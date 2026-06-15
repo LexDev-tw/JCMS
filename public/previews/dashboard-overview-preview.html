@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>總覽頁面 — 版面預覽</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '"Noto Sans TC"', 'PingFang TC', 'Microsoft JhengHei', 'sans-serif'],
+                    },
+                    colors: {
+                        surface: '#FFFFFF',
+                        panel: '#F7F7F5',
+                        ink: { 900: '#111111', 600: '#666666', 400: '#999999', 100: '#EAEAEA' },
+                        accent: '#F05A28',
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="stylesheet" href="../css/jcms.css">
+    <style>
+        .preview-banner {
+            position: sticky; top: 0; z-index: 50;
+            background: #111; color: #fff;
+            font-size: 0.5625rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            padding: 0.45rem 1rem;
+            display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        }
+        .preview-banner a { color: #ffb89a; text-decoration: underline; }
+        .dash-kpi-row {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 1rem;
+            align-items: start;
+        }
+        .dash-kpi-card {
+            display: flex; flex-direction: column; gap: 0.25rem;
+            min-width: 0;
+        }
+        .dash-kpi-card--action {
+            cursor: pointer; border-radius: 0.125rem;
+            margin: -0.25rem; padding: 0.25rem;
+            transition: background 0.15s; text-align: left;
+        }
+        .dash-kpi-card--action:hover { background: rgba(247, 247, 245, 0.9); }
+        .dash-kpi-card--action:hover .dash-kpi-value:not(.dash-kpi-value--accent) { color: #f05a28; }
+        .dash-kpi-value.dash-kpi-value--accent { color: #f05a28; }
+        .dash-kpi-label-wrap { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+        .dash-kpi-label {
+            font-size: 0.6875rem; font-weight: 700; color: #111;
+            letter-spacing: 0.06em; line-height: 1.2;
+        }
+        .dash-kpi-label-en {
+            font-family: ui-monospace, monospace; font-size: 0.5rem;
+            font-weight: 400; color: #999; text-transform: uppercase;
+            letter-spacing: 0.1em; line-height: 1.2;
+        }
+        .dash-kpi-value {
+            font-size: 2.75rem; font-weight: 300; line-height: 1;
+            letter-spacing: -0.04em; color: #111; font-variant-numeric: tabular-nums;
+            transition: color 0.15s;
+        }
+        .dash-kpi-sub { display: flex; flex-direction: column; gap: 0.05rem; margin-top: 0.1rem; }
+        .dash-kpi-sub-label { font-size: 0.5625rem; font-weight: 700; color: #111; letter-spacing: 0.04em; line-height: 1.2; }
+        .dash-kpi-sub-value {
+            font-family: ui-monospace, monospace; font-size: 0.875rem;
+            font-weight: 700; color: #111; font-variant-numeric: tabular-nums; line-height: 1.2;
+        }
+        .dash-middle-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            column-gap: 2.5rem;
+            row-gap: 0;
+        }
+        .dash-section-head {
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.85rem;
+            border-bottom: 2px solid #111;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 0.5rem;
+            align-self: stretch;
+            min-width: 0;
+        }
+        .dash-section-head__extra {
+            font-size: 0.75rem;
+            font-family: ui-monospace, monospace;
+            font-weight: 700;
+            color: #999;
+            white-space: nowrap;
+            flex-shrink: 0;
+            padding-bottom: 0.05rem;
+        }
+        .dash-chart-box { position: relative; width: 100%; height: 11rem; }
+        .dash-breakdown-body {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .dash-breakdown-list {
+            display: grid;
+            grid-template-rows: repeat(5, 1.75rem);
+            row-gap: 0.5rem;
+            flex: 0 0 auto;
+            align-content: start;
+        }
+        .dash-breakdown-row {
+            display: grid;
+            grid-template-columns: 5.5rem minmax(0, 1fr) 2rem;
+            align-items: center;
+            column-gap: 0.75rem;
+            min-height: 0;
+        }
+        .dash-breakdown-label {
+            width: 5.5rem;
+            flex-shrink: 0;
+        }
+        .dash-breakdown-label__title {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #111;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dash-breakdown-row--placeholder {
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .dash-breakdown-bar {
+            position: relative;
+            height: 2px;
+            background: #f7f7f5;
+            overflow: hidden;
+            min-width: 0;
+        }
+        .dash-breakdown-bar canvas {
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 2px !important;
+        }
+        .dash-breakdown-empty {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .dash-middle-grid > :not(.dash-section-head) {
+            align-self: start;
+        }
+        .dash-cumulative-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .dash-cumulative-item__head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.35rem;
+        }
+        .dash-cumulative-item__value {
+            font-family: ui-monospace, monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+        .dash-cumulative-item__value--accent { color: #f05a28; }
+        .dash-cumulative-bar {
+            position: relative;
+            height: 2px;
+            background: #f7f7f5;
+            overflow: hidden;
+            width: 100%;
+        }
+        .dash-cumulative-bar canvas {
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 2px !important;
+        }
+        .dash-stat-block { display: flex; flex-direction: column; gap: 1.35rem; }
+        .dash-stat-item { display: flex; flex-direction: column; gap: 0.2rem; }
+        .dash-stat-item__label { font-size: 0.6875rem; font-weight: 700; color: #111; letter-spacing: 0.06em; }
+        .dash-stat-item__value {
+            font-family: ui-monospace, monospace; font-size: 1.75rem;
+            font-weight: 700; color: #111; font-variant-numeric: tabular-nums; line-height: 1.1;
+        }
+        .dash-toggle { display: inline-flex; gap: 0.25rem; }
+        .dash-toggle__btn {
+            font-size: 0.5625rem; font-weight: 700; letter-spacing: 0.1em;
+            text-transform: uppercase; padding: 0.22rem 0.45rem;
+            border-radius: 0.125rem; border: 1px solid #eaeaea;
+            background: #fff; color: #666; cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+        .dash-toggle__btn:hover { color: #111; border-color: #111; }
+        .dash-toggle__btn--active { background: #111; border-color: #111; color: #fff; }
+        .dash-nav-toast {
+            position: fixed; bottom: 1.25rem; left: 50%;
+            transform: translateX(-50%) translateY(120%);
+            background: #111; color: #fff; font-size: 0.6875rem; font-weight: 700;
+            letter-spacing: 0.06em; padding: 0.55rem 0.85rem; border-radius: 0.125rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.18); transition: transform 0.25s ease;
+            z-index: 60; max-width: 28rem; text-align: center;
+        }
+        .dash-nav-toast--show { transform: translateX(-50%) translateY(0); }
+        .dash-nav-toast code { font-family: ui-monospace, monospace; color: #ffb89a; font-size: 0.625rem; }
+        .dash-week-calendar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .dash-week-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 2fr) 1fr 1fr;
+            gap: 0.75rem;
+        }
+        @media (max-width: 1023px) {
+            .dash-week-grid {
+                grid-template-columns: repeat(4, 2fr) 1fr;
+            }
+        }
+        @media (max-width: 639px) {
+            .dash-week-grid {
+                grid-template-columns: repeat(2, 2fr) 1fr;
+            }
+        }
+        .dash-week-day-head {
+            border-top: 2px solid #eaeaea;
+            padding-top: 0.75rem;
+            min-width: 0;
+        }
+        .dash-week-day-head--today { border-top-color: #f05a28; }
+        .dash-week-day-head--default:hover { border-top-color: #666; }
+        .dash-week-day-body { min-height: 16rem; padding-top: 0.15rem; }
+        .dash-week-span-track { min-width: 0; }
+        .dash-week-span-track__grid {
+            grid-auto-rows: 1.4rem;
+            row-gap: 0.25rem;
+            padding-bottom: 0.25rem;
+        }
+        .dash-week-span-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-end;
+            gap: 0.15rem;
+            min-width: 0;
+            min-height: 1.4rem;
+            padding: 0 0.05rem 0.05rem;
+        }
+        .dash-week-span-bar__label {
+            flex: 0 1 auto;
+            min-width: 0;
+            font-size: 0.625rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #111;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dash-week-span-bar__line {
+            display: block;
+            width: 100%;
+            height: 2px;
+            background: #111;
+        }
+    </style>
+</head>
+<body class="bg-panel text-ink-900 font-sans antialiased min-h-screen">
+    <div class="preview-banner">
+        <span>總覽頁面版面預覽 v2 · 模擬資料 · Chart.js 4.4.1</span>
+        <a href="../JCMS.html?view=dashboardDetail">詳細資訊總覽</a>
+        <a href="../JCMS.html?view=dashboard">回主應用（地圖總覽）</a>
+    </div>
+
+    <main id="dash-root" class="p-8 lg:p-10 max-w-[1400px] mx-auto w-full flex flex-col gap-6"></main>
+    <div id="nav-toast" class="dash-nav-toast" role="status" aria-live="polite"></div>
+
+    <script>
+    (function () {
+        const CHART = Object.freeze({
+            ink: '#111111', muted: '#666666', accent: '#F05A28',
+            grid: '#EAEAEA', panel: '#F7F7F5',
+            palette: ['#111111', '#666666', '#F05A28', '#999999', '#EAEAEA'],
+        });
+
+        const MOCK_CASES = [
+            { word: '士補', reason: '損害賠償', dates: '1140305', closeDate: '', targetAmount: '850000' },
+            { word: '士補', reason: '損害賠償', dates: '1140210', closeDate: '', targetAmount: '1200000' },
+            { word: '士簡', reason: '給付票款', dates: '1140118', closeDate: '1140312', targetAmount: '450000' },
+            { word: '士簡', reason: '返還不當得利', dates: '1131205', closeDate: '', targetAmount: '320000' },
+            { word: '士小', reason: '給付票款', dates: '1140301', closeDate: '1140315', targetAmount: '98000' },
+            { word: '士補', reason: '確認債權', dates: '1131102', closeDate: '1140308', targetAmount: '5600000' },
+            { word: '士簡', reason: '損害賠償', dates: '1140220', closeDate: '1140320', targetAmount: '2100000' },
+            { word: '士補', reason: '排除侵害', dates: '1130901', closeDate: '', targetAmount: '780000' },
+            { word: '士小', reason: '給付票款', dates: '1140105', closeDate: '1140302', targetAmount: '150000' },
+            { word: '士簡', reason: '返還不當得利', dates: '1130808', closeDate: '1140310', targetAmount: '890000' },
+            { word: '士補', reason: '損害賠償', dates: '1140322', closeDate: '', targetAmount: '2400000' },
+            { word: '士簡', reason: '確認債權', dates: '1130701', closeDate: '1131201', targetAmount: '670000' },
+            { word: '士小', reason: '給付票款', dates: '1140318', closeDate: '', targetAmount: '42000' },
+            { word: '士補', reason: '損害賠償', dates: '1140309', closeDate: '1140325', targetAmount: '3100000' },
+            { word: '士簡', reason: '排除侵害', dates: '1140201', closeDate: '', targetAmount: '540000' },
+            { word: '士補', reason: '確認債權', dates: '1130603', closeDate: '1140318', targetAmount: '9200000' },
+            { word: '士小', reason: '返還不當得利', dates: '1140125', closeDate: '', targetAmount: '88000' },
+            { word: '士簡', reason: '給付票款', dates: '1140328', closeDate: '', targetAmount: '760000' },
+            { word: '士補', reason: '其他', dates: '1140320', closeDate: '', targetAmount: '150000' },
+            { word: '士簡', reason: '其他', dates: '1140325', closeDate: '', targetAmount: '210000' },
+        ];
+
+        const MOCK_TODOS = [
+            { text: '補登 114 年 3 月結算', done: false },
+            { text: '確認士字第 128 號期日', done: false },
+            { text: '更新字軌設定', done: true },
+        ];
+
+        const MOCK_CALENDAR = [
+            { dateRoc: '1140407', time: '0930', title: '士補 128 開庭' },
+            { dateRoc: '1140407', time: '1400', title: '內部會議' },
+            { dateRoc: '1140408', time: '', title: '撰寫準備書狀' },
+            { dateRoc: '1140409', time: '1030', title: '簡 456 調解' },
+            { dateRoc: '1140410', time: '1500', title: '小額 89 言詞辯論' },
+            { dateRoc: '1140411', time: '0900', title: '院內行政會議' },
+            { dateRoc: '1140412', time: '', title: '卷宗整理' },
+            { dateRoc: '1140413', time: '1000', title: '研習課程' },
+            { startRoc7: '1140408', endRoc7: '1140410', time: '', title: '研習營（跨三日）' },
+            { startRoc7: '1140411', endRoc7: '1140413', time: '', title: '出差臺中（跨三日）' },
+        ];
+
+        const CURRENT_MONTH = '11403';
+        const TAIWAN_HOLIDAY_CDN = 'https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data';
+        const holidayByRoc7 = new Map();
+        let breakdownMode = 'word';
+        const breakdownCharts = [];
+        const cumulativeCharts = [];
+        let week = null;
+
+        async function loadGovHolidays(years) {
+            await Promise.all([...new Set(years)].map(async (year) => {
+                try {
+                    const res = await fetch(`${TAIWAN_HOLIDAY_CDN}/${year}.json`);
+                    if (!res.ok) return;
+                    const rows = await res.json();
+                    (rows || []).forEach((row) => {
+                        const raw = String(row.date || '').replace(/\D/g, '');
+                        if (raw.length !== 8) return;
+                        const ry = parseInt(raw.slice(0, 4), 10) - 1911;
+                        const roc7 = `${String(ry).padStart(3, '0')}${raw.slice(4, 6)}${raw.slice(6, 8)}`;
+                        holidayByRoc7.set(roc7, {
+                            isHoliday: !!row.isHoliday,
+                            description: String(row.description || '').trim(),
+                        });
+                    });
+                } catch { /* 預覽離線時略過 */ }
+            }));
+        }
+
+        function parseMoney(v) {
+            return parseInt(String(v || '').replace(/,/g, ''), 10) || 0;
+        }
+        function formatMoney(v) {
+            if (!v) return '0';
+            return Number(v).toLocaleString('en-US');
+        }
+        function isCaseNotProceeding(c) {
+            if (c.closeDate) return false;
+            const pd = String(c.dates || '').trim();
+            if (!pd) return true;
+            return pd < '1140401';
+        }
+
+        function computeStats(cases) {
+            const unresolvedList = cases.filter((c) => !c.closeDate);
+            const unresolved = unresolvedList.length;
+            const closedThisMonth = cases.filter((c) => String(c.closeDate || '').slice(0, 5) === CURRENT_MONTH);
+            const closed = closedThisMonth.length;
+            const newlyReceived = cases.filter((c) => String(c.dates || '').slice(0, 5) === CURRENT_MONTH).length;
+            const notProceeding = cases.filter((c) => isCaseNotProceeding(c)).length;
+            const monthClosedTarget = closedThisMonth.reduce((s, c) => s + parseMoney(c.targetAmount), 0);
+            const clearanceRate = newlyReceived > 0 ? Math.round((closed / newlyReceived) * 100) : 0;
+            return {
+                unresolved, closed, newlyReceived, notProceeding, monthClosedTarget, clearanceRate,
+                cumulativeReceived: cases.length,
+                cumulativeClosed: cases.filter((c) => String(c.closeDate || '').trim()).length,
+                cumulativeTargetAmount: cases.reduce((s, c) => s + parseMoney(c.targetAmount), 0),
+            };
+        }
+
+        function top5Breakdown(cases, mode) {
+            const unresolved = cases.filter((c) => !c.closeDate);
+            const total = Math.max(unresolved.length, 1);
+            const map = {};
+            unresolved.forEach((c) => {
+                const key = mode === 'word'
+                    ? (String(c.word || '').trim() || '其他')
+                    : (String(c.reason || '').trim() || '其他');
+                map[key] = (map[key] || 0) + 1;
+            });
+            const typeLabel = mode === 'word' ? '字別群組' : '案由';
+            return Object.entries(map)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([label, count]) => ({
+                    label,
+                    count,
+                    percentage: Math.min(100, Math.round((count / total) * 100)),
+                    type: typeLabel,
+                }));
+        }
+
+        function compareRoc7(a, b) {
+            return String(a || '').localeCompare(String(b || ''));
+        }
+
+        function normalizeMockEvent(e) {
+            const dateRoc = e.dateRoc || e.startRoc7 || '';
+            const startRoc7 = e.startRoc7 || dateRoc;
+            const endRoc7 = e.endRoc7 || startRoc7;
+            return { ...e, dateRoc, startRoc7, endRoc7, time: e.time || '' };
+        }
+
+        function buildWeekSpanBars(spanEvents, weekDays) {
+            const weekStart = weekDays[0].fullDate;
+            const weekEnd = weekDays[6].fullDate;
+            const bars = [];
+            spanEvents.forEach((ev) => {
+                const start = ev.startRoc7;
+                const end = ev.endRoc7;
+                if (compareRoc7(start, end) === 0) return;
+                if (compareRoc7(end, weekStart) < 0 || compareRoc7(start, weekEnd) > 0) return;
+                const effStart = compareRoc7(start, weekStart) < 0 ? weekStart : start;
+                const effEnd = compareRoc7(end, weekEnd) > 0 ? weekEnd : end;
+                const startIdx = weekDays.findIndex((d) => d.fullDate === effStart);
+                const endIdx = weekDays.findIndex((d) => d.fullDate === effEnd);
+                if (startIdx < 0 || endIdx < 0) return;
+                bars.push({
+                    ...ev,
+                    startCol: startIdx + 1,
+                    spanCols: endIdx - startIdx + 1,
+                });
+            });
+            const rows = [];
+            return bars
+                .sort((a, b) => a.startCol - b.startCol || b.spanCols - a.spanCols)
+                .map((bar) => {
+                    let rowIdx = 0;
+                    while (true) {
+                        if (!rows[rowIdx]) rows[rowIdx] = [];
+                        const endCol = bar.startCol + bar.spanCols - 1;
+                        const conflict = rows[rowIdx].some((placed) => {
+                            const placedEnd = placed.startCol + placed.spanCols - 1;
+                            return !(endCol < placed.startCol || placedEnd < bar.startCol);
+                        });
+                        if (!conflict) {
+                            rows[rowIdx].push(bar);
+                            return { ...bar, row: rowIdx + 1 };
+                        }
+                        rowIdx += 1;
+                    }
+                });
+        }
+
+        function buildWeekSchedule() {
+            const realToday = new Date();
+            const base = new Date();
+            const dow = base.getDay();
+            const monOffset = dow === 0 ? -6 : 1 - dow;
+            const mon = new Date(base);
+            mon.setDate(base.getDate() + monOffset);
+            const pad = (n) => String(n).padStart(2, '0');
+            const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+            const days = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(mon);
+                d.setDate(mon.getDate() + i);
+                const ad = d.getFullYear() - 1911;
+                const fullDate = `${String(ad).padStart(3, '0')}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+                const holiday = holidayByRoc7.get(fullDate);
+                days.push({
+                    fullDate,
+                    label: pad(d.getDate()),
+                    day: dayLabels[i],
+                    isToday: d.toDateString() === realToday.toDateString(),
+                    isHoliday: !!(holiday && holiday.isHoliday),
+                    holidayLabel: holiday?.isHoliday
+                        ? String(holiday.description || '').trim()
+                        : '',
+                });
+            }
+            const allEvents = MOCK_CALENDAR.map(normalizeMockEvent);
+            const spanEvents = allEvents.filter((e) => compareRoc7(e.startRoc7, e.endRoc7) !== 0);
+            const singleDay = allEvents.filter((e) => compareRoc7(e.startRoc7, e.endRoc7) === 0);
+            const weekSpanBars = buildWeekSpanBars(spanEvents, days);
+            const schedule = days.map((day, dayIdx) => {
+                const dayEvents = singleDay.filter((e) => e.dateRoc === day.fullDate);
+                const spanCovered = weekSpanBars.some((bar) => {
+                    const col = dayIdx + 1;
+                    return col >= bar.startCol && col < bar.startCol + bar.spanCols;
+                });
+                return {
+                    ...day,
+                    allDayEvents: dayEvents.filter((e) => !e.time),
+                    timedEvents: dayEvents.filter((e) => e.time).sort((a, b) => a.time.localeCompare(b.time)),
+                    spanCovered,
+                };
+            });
+            return {
+                weekRange: `${days[0].fullDate} — ${days[6].fullDate}`,
+                days: schedule,
+                weekSpanBars,
+            };
+        }
+
+        const stats = computeStats(MOCK_CASES);
+
+        function monoFont() {
+            return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+        }
+
+        function sectionHead(title, subtitle, extra, colSpan) {
+            const extraHtml = extra
+                ? (String(extra).includes('<')
+                    ? extra
+                    : `<span class="dash-section-head__extra">${extra}</span>`)
+                : '';
+            return `
+                <header class="dash-section-head ${colSpan}">
+                    <div class="swiss-section-heading min-w-0">
+                        <h2 class="swiss-section-heading__title">${title}</h2>
+                        ${subtitle ? `<p class="swiss-section-subtitle">${subtitle}</p>` : ''}
+                    </div>
+                    ${extraHtml}
+                </header>`;
+        }
+
+        function kpiLabel(title, en, extra) {
+            return `
+                <div class="dash-kpi-label-wrap">
+                    <div class="dash-kpi-label flex items-center gap-0.5 min-w-0">
+                        <span class="truncate">${title}</span>${extra || ''}
+                    </div>
+                    <span class="dash-kpi-label-en">${en}</span>
+                </div>`;
+        }
+
+        function renderKpiRow(s) {
+            return `
+                <div class="dash-kpi-row shrink-0">
+                    <button type="button" class="dash-kpi-card dash-kpi-card--action group" id="goto-unresolved" aria-label="前往案件清單並篩選未結">
+                        ${kpiLabel('未結案件', 'Unresolved', '<i class="ph ph-arrow-up-right text-ink-400 text-[10px] shrink-0" aria-hidden="true"></i>')}
+                        <div class="dash-kpi-value dash-kpi-value--accent">${s.unresolved}</div>
+                    </button>
+                    <button type="button" class="dash-kpi-card dash-kpi-card--action group" id="goto-received" aria-label="前往案件清單並篩選本月新收">
+                        ${kpiLabel('本月新收', 'Received', '<i class="ph ph-arrow-up-right text-ink-400 text-[10px] shrink-0" aria-hidden="true"></i>')}
+                        <div class="dash-kpi-value">${s.newlyReceived}</div>
+                    </button>
+                    <button type="button" class="dash-kpi-card dash-kpi-card--action group" id="goto-closed" aria-label="前往案件清單並篩選本月結案">
+                        ${kpiLabel('本月已結', 'Closed', '<i class="ph ph-arrow-up-right text-ink-400 text-[10px] shrink-0" aria-hidden="true"></i>')}
+                        <div class="dash-kpi-value">${s.closed}</div>
+                        <div class="dash-kpi-sub">
+                            <span class="dash-kpi-sub-label">本月結案標的價額</span>
+                            <span class="dash-kpi-sub-value">${formatMoney(s.monthClosedTarget)}</span>
+                        </div>
+                    </button>
+                    <div class="dash-kpi-card">
+                        ${kpiLabel('本月折結率', 'Clearance Rate')}
+                        <div class="dash-kpi-value">${s.clearanceRate}%</div>
+                    </div>
+                    <button type="button" class="dash-kpi-card dash-kpi-card--action" id="goto-not-proceeding" aria-label="前往案件清單並篩選未進行">
+                        ${kpiLabel('未進行案件', 'Not Proceeding', '<i class="ph ph-arrow-up-right text-ink-400 text-[10px] shrink-0" aria-hidden="true"></i>')}
+                        <div class="dash-kpi-value dash-kpi-value--accent">${s.notProceeding}</div>
+                    </button>
+                </div>`;
+        }
+
+        function renderMiddleRow() {
+            const pending = MOCK_TODOS.filter((t) => !t.done).length;
+            return `
+                <div class="dash-middle-grid shrink-0">
+                    ${sectionHead('累計收結情形', 'CUMULATIVE INTAKE & CLOSURE', '', 'col-span-12 lg:col-span-3')}
+                    ${sectionHead('未結案件結構分析', 'UNRESOLVED BREAKDOWN', `
+                        <div class="dash-toggle shrink-0" role="group" aria-label="分析維度">
+                            <button type="button" class="dash-toggle__btn dash-toggle__btn--active" data-mode="word">依字別</button>
+                            <button type="button" class="dash-toggle__btn" data-mode="reason">依案由</button>
+                        </div>`, 'col-span-12 lg:col-span-5')}
+                    ${sectionHead('待辦事項', 'TO-DO LIST', `${pending} PENDING`, 'col-span-12 lg:col-span-4 pr-2')}
+                    <div class="col-span-12 lg:col-span-3 min-w-0">
+                        <div id="cumulative-list" class="dash-cumulative-list" aria-label="累計收案數與累計結案數"></div>
+                        <div class="dash-stat-item">
+                            <span class="dash-stat-item__label">累計訴訟標的價額</span>
+                            <span class="dash-stat-item__value text-[1.35rem]">${formatMoney(stats.cumulativeTargetAmount)}</span>
+                        </div>
+                    </div>
+                    <div class="col-span-12 lg:col-span-5 min-w-0">
+                        <div class="dash-breakdown-body shrink-0">
+                            <div id="breakdown-list" class="dash-breakdown-list" aria-label="未結案件結構分析前五大"></div>
+                            <div id="breakdown-empty" class="dash-breakdown-empty hidden" aria-hidden="true">
+                                <span class="text-[12px] font-mono text-ink-400 uppercase tracking-widest">NO UNRESOLVED CASES</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-span-12 lg:col-span-4 flex flex-col max-h-[600px] pr-2 min-w-0">
+                        <form class="mb-4 flex shrink-0 border-b border-ink-100 pb-1" onsubmit="return false;">
+                            <input type="text" placeholder="Type to add..." class="w-full bg-transparent text-[13px] font-mono font-bold text-ink-900 border-b border-transparent focus:border-ink-900 outline-none placeholder:text-ink-400 placeholder:font-normal py-1 transition-colors">
+                            <button type="submit" class="text-ink-400 hover:text-ink-900 transition-colors"><i class="ph ph-plus font-bold text-lg"></i></button>
+                        </form>
+                        <div class="flex-1 overflow-y-auto pb-2 flex flex-col gap-1">
+                            ${MOCK_TODOS.map((t, i) => `
+                                <div class="flex items-center gap-2 group cursor-pointer rounded-sm border-t border-transparent">
+                                    <button type="button" class="shrink-0 p-0.5 text-ink-400 transition-colors hover:text-ink-900 cursor-grab active:cursor-grabbing" title="拖曳排序" draggable="true">
+                                        <i class="ph ph-dots-six-vertical text-[13px]"></i>
+                                    </button>
+                                    <div class="w-3 h-3 border flex items-center justify-center shrink-0 transition-colors ${t.done ? 'border-ink-900 bg-ink-900' : 'border-ink-400 group-hover:border-ink-900'}"></div>
+                                    <span class="text-[14px] font-bold flex-1 leading-tight transition-colors ${t.done ? 'text-ink-400 line-through' : 'text-ink-900'}">${t.text}</span>
+                                    <button type="button" class="opacity-0 group-hover:opacity-100 text-ink-400 hover:text-accent transition-opacity shrink-0"><i class="ph ph-x text-sm"></i></button>
+                                </div>`).join('')}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderCalendar() {
+            const headCells = week.days.map((day) => `
+                <div class="dash-week-day-head cursor-pointer group/day min-w-0 ${day.isToday ? 'dash-week-day-head--today' : 'dash-week-day-head--default'}">
+                    <div class="flex items-start gap-2 min-w-0">
+                        <div class="flex items-baseline gap-2 min-w-0">
+                            <span class="text-3xl font-light font-mono tabular-nums tracking-tighter shrink-0 ${day.isHoliday ? 'text-accent' : 'text-ink-900'}">${day.label}</span>
+                            <span class="text-[12px] font-bold tracking-widest uppercase text-ink-400 shrink-0">${day.day}</span>
+                            ${day.holidayLabel
+                                ? `<span class="text-[10px] font-bold text-accent leading-tight truncate min-w-0" title="${day.holidayLabel}">${day.holidayLabel}</span>`
+                                : ''}
+                        </div>
+                        ${day.allDayEvents.length
+                            ? `<div class="flex-1 flex flex-col gap-0.5 min-w-0 pt-0.5">
+                                ${day.allDayEvents.map((ev) => `
+                                    <span class="text-[10px] font-bold text-ink-900 truncate leading-tight block" title="${ev.title}">${ev.title}</span>`).join('')}
+                               </div>`
+                            : ''}
+                    </div>
+                </div>`).join('');
+
+            const spanBars = week.weekSpanBars.length
+                ? `<div class="dash-week-span-track">
+                        <div class="dash-week-grid dash-week-span-track__grid">
+                            ${week.weekSpanBars.map((bar) => `
+                                <div class="dash-week-span-bar" style="grid-column: ${bar.startCol} / span ${bar.spanCols}; grid-row: ${bar.row};">
+                                    <span class="dash-week-span-bar__label" title="${bar.title}">${bar.title}</span>
+                                    <span class="dash-week-span-bar__line" aria-hidden="true"></span>
+                                </div>`).join('')}
+                        </div>
+                   </div>`
+                : '';
+
+            const bodyCells = week.days.map((day) => `
+                <div class="dash-week-day-body cursor-pointer group/day min-w-0">
+                    <div class="flex flex-col gap-1.5 min-h-0">
+                        ${day.timedEvents.length
+                            ? day.timedEvents.map((ev) => `
+                                <div class="flex items-center gap-1.5 p-1 -mx-1 hover:bg-ink-100/50 rounded-sm transition-colors">
+                                    <span class="text-[12px] font-mono font-bold tabular-nums tracking-widest shrink-0 text-ink-600">${ev.time}</span>
+                                    <span class="text-[13px] font-bold text-ink-900 truncate flex-1" title="${ev.title}">${ev.title}</span>
+                                </div>`).join('')
+                            : (day.allDayEvents.length === 0 && !day.spanCovered
+                                ? `<div class="text-[12px] font-mono text-ink-400 uppercase tracking-widest pt-1 group-hover/day:text-ink-900 transition-colors"><i class="ph ph-plus mr-1"></i>Add</div>`
+                                : '')}
+                    </div>
+                </div>`).join('');
+
+            return `
+                <section class="flex flex-col shrink-0 pb-8">
+                    <header class="dash-section-head">
+                        <div class="swiss-section-heading">
+                            <h2 class="swiss-section-heading__title">行事曆</h2>
+                            <p class="swiss-section-subtitle">WEEKLY SCHEDULE</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" class="text-ink-400 hover:text-accent transition-colors p-1" title="上一週（預覽）"><i class="ph ph-caret-left text-lg"></i></button>
+                            <span class="text-[13px] font-mono font-bold text-ink-900 tabular-nums tracking-widest min-w-[11rem] text-center">${week.weekRange}</span>
+                            <button type="button" class="px-2 py-1 text-[12px] font-bold text-ink-900 bg-panel border border-ink-100 hover:bg-ink-100 transition-colors rounded-sm">今日</button>
+                            <button type="button" class="text-ink-400 hover:text-accent transition-colors p-1" title="下一週（預覽）"><i class="ph ph-caret-right text-lg"></i></button>
+                            <button type="button" class="swiss-btn swiss-btn--primary ml-2"><i class="ph ph-plus" aria-hidden="true"></i>新增行事</button>
+                        </div>
+                    </header>
+                    <div class="dash-week-calendar">
+                        <div class="dash-week-grid dash-week-grid--heads">${headCells}</div>
+                        ${spanBars}
+                        <div class="dash-week-grid dash-week-grid--body">${bodyCells}</div>
+                    </div>
+                </section>`;
+        }
+
+        const root = document.getElementById('dash-root');
+
+        function padBreakdownSlots(data) {
+            const slots = data.slice(0, 5).map((item) => ({ ...item, empty: false }));
+            while (slots.length < 5) {
+                slots.push({ label: ' ', count: 0, percentage: 0, type: ' ', empty: true });
+            }
+            return slots;
+        }
+
+        function destroyBreakdownCharts() {
+            while (breakdownCharts.length) {
+                const c = breakdownCharts.pop();
+                if (c) c.destroy();
+            }
+        }
+
+        function createBreakdownRowBar(canvas, percentage) {
+            return new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: [''],
+                    datasets: [{
+                        data: [percentage],
+                        backgroundColor: CHART.ink,
+                        barThickness: 2,
+                        maxBarThickness: 2,
+                        borderSkipped: false,
+                        borderRadius: 0,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    animation: { duration: 220 },
+                    datasets: { bar: { grouped: false, categoryPercentage: 1, barPercentage: 1 } },
+                    layout: { padding: 0 },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { min: 0, max: 100, display: false, grid: { display: false }, border: { display: false } },
+                        y: { display: false, grid: { display: false }, border: { display: false } },
+                    },
+                },
+            });
+        }
+
+        function renderBreakdownList() {
+            const listEl = document.getElementById('breakdown-list');
+            const emptyEl = document.getElementById('breakdown-empty');
+            if (!listEl) return;
+            destroyBreakdownCharts();
+
+            const raw = top5Breakdown(MOCK_CASES, breakdownMode);
+            const slots = padBreakdownSlots(raw);
+            if (emptyEl) {
+                emptyEl.classList.toggle('hidden', raw.length > 0);
+            }
+
+            const labelFontClass = breakdownMode === 'word' ? 'font-mono' : 'font-sans';
+            listEl.innerHTML = slots.map((item, i) => `
+                <div class="dash-breakdown-row group ${item.empty ? 'dash-breakdown-row--placeholder' : ''}">
+                    <div class="dash-breakdown-label flex flex-col gap-0.5 leading-none">
+                        <span class="dash-breakdown-label__title ${labelFontClass}" title="${item.empty ? '' : item.label}">${item.label}</span>
+                        <span class="text-[11px] text-ink-400 font-bold tracking-widest uppercase truncate">${item.type}</span>
+                    </div>
+                    <div class="dash-breakdown-bar min-w-0">
+                        ${item.empty ? '' : `<canvas id="breakdown-bar-${i}" role="img" aria-label="${item.label} ${item.count} 件"></canvas>`}
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-[14px] font-bold font-mono tabular-nums text-ink-900">${item.empty ? '' : item.count}</span>
+                    </div>
+                </div>`).join('');
+
+            slots.forEach((item, i) => {
+                if (item.empty) return;
+                const canvas = document.getElementById(`breakdown-bar-${i}`);
+                const row = canvas && canvas.closest('.dash-breakdown-row');
+                if (!canvas || !row) return;
+                const chart = createBreakdownRowBar(canvas, item.percentage);
+                breakdownCharts.push(chart);
+                row.addEventListener('mouseenter', () => {
+                    chart.data.datasets[0].backgroundColor = CHART.accent;
+                    chart.update('none');
+                });
+                row.addEventListener('mouseleave', () => {
+                    chart.data.datasets[0].backgroundColor = CHART.ink;
+                    chart.update('none');
+                });
+            });
+        }
+
+        function destroyCumulativeCharts() {
+            while (cumulativeCharts.length) {
+                const c = cumulativeCharts.pop();
+                if (c) c.destroy();
+            }
+        }
+
+        function renderCumulativeList() {
+            const listEl = document.getElementById('cumulative-list');
+            if (!listEl) return;
+            destroyCumulativeCharts();
+
+            const items = [
+                { label: '累計收案數', count: stats.cumulativeReceived, accent: true },
+                { label: '累計結案數', count: stats.cumulativeClosed, accent: false },
+            ];
+            const maxVal = Math.max(...items.map((it) => it.count), 1);
+
+            listEl.innerHTML = items.map((item, i) => `
+                <div class="dash-cumulative-item group">
+                    <div class="dash-cumulative-item__head">
+                        <span class="dash-stat-item__label">${item.label}</span>
+                        <span class="dash-cumulative-item__value ${item.accent ? 'dash-cumulative-item__value--accent' : 'text-ink-900'}">${item.count}</span>
+                    </div>
+                    <div class="dash-cumulative-bar">
+                        <canvas id="cumulative-bar-${i}" role="img" aria-label="${item.label} ${item.count} 件"></canvas>
+                    </div>
+                </div>`).join('');
+
+            items.forEach((item, i) => {
+                const canvas = document.getElementById(`cumulative-bar-${i}`);
+                const row = canvas && canvas.closest('.dash-cumulative-item');
+                if (!canvas || !row) return;
+                const pct = Math.min(100, Math.round((item.count / maxVal) * 100));
+                const color = item.accent ? CHART.accent : CHART.ink;
+                const chart = createBreakdownRowBar(canvas, pct);
+                chart.data.datasets[0].backgroundColor = color;
+                chart.update('none');
+                cumulativeCharts.push(chart);
+                row.addEventListener('mouseenter', () => {
+                    chart.data.datasets[0].backgroundColor = item.accent ? CHART.accent : CHART.accent;
+                    chart.update('none');
+                });
+                row.addEventListener('mouseleave', () => {
+                    chart.data.datasets[0].backgroundColor = color;
+                    chart.update('none');
+                });
+            });
+        }
+
+        async function bootstrap() {
+            const draft = buildWeekSchedule();
+            const years = draft.days.map((d) => parseInt(d.fullDate.slice(0, 3), 10) + 1911);
+            await loadGovHolidays(years);
+            week = buildWeekSchedule();
+            root.innerHTML = renderKpiRow(stats) + renderMiddleRow() + renderCalendar();
+            renderBreakdownList();
+            renderCumulativeList();
+            bindPreviewInteractions();
+        }
+
+        function bindPreviewInteractions() {
+        document.querySelectorAll('.dash-toggle__btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                if (mode === breakdownMode) return;
+                breakdownMode = mode;
+                document.querySelectorAll('.dash-toggle__btn').forEach((b) => {
+                    b.classList.toggle('dash-toggle__btn--active', b.dataset.mode === mode);
+                });
+                renderBreakdownList();
+            });
+        });
+
+        const toast = document.getElementById('nav-toast');
+        let toastTimer = null;
+        function showNavToast(html) {
+            toast.innerHTML = html;
+            toast.classList.add('dash-nav-toast--show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('dash-nav-toast--show'), 4200);
+        }
+        const monthQ = CURRENT_MONTH;
+        document.getElementById('goto-unresolved').addEventListener('click', () => {
+            showNavToast('預覽：<code>switchView(\'cases\')</code> + <code>changeStatusFilter(\'未結\')</code>');
+        });
+        document.getElementById('goto-received').addEventListener('click', () => {
+            showNavToast(`預覽：<code>switchView('cases')</code> + <code>assignDateQ='${monthQ}'</code>（本月新收）`);
+        });
+        document.getElementById('goto-closed').addEventListener('click', () => {
+            showNavToast(`預覽：<code>switchView('cases')</code> + <code>closeDateQ='${monthQ}'</code>（本月結案）`);
+        });
+        document.getElementById('goto-not-proceeding').addEventListener('click', () => {
+            showNavToast('預覽：<code>switchView(\'cases\')</code> + <code>changeStatusFilter(\'未進行\')</code>');
+        });
+
+        window.addEventListener('resize', () => {
+            breakdownCharts.forEach((c) => c && c.resize());
+            cumulativeCharts.forEach((c) => c && c.resize());
+        });
+        }
+
+        bootstrap();
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+node_modules/
+# 建置產物（勘驗離線單檔）
+public/dist/
+.env
+data/
+*.db
+*.log
+.DS_Store
+
+# 執行時產物（啟動腳本／PM2 狀態）
+.jcms-runtime/
+temp/
+tmp-*
+
+# 使用者上傳檔（保留 uploads/README.md 與各子資料夾 .gitkeep）
+uploads/**
+!uploads/README.md
+!uploads/**/.gitkeep
+
+# Obsidian 案件筆記庫（與 case_archive/README.md）
+case_archive/**
+!case_archive/README.md
+!case_archive/**/.gitkeep

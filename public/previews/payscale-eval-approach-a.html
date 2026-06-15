@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俸表 × 職務評定 — 方案 A 預覽</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '"Noto Sans TC"', 'PingFang TC', 'Microsoft JhengHei', 'sans-serif'],
+                    },
+                    colors: {
+                        surface: '#FFFFFF',
+                        panel: '#F7F7F5',
+                        ink: { 900: '#111111', 600: '#666666', 400: '#999999', 100: '#EAEAEA' },
+                        accent: '#F05A28',
+                    },
+                    boxShadow: { subtle: '0 2px 8px 0 rgba(0, 0, 0, 0.04)' },
+                },
+            },
+        };
+    </script>
+    <link rel="stylesheet" href="../css/jcms.css">
+    <style>
+        .eval-records-table { --swiss-expand-panel-indent: var(--swiss-expand-indent-bullet); }
+        .eval-records-table col.eval-col-year { width: 4.25rem; }
+        .eval-records-table col.eval-col-result { width: 4rem; }
+        .eval-records-table col.eval-col-grade { width: 6.75rem; }
+        .eval-records-table col.eval-col-eff { width: 6.5rem; }
+        .eval-records-table col.eval-col-attach { width: 2.5rem; }
+        .eval-records-table__year-band td { padding: 0; vertical-align: top; }
+        .eval-records-table__year-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.25rem;
+            border: 0;
+            border-bottom: 1px solid #eaeaea;
+            background: rgba(247, 247, 245, 0.8);
+            text-align: left;
+            cursor: pointer;
+        }
+        .eval-records-table__year-toggle:hover { background: #f7f7f5; }
+        .eval-records-table__row--expanded { background: rgba(234, 234, 234, 0.28); }
+        .eval-records-table__expand-row > td { padding: 0; vertical-align: top; }
+        .eval-records-table__expand-row > td > .attn-inline-panel {
+            margin-left: var(--swiss-expand-panel-indent);
+            width: calc(100% - var(--swiss-expand-panel-indent));
+        }
+        .eval-inline-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            padding: 0.65rem 0.75rem 0.7rem;
+            background: rgba(247, 247, 245, 0.96);
+        }
+        .eval-inline-panel__grid {
+            display: grid;
+            grid-template-columns: 5.5rem minmax(0, 1fr) 5rem minmax(0, 1fr);
+            gap: 0.45rem 0.55rem;
+            align-items: end;
+        }
+        @media (max-width: 720px) {
+            .eval-inline-panel__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        .eval-result-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            padding: 0.1rem 0.35rem;
+            border-radius: 0.125rem;
+        }
+        .eval-result-badge--a { color: #111; background: rgba(17, 17, 17, 0.08); }
+        .eval-result-badge--b { color: #666; background: rgba(102, 102, 102, 0.1); }
+        .eval-result-badge--c { color: #f05a28; background: rgba(240, 90, 40, 0.1); }
+        .eval-promo-arrow { color: #f05a28; font-weight: 700; }
+        .eval-step-chart-host { min-height: 8.5rem; }
+        .payscale-chart-wrap { position: relative; }
+        .payscale-chart-host { min-height: 12.5rem; }
+        .preview-badge {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #f05a28;
+            border: 1px solid rgba(240, 90, 40, 0.35);
+            padding: 0.15rem 0.4rem;
+            border-radius: 0.125rem;
+        }
+    </style>
+</head>
+<body class="bg-panel text-ink-900 font-sans antialiased overflow-hidden h-screen flex flex-col">
+    <!-- 模擬 JCMS 頂欄 -->
+    <header class="h-14 bg-surface border-b border-ink-100 flex items-center px-6 sm:px-8 shrink-0">
+        <div class="font-bold text-xl tracking-tight text-ink-900">JCMS<span class="text-accent font-bold text-xs ml-2">預覽</span></div>
+        <div class="ml-auto flex items-center gap-2">
+            <span class="preview-badge">方案 A · Mock</span>
+            <span class="text-ink-400 text-lg" title="個人行政"><i class="ph ph-identification-card"></i></span>
+        </div>
+    </header>
+
+    <!-- 模擬個人行政 › 俸表 -->
+    <main class="flex-1 overflow-y-auto bg-surface min-w-0">
+        <div class="max-w-[min(100%,92rem)] mx-auto w-full min-w-0 px-4 sm:px-8 lg:px-12 pt-4 sm:pt-5 pb-20 flex flex-col gap-4">
+            <nav class="flex gap-1 sm:gap-4 overflow-x-auto pb-1 shrink-0" aria-label="個人行政分頁">
+                <button type="button" class="shrink-0 px-2 sm:px-1 py-2 text-[13px] sm:text-[14px] font-bold tracking-widest text-ink-400 border-b-2 border-transparent whitespace-nowrap">差勤</button>
+                <button type="button" class="shrink-0 px-2 sm:px-1 py-2 text-[13px] sm:text-[14px] font-bold tracking-widest text-ink-400 border-b-2 border-transparent whitespace-nowrap">薪資</button>
+                <button type="button" class="shrink-0 px-2 sm:px-1 py-2 text-[13px] sm:text-[14px] font-bold tracking-widest text-ink-900 border-b-2 border-ink-900 -mb-px whitespace-nowrap" aria-current="page">俸表</button>
+                <button type="button" class="shrink-0 px-2 sm:px-1 py-2 text-[13px] sm:text-[14px] font-bold tracking-widest text-ink-400 border-b-2 border-transparent whitespace-nowrap">研習</button>
+                <button type="button" class="shrink-0 px-2 sm:px-1 py-2 text-[13px] sm:text-[14px] font-bold tracking-widest text-ink-400 border-b-2 border-transparent whitespace-nowrap">職務年表</button>
+                <button type="button" class="shrink-0 px-2 sm:px-1 py-2 text-[13px] sm:text-[14px] font-bold tracking-widest text-ink-400 border-b-2 border-transparent whitespace-nowrap">行事／待辦</button>
+            </nav>
+
+            <div class="flex flex-col gap-3 animate-fade-in-up w-full min-w-0">
+                <!-- §1 俸級棒棒糖圖（既有） -->
+                <section class="flex flex-col gap-2 min-w-0" aria-label="俸級圖表">
+                    <div class="payscale-chart-wrap rounded-sm px-2 py-3 sm:px-4 sm:py-4 pb-11 sm:pb-12 pr-2 w-full min-w-0 overflow-x-auto relative">
+                        <div class="flex items-start justify-between gap-2 mb-2 pr-1 min-w-0">
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-ink-400 shrink-0">Payscale</p>
+                            <p class="text-[10px] font-mono font-bold tabular-nums text-ink-900 text-right shrink-0 leading-tight" id="payscale-effective-label">114/01/01 起施行</p>
+                        </div>
+                        <div class="payscale-chart-host w-full min-w-[28rem]">
+                            <canvas id="payscaleLollipop" aria-label="俸級棒棒糖圖"></canvas>
+                        </div>
+                        <p class="text-[10px] text-ink-600 mt-1 pr-24" id="my-grade-hint">
+                            點擊圖表標記「我的俸級」
+                        </p>
+                        <div class="absolute bottom-2 right-2 z-10 flex flex-row flex-wrap items-center justify-end gap-2">
+                            <button type="button" class="swiss-btn swiss-btn--secondary shrink-0" id="btn-clear-grade">清除俸級註記</button>
+                            <button type="button" class="swiss-btn swiss-btn--primary shrink-0">
+                                <i class="ph ph-plus" aria-hidden="true"></i>新增俸表
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- §2 晉級歷程階梯圖（新增） -->
+                <section class="flex flex-col gap-2 min-w-0 pt-1 border-t border-ink-100" aria-labelledby="promo-step-heading">
+                    <div class="flex flex-wrap items-baseline justify-between gap-2">
+                        <h2 id="promo-step-heading" class="text-[12px] font-bold text-ink-900 uppercase tracking-widest">晉級歷程</h2>
+                        <span class="text-[10px] font-mono tabular-nums text-ink-600">
+                            現任俸級 <span class="font-bold text-accent" id="current-grade-label">16</span>
+                            <span class="mx-1">·</span>
+                            累計晉級 <span class="font-bold text-ink-900" id="promo-count-label">2</span> 次
+                        </span>
+                    </div>
+                    <div class="eval-step-chart-host w-full min-w-0 px-0.5">
+                        <canvas id="promoStepChart" aria-label="俸級晉級階梯圖"></canvas>
+                    </div>
+                </section>
+
+                <!-- §3 職務評定紀錄（新增） -->
+                <section class="flex flex-col gap-2 min-w-0 pt-1 border-t border-ink-100" aria-labelledby="eval-records-heading">
+                    <header class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 w-full">
+                        <button type="button" class="swiss-btn swiss-btn--ghost inline-flex items-center gap-1.5" id="btn-collapse-prior">
+                            <i class="ph ph-caret-right text-[13px]" aria-hidden="true"></i>收合以前年度
+                        </button>
+                        <button type="button" class="swiss-btn swiss-btn--primary" id="btn-add-eval">
+                            <i class="ph ph-plus" aria-hidden="true"></i><span id="add-eval-label">新增評定</span>
+                        </button>
+                    </header>
+                    <h2 id="eval-records-heading" class="text-[12px] font-bold text-ink-900 uppercase tracking-widest -mt-1">職務評定紀錄</h2>
+                    <div class="w-full min-w-0 overflow-x-auto -mx-1 px-1">
+                        <table class="attn-grid-table eval-records-table attn-table--bullet-rows w-full min-w-0">
+                            <colgroup>
+                                <col class="eval-col-year" />
+                                <col class="eval-col-result" />
+                                <col class="eval-col-grade" />
+                                <col class="eval-col-eff" />
+                                <col class="eval-col-attach" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th scope="col">評定年度</th>
+                                    <th scope="col">結果</th>
+                                    <th scope="col">俸級</th>
+                                    <th scope="col">生效日期</th>
+                                    <th scope="col">附件</th>
+                                </tr>
+                            </thead>
+                            <tbody id="eval-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- §4 俸表明細（既有，收合示意） -->
+                <section class="flex flex-col gap-2 min-w-0 pt-1 border-t border-ink-100 opacity-60" aria-labelledby="payscale-db-heading">
+                    <h2 id="payscale-db-heading" class="text-[12px] font-bold text-ink-900 uppercase tracking-widest">俸表明細</h2>
+                    <p class="text-[10px] text-ink-400 font-mono uppercase tracking-widest">（既有區塊 · 預覽中略）</p>
+                    <div class="flex items-baseline gap-2 text-[12px] py-2">
+                        <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
+                        <span class="font-mono font-bold tabular-nums text-ink-900">114/01/01 起施行</span>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-accent">現行</span>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const PAYSCALE_BUILTIN = [
+            105200, 104136, 103071, 102007, 100943, 99878, 98814, 97750, 96685, 95621,
+            94557, 93492, 92428, 91363, 90299, 89235, 88170, 87106, 86042, 84977,
+            83913, 82849, 81784, 80720,
+        ];
+
+        const SAMPLE_EVALS = [
+            { id: 'e114', yearRoc3: '114', result: '乙', gradeFrom: 16, gradeTo: 16, effective: '1150101', hasAttach: true, fileName: '114職務評定通知書.pdf' },
+            { id: 'e113', yearRoc3: '113', result: '甲', gradeFrom: 17, gradeTo: 16, effective: '1140101', hasAttach: true, fileName: '113職務評定通知書.pdf' },
+            { id: 'e112', yearRoc3: '112', result: '乙', gradeFrom: 17, gradeTo: 17, effective: '1130101', hasAttach: false },
+            { id: 'e111', yearRoc3: '111', result: '甲', gradeFrom: 18, gradeTo: 17, effective: '1120101', hasAttach: true, fileName: '111職務評定通知書.pdf' },
+            { id: 'e110', yearRoc3: '110', result: '乙', gradeFrom: 18, gradeTo: 18, effective: '1110101', hasAttach: false },
+        ];
+
+        const RESULT_LABEL = { 甲: '甲等', 乙: '乙等', 丙: '丙等' };
+        const RESULT_CLASS = { 甲: 'eval-result-badge--a', 乙: 'eval-result-badge--b', 丙: 'eval-result-badge--c' };
+
+        let myGrade = 16;
+        let expandedId = null;
+        let collapsedYears = new Set();
+        let lollipopChart = null;
+        let stepChart = null;
+
+        function formatRoc7(s) {
+            const d = String(s || '').replace(/\D/g, '');
+            if (d.length !== 7) return s;
+            return `${d.slice(0, 3)}/${d.slice(3, 5)}/${d.slice(5, 7)}`;
+        }
+
+        function gradeCell(from, to) {
+            if (from === to) return `<span class="font-mono tabular-nums text-ink-900">${from}</span>`;
+            return `<span class="font-mono tabular-nums text-ink-900">${from}</span><span class="eval-promo-arrow mx-0.5">→</span><span class="font-mono tabular-nums font-bold text-accent">${to}</span>`;
+        }
+
+        function promoCount() {
+            return SAMPLE_EVALS.filter((e) => e.gradeFrom !== e.gradeTo).length;
+        }
+
+        function updateGradeLabels() {
+            document.getElementById('current-grade-label').textContent = myGrade || '—';
+            const hint = document.getElementById('my-grade-hint');
+            if (myGrade > 0) {
+                hint.innerHTML = `<span class="font-bold text-accent font-mono tabular-nums">俸級 ${myGrade}</span><span class="mx-1">·</span>點擊圖表可變更註記`;
+            } else {
+                hint.textContent = '點擊圖表標記「我的俸級」';
+            }
+            if (lollipopChart) lollipopChart.update('none');
+        }
+
+        function renderExpandPanel(row, isNew) {
+            const yr = isNew ? '115' : row.yearRoc3;
+            const result = isNew ? '乙' : row.result;
+            const gradeTo = isNew ? myGrade || 16 : row.gradeTo;
+            const effective = isNew ? '' : row.effective;
+            const hasAttach = !isNew && row.hasAttach;
+            const fileName = !isNew && row.fileName ? row.fileName : '';
+            return `<tr class="eval-records-table__expand-row"><td colspan="5">
+                <div class="attn-inline-panel eval-inline-panel" role="region" aria-label="${isNew ? '新增職務評定' : '編輯職務評定'}" onclick="event.stopPropagation()">
+                    <div class="eval-inline-panel__grid">
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <label class="swiss-field-label" for="eval-yr">評定年度</label>
+                            <input id="eval-yr" type="text" class="swiss-input font-mono tabular-nums text-ink-900" value="${yr}" ${isNew ? '' : 'readonly'} />
+                        </div>
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <label class="swiss-field-label" for="eval-result">評定結果</label>
+                            <select id="eval-result" class="swiss-select">
+                                <option value="甲" ${result === '甲' ? 'selected' : ''}>甲等</option>
+                                <option value="乙" ${result === '乙' ? 'selected' : ''}>乙等</option>
+                                <option value="丙" ${result === '丙' ? 'selected' : ''}>丙等</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <label class="swiss-field-label" for="eval-grade">晉級後俸級</label>
+                            <input id="eval-grade" type="number" min="1" max="24" class="swiss-input font-mono tabular-nums text-ink-900" value="${gradeTo}" />
+                        </div>
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <label class="swiss-field-label" for="eval-eff">生效日期</label>
+                            <input id="eval-eff" type="text" class="swiss-input font-mono tabular-nums text-ink-900" value="${effective}" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-0.5 min-w-0">
+                        <label class="swiss-field-label">職務評定通知書</label>
+                        <div class="training-attach-row min-w-0 flex flex-wrap items-center gap-2">
+                            ${hasAttach ? `<ul class="training-attach-chips m-0 p-0 list-none flex flex-wrap items-center gap-1 min-w-0 flex-1">
+                                <li class="training-attach-chip min-w-0">
+                                    <a href="#" class="training-attach-chip__link" onclick="return false">
+                                        <i class="ph ph-file-pdf text-accent shrink-0" aria-hidden="true"></i>
+                                        <span class="truncate">${fileName}</span>
+                                    </a>
+                                </li>
+                            </ul>` : '<span class="text-[10px] text-ink-600 flex-1">尚未上傳</span>'}
+                            <button type="button" class="swiss-btn swiss-btn--secondary shrink-0">選擇檔案</button>
+                        </div>
+                        <div class="w-full max-w-[42rem] border border-dashed border-ink-100 bg-surface/95 rounded-sm px-4 py-3 text-center">
+                            <p class="text-[10px] text-ink-600">拖曳 PDF／影像至此上傳職務評定通知書</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap justify-end gap-2 pt-1 border-t border-ink-100">
+                        ${isNew ? '' : '<button type="button" class="swiss-btn swiss-btn--danger">刪除</button>'}
+                        <button type="button" class="swiss-btn swiss-btn--ghost" data-close-eval>取消</button>
+                        <button type="button" class="swiss-btn swiss-btn--primary">儲存</button>
+                    </div>
+                </div>
+            </td></tr>`;
+        }
+
+        function renderEvalTable() {
+            const tbody = document.getElementById('eval-table-body');
+            const years = [...new Set(SAMPLE_EVALS.map((e) => e.yearRoc3))].sort((a, b) => Number(b) - Number(a));
+            let html = '';
+
+            if (expandedId === '__new__') {
+                html += renderExpandPanel(null, true);
+            }
+
+            years.forEach((yr) => {
+                const rows = SAMPLE_EVALS.filter((e) => e.yearRoc3 === yr);
+                const promoN = rows.filter((r) => r.gradeFrom !== r.gradeTo).length;
+                const collapsed = collapsedYears.has(yr);
+                html += `<tr class="eval-records-table__year-band">
+                    <td colspan="5">
+                        <button type="button" class="eval-records-table__year-toggle" data-year="${yr}" aria-expanded="${collapsed ? 'false' : 'true'}">
+                            <i class="ph ${collapsed ? 'ph-caret-right' : 'ph-caret-down'} text-[13px] text-ink-600 shrink-0" aria-hidden="true"></i>
+                            <span class="text-[11px] font-bold tracking-[0.12em] text-ink-900">民國 ${yr} 年</span>
+                            <span class="ml-auto text-[10px] font-mono tabular-nums text-ink-600">${promoN ? `晉級 ${promoN} 次` : '未晉級'}</span>
+                        </button>
+                    </td>
+                </tr>`;
+
+                if (!collapsed) {
+                    rows.forEach((row) => {
+                        const isExp = expandedId === row.id;
+                        html += `<tr class="eval-records-table__row cursor-pointer hover:bg-ink-100/15 ${isExp ? 'eval-records-table__row--expanded' : ''}" data-id="${row.id}" role="button" tabindex="0">
+                            <td class="text-[11px] font-mono font-bold tabular-nums text-ink-900">${row.yearRoc3}</td>
+                            <td><span class="eval-result-badge ${RESULT_CLASS[row.result]}">${RESULT_LABEL[row.result]}</span></td>
+                            <td class="text-[11px]">${gradeCell(row.gradeFrom, row.gradeTo)}</td>
+                            <td class="text-[11px] font-mono tabular-nums text-ink-900">${formatRoc7(row.effective)}</td>
+                            <td>${row.hasAttach ? '<span class="career-tree__attach-dot inline-block" title="含通知書" aria-label="含通知書"></span>' : '<span class="text-[11px] font-mono text-ink-400">—</span>'}</td>
+                        </tr>`;
+                        if (isExp) html += renderExpandPanel(row, false);
+                    });
+                }
+            });
+
+            tbody.innerHTML = html;
+
+            tbody.querySelectorAll('.eval-records-table__row').forEach((tr) => {
+                tr.addEventListener('click', () => {
+                    expandedId = expandedId === tr.dataset.id ? null : tr.dataset.id;
+                    document.getElementById('add-eval-label').textContent = expandedId === '__new__' ? '收合新增' : '新增評定';
+                    renderEvalTable();
+                });
+            });
+            tbody.querySelectorAll('[data-close-eval]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    expandedId = null;
+                    document.getElementById('add-eval-label').textContent = '新增評定';
+                    renderEvalTable();
+                });
+            });
+            tbody.querySelectorAll('.eval-records-table__year-toggle').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const yr = btn.dataset.year;
+                    if (collapsedYears.has(yr)) collapsedYears.delete(yr);
+                    else collapsedYears.add(yr);
+                    renderEvalTable();
+                });
+            });
+        }
+
+        function initLollipop() {
+            const ctx = document.getElementById('payscaleLollipop');
+            const grades = Array.from({ length: 24 }, (_, i) => i + 1);
+            lollipopChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: grades.map(String),
+                    datasets: [{ data: PAYSCALE_BUILTIN, backgroundColor: 'transparent', borderWidth: 0, barPercentage: 0.55 }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick(_evt, elements) {
+                        if (!elements.length) return;
+                        const grade = elements[0].index + 1;
+                        myGrade = myGrade === grade ? 0 : grade;
+                        updateGradeLabels();
+                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { family: 'ui-monospace', size: 9 }, color: '#999999' } },
+                        y: { display: false, min: 0 },
+                    },
+                },
+                plugins: [{
+                    id: 'payscaleLollipopPreview',
+                    afterDatasetsDraw(chart) {
+                        const meta = chart.getDatasetMeta(0);
+                        const y0 = chart.scales.y.getPixelForValue(0);
+                        const c = chart.ctx;
+                        c.save();
+                        c.strokeStyle = 'rgba(10, 10, 10, 0.12)';
+                        c.beginPath();
+                        c.moveTo(chart.chartArea.left, y0 + 0.5);
+                        c.lineTo(chart.chartArea.right, y0 + 0.5);
+                        c.stroke();
+                        meta.data.forEach((bar, idx) => {
+                            if (!bar || bar.skip) return;
+                            const grade = idx + 1;
+                            const marked = myGrade > 0 && grade === myGrade;
+                            const color = marked ? '#F05A28' : '#111111';
+                            const x = bar.x;
+                            const topY = bar.y;
+                            const barH = Math.max(0, y0 - topY);
+                            const headR = marked ? 6 : Math.min(3, Math.max(2, barH * 0.08));
+                            const headCy = topY + headR;
+                            const stemTop = headCy + headR;
+                            const stemH = Math.max(0, y0 - stemTop);
+                            if (stemH > 0) { c.fillStyle = color; c.fillRect(x - 1, stemTop, 2, stemH); }
+                            if (headR > 0) {
+                                c.beginPath();
+                                c.arc(x, headCy, headR, 0, Math.PI * 2);
+                                c.fillStyle = color;
+                                c.fill();
+                            }
+                            if (marked && PAYSCALE_BUILTIN[idx] > 0) {
+                                c.font = 'bold 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+                                c.fillStyle = '#F05A28';
+                                c.textAlign = 'center';
+                                c.textBaseline = 'bottom';
+                                c.fillText(PAYSCALE_BUILTIN[idx].toLocaleString('en-US'), x, topY - 4);
+                            }
+                        });
+                        c.restore();
+                    },
+                }],
+            });
+        }
+
+        function initStepChart() {
+            const sorted = [...SAMPLE_EVALS].sort((a, b) => Number(a.yearRoc3) - Number(b.yearRoc3));
+            const grades = sorted.map((e) => e.gradeTo);
+            const minG = Math.min(...grades) - 1;
+            const maxG = Math.max(...grades) + 1;
+            stepChart = new Chart(document.getElementById('promoStepChart'), {
+                type: 'line',
+                data: {
+                    labels: sorted.map((e) => `民國${e.yearRoc3}`),
+                    datasets: [{
+                        data: grades,
+                        stepped: true,
+                        borderColor: '#111111',
+                        borderWidth: 2,
+                        pointBackgroundColor: sorted.map((e) => (e.gradeFrom !== e.gradeTo ? '#F05A28' : '#111111')),
+                        pointBorderColor: sorted.map((e) => (e.gradeFrom !== e.gradeTo ? '#F05A28' : '#111111')),
+                        pointRadius: 5,
+                        pointHoverRadius: 6,
+                        fill: false,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label(ctx) {
+                                    const e = sorted[ctx.dataIndex];
+                                    const promo = e.gradeFrom !== e.gradeTo;
+                                    return promo
+                                        ? `俸級 ${e.gradeFrom} → ${e.gradeTo}（${RESULT_LABEL[e.result]}）`
+                                        : `俸級 ${e.gradeTo}（${RESULT_LABEL[e.result]}）`;
+                                },
+                            },
+                            titleFont: { family: 'ui-monospace' },
+                            bodyFont: { family: 'ui-monospace' },
+                        },
+                    },
+                    scales: {
+                        y: {
+                            reverse: true,
+                            min: minG,
+                            max: maxG,
+                            ticks: { font: { family: 'ui-monospace', size: 10 }, color: '#666666' },
+                            grid: { color: 'rgba(234, 234, 234, 0.95)' },
+                            title: { display: true, text: '俸級', font: { size: 9, weight: '700' }, color: '#999999' },
+                        },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#666666' } },
+                    },
+                },
+            });
+        }
+
+        document.getElementById('btn-clear-grade').addEventListener('click', () => {
+            myGrade = 0;
+            updateGradeLabels();
+        });
+
+        document.getElementById('btn-add-eval').addEventListener('click', () => {
+            expandedId = expandedId === '__new__' ? null : '__new__';
+            document.getElementById('add-eval-label').textContent = expandedId === '__new__' ? '收合新增' : '新增評定';
+            renderEvalTable();
+        });
+
+        document.getElementById('btn-collapse-prior').addEventListener('click', () => {
+            const currentYear = '114';
+            SAMPLE_EVALS.forEach((e) => {
+                if (Number(e.yearRoc3) < Number(currentYear)) collapsedYears.add(e.yearRoc3);
+            });
+            renderEvalTable();
+        });
+
+        document.getElementById('promo-count-label').textContent = String(promoCount());
+
+        renderEvalTable();
+        initLollipop();
+        initStepChart();
+        updateGradeLabels();
+    </script>
+</body>
+</html>

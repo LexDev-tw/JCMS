@@ -1,0 +1,194 @@
+# JCMS — 專案最高準則（`.cursorrules`）
+
+**本檔為本專案設計與程式產出之最高準則。** 每次修改或生成程式碼均須遵循。
+
+## 優先順位（衝突時）
+
+1. **JCMS Neo-Swiss 專屬 UI 規範**（下文「司法核心介面 UI」全節）— 含色票、元件、密度、禁止事項。
+2. **通用工程準則**（資安、SOLID、註解）— 與 UI 無衝突時適用。
+3. **Profile／產出敘事**— 僅定調態度與品質目標；**不得**與第 1 點牴觸（例如不得以「當代語彙」為由在 JCMS 採用 Glassmorphism、高飽和裝飾或非規範色票）。
+
+---
+
+## Profile（產出視角）
+
+- **Experience:** 頂級軟體架構與 UI/UX 視覺設計雙修視角。
+- **Traits:** 程式碼與介面細節一致、可維護；對設計史與多種風格有判斷力，**於本專案僅落實 Neo-Swiss Utility Design + JCMS 色票／元件**。
+- **Philosophy:** 程式碼是骨幹，介面是靈魂；拒絕平庸預設與無理由混搭。
+
+**本專案視覺語彙：** 單一且固定為 **Neo-Swiss Utility Design（新瑞士實用主義）**，由「司法核心介面 UI」一節具體定義。不在此專案為「實驗衝突美學」或混搭其他風格，除非需求方**明示**且範圍限於非司法核心畫面（預設仍不適用）。
+
+---
+
+## 通用工程準則
+
+### 資安與穩健
+
+- 錯誤處理與型別／輸入驗證（依 stack 可行範圍）。
+- OWASP Top 10 意識；敏感資料加密、雜湊或脫敏，不得明文進版本庫或日誌。
+
+### 架構
+
+- 類別與函式遵守 SRP、OCP 等可維護性原則。
+- **業務邏輯與視圖（View / UI）解耦**，版面可調而不破壞底層運算。
+
+### 圖表（Chart.js 強制）
+
+本專案**所有圖表**均須以 **Chart.js**（`JCMS.html` 已載入 CDN `chart.js@4.4.1`）生成，渲染於 `<canvas>`。
+
+- **禁止**以純 HTML／CSS／SVG 手刻長條、折線、圓餅等圖表（含棒棒糖、堆疊柱、組合圖）；**禁止**無明示需求下引入 ECharts、D3、Recharts、ApexCharts 等第二套圖表庫。
+- **內建型別優先**：`bar`、`line` 等能表達者直接用 Chart.js dataset；內建不足時以 **Chart.js plugin**（`beforeDatasetsDraw`／`afterDatasetsDraw`）擴充，**不得**改回 DOM 圖。
+- **Neo-Swiss 色票**：圖表色階僅用 JCMS 規範色（`#111111`、`#666666`、`#F05A28`、`#EAEAEA`、`#F7F7F5` 等）；關閉 Chart.js 預設 legend／grid 或改為極簡樣式，避免套版感。
+- **數字與金額標籤**：軸刻度、柱頂／線上數值、tooltip 內數字須 `font-mono tabular-nums`；金額參考線標籤靠右、置於線上方（不與格線重疊）。
+- **架構慣例**：Vue 頁抽成 composable（例：`use-payscale-chart.js`）；React 小應用抽 `useChart` hook（例：`case-stats-app.jsx`）。`maintainAspectRatio: false` 配合容器高度；`v-show` 隱藏之分頁須在顯示時 `resize`／重建。
+- **既有參考**：案件統計 `public/apps/case-stats-app.jsx`；俸表棒棒糖 `public/js/jcms/composables/use-payscale-chart.js`。
+
+### 註解
+
+- 程式碼即文件；註解僅說明 **Why**（商業邏輯或設計意圖），禁止冗長語法教學式註解。
+
+---
+
+## 產出結構（回覆與交付時優先遵循）
+
+任務極小可縮寫，但保留對應要點：
+
+1. **Aesthetic & Architecture** — 設計語彙須明確寫為 Neo-Swiss + JCMS 色票／元件；簡述演算法或設計模式（必要時 Time / Space）。
+2. **Source Code** — 介面須符合「司法核心介面 UI」約束。
+3. **Environment & Dependencies** — 可重現之設定（如 `package.json`、`requirements.txt`、環境變數範例）。
+
+---
+
+# 司法核心介面 UI — JCMS Neo-Swiss 專屬規範
+
+**範圍：** 撰寫任何本專案前端 UI 時適用。  
+**禁止：** Bootstrap 風格、任意 Tailwind 預設「套版感」（如 `bg-blue-500`、`rounded-lg`、`shadow-md`）；**表格列內**禁止寬鬆 `p-4`、`gap-6`。**頁面級**區塊之間可使用 `gap-4`～`gap-5`。圓角最多 `rounded-sm`，拒絕漸層與多餘陰影（主按鈕依下文使用 `shadow-subtle`）。
+
+**非必要不套框（裝飾邊界）：** 除**既有規格已要求**之邊界外—例如表格格線、表單輸入外框、**檔案拖曳**虛線區、**金額欄**幣別殼＋`border-ink-100` 外殼、**主按鈕**、modal／sheet 之必要區隔—**不**以裝飾性全周 `border`／卡片化外框包區塊。列表、收合、時間軸、儀表區塊等優先**無框**；層次以**間距**（`gap`／`py`）、**字重與色階**（`text-ink-*`）、必要時**單一方向分隔**（如 `border-b border-ink-100` 一條、或 `bg-panel` 面區分）表達。避免「沒事加一圈框」的套版感。
+
+### 1. 核心精神
+
+- **極簡權威：** 司法核心系統；介面冷靜、權威、可掃讀。
+- **高密度：** 表單與表格緊湊，資訊承載量大。
+
+### 2. 色彩（僅用 tailwind.config 客製色）
+
+**禁止**自創色階（如任意 `gray-500`、`blue-600`）。
+
+| 用途 | 類別 |
+|------|------|
+| 主背景 | `bg-surface` (#FFFFFF) |
+| 區塊／hover／斑馬 | `bg-panel` (#F7F7F5) 或 `bg-ink-100/15` |
+| 主文 | `text-ink-900` |
+| 次要內文 | `text-ink-600` |
+| 標籤／提示 | `text-ink-400` |
+| 分隔線 | `border-ink-100`；強調線 `border-ink-900` |
+| 點綴／警示／減項等 | `text-accent` (#F05A28) |
+
+**文字色預設原則：** 介面可讀內容 **預設使用深色**（`text-ink-900`）；**僅** 說明文字、提示、輔助次述、表頭 metadata 等 **非主要可讀內容** 得使用淺色（`text-ink-600` 或 `text-ink-400`，依上表層級）。禁止將淺色當成標題、表單主標籤、列表主內文之預設色。
+
+**標題文字色（全域強制）：** 凡具標題／區塊眉標語意之文字—含 `h1`–`h6`、`.settings-section__title`、頁面標題、面板標題、表單區塊標題、收合區標題、欄位標籤、modal／sheet 標題等使用者必讀標籤—**一律 `text-ink-900`**（CSS 等價 `#111111`）。**禁止**以 `text-ink-400`、`text-ink-600` 或其他淺色作為標題預設色。**例外（不得擴大解釋）：** 僅 (1) 非啟用狀態（如 tab 未選中、已完成刪除線項目）或 (2) 標題本體**以外**之純英文 metadata 副標（如標題後之 `BREAKDOWN` 眉標）得用淺色；**主標題本體仍須深色**。**表格表頭 `th`** 維持 metadata 規格可用 `text-ink-400`（掃讀輔助，非區塊標題）。
+
+**區塊標題標準樣式（定案，全站區塊眉標）：** 凡頁面／分頁／圖表區／面板之**區塊主標題**，預設採**上下兩行**眉標組（中文主標深色在上、英文識別淺色在下）。**CSS 單一來源：** `public/css/jcms.css`（`.swiss-section-heading` 系列、`.settings-section__title`）。**禁止**以 Tailwind 重刻字級／色票；**禁止**擅自調整下列定案字級。
+
+```html
+<div class="swiss-section-heading">
+  <h2 class="swiss-section-heading__title">每月新分案統計</h2>
+  <p class="swiss-section-subtitle">CASE LIST INTAKE DATES</p>
+</div>
+```
+
+| 元素 | 類別 | 定案規格（`jcms.css`） |
+|------|------|------------------------|
+| 外層 | `.swiss-section-heading` | `display: flex; flex-direction: column; gap: 0.125rem` |
+| 主標（中文） | `.swiss-section-heading__title` | `font-size: 0.625rem`（10px）、`font-weight: 700`、`font-family: inherit`（`font-sans`）、`letter-spacing: 0.12em`、`line-height: 1.25`、`color: #111111`（`text-ink-900`）、`text-transform: none`（**不得** `uppercase`） |
+| 英文副標 | `.swiss-section-subtitle` | `font-size: 0.5rem`（8px）、`font-weight: 400`、`font-mono`、`letter-spacing: 0.14em`、`line-height: 1.2`、`text-transform: uppercase`、`color: #999999`（`text-ink-400`） |
+| 單行主標（無英文） | `.settings-section__title` | 與 `.swiss-section-heading__title` **同源**（10px 深色）；設定頁、民事工具等僅一行時使用 |
+
+**使用慣例：** 有英文識別時**必須**採兩行結構；無英文時可省略 `.swiss-section-subtitle`。`h1`–`h4` 若具區塊主標語意，須加 `.swiss-section-heading__title`，**不得**僅寫 `text-[10px] font-bold …`。同一行 inline「中文 ＋ 英文」組合（如儀表板 `加班時數監控` + `OVERTIME TRACKER`）亦同：中文 `#111111`、英文 `#999999`。**禁止**英文副標與主標同色；**禁止** `text-ink-500` 等規範外色階。
+
+### 3. 字體層次
+
+全站中文與說明為無襯線（`font-sans` / Noto Sans TC）。
+
+- **一般 UI／內文：** `font-sans`；常用 `text-[11px]` 或 `text-xs`；**預設主內文** `text-ink-900`；僅次要敘述或補充說明用 `text-ink-600`。
+- **Metadata／標籤：** 僅 **次要 navigation／表格表頭** 等掃讀輔助可用 `text-[9px]` 或 `text-[10px] font-bold uppercase tracking-widest text-ink-400`（英文眉標可加 `font-mono`）。**區塊主標題**見「區塊標題標準樣式」，用 `.swiss-section-heading` 系列，**不得**以 metadata 字級樣式取代。**表單欄位標籤**等小型標題仍 `text-ink-900`、`uppercase` 可保留。
+- **數字、金額、日期、時間、案號：** **強制** `font-mono tabular-nums`；金額 **靠右** `text-right`。
+
+### 4. 元件（禁止用 Tailwind 重刻既有規格）
+
+- **日期／時間：** `<roc-date-input swiss />`、`<roc-month-input swiss />`、`<roc-time-input swiss />`
+- **日期輸入語意（預設與相容）：** 未另行指定格式時，**預設以民國紀元連續數字 7 碼 `YYYMMDD`**（民國年三位＋月二位＋日二位，無分隔）為主要輸入慣例；**同時須支援西元紀元輸入**，由解析層依位數、合理範圍與專案既有日期工具邏輯**自動判斷**民國或西元。若畫面、表單或元件層級**已明示格式**（placeholder、`format`、`mode`、欄位說明等），則**優先依該指定格式**，不得與之衝突。
+- **一般輸入：** `.swiss-input`
+- **表單控制項高度（緊湊、全站統一）：** 調整**垂直高度與 padding**，**不**以縮小字級換取密度。規格定義於 `public/css/jcms.css`，以 CSS 變數 **`--swiss-control-h: 1.5rem`** 為單一來源。
+  - **`.swiss-input`／`.swiss-select`（單行）：** `font-size: 0.625rem`（不變）、`line-height: 1.2`、`padding: 0.1rem 0.38rem`、`min-height`／`height: var(--swiss-control-h)`。`textarea.swiss-input` **除外**（`height: auto`，保留各頁 `min-h-[*]`）。
+  - **複合輸入外殼（日期、月份、金額等）：** 外層加 **`.swiss-control-shell`**（與 `.swiss-input` 同高）；殼內輸入 `!border-0 !rounded-none`，以 `!h-full` 或 `!py-0 !leading-none` 填滿殼高。`UI.Input` 金額殼須含 `swiss-control-shell`。
+  - **Tailwind 對齊：** 既有 **`h-8`／`min-h-8`** 語意保留，但由 `jcms.css` 映射為 `var(--swiss-control-h)`（勿再自訂 `2rem` 高度）；**禁止**同列混用 `h-8` 與其他固定高度。方形圖示按鈕 `h-8 w-8` 寬高皆對齊 `--swiss-control-h`。
+  - **同列表單列按鈕：** 與輸入並列之主／次按鈕加 `h-8`，**勿**再加 `py-2` 等多餘垂直 padding（`jcms.css` 已處理 `button.h-8` 等）。
+  - **表格格內：** `.attn-cell-input`、`.attn-cell-select`、`.case-cell-input` 及差勤工具列／inline panel 之日期框，高度與 padding 須跟隨 `--swiss-control-h`，**不得**另設 `2rem`／`1.875rem` 覆寫。
+  - **禁止：** 以更大 padding（如 `py-2` 疊在單行輸入上）、任意 `min-h-[2rem]`、或未走上述變數的自訂高度，把控制項撐回舊版偏高樣式。
+- **欄位佔位字元（Placeholder）預設：** 表單與篩選欄位**預設不設置 placeholder**（保持空白輸入框）；僅在需求方明示或該欄位若無格式提示將明顯降低可用性時，才可加入最小必要提示。
+- **下拉：** `.swiss-select` 或 `.attn-cell-select`
+- **步進器：** `.swiss-stepper` > `.swiss-stepper__btn` + `.swiss-stepper__core` > `.swiss-stepper__value`
+- **區塊標題（定案）：** `.swiss-section-heading` ＋ `.swiss-section-heading__title`（10px 深色）＋ `.swiss-section-subtitle`（8px 淺色）；單行用 `.settings-section__title`。見「區塊標題標準樣式」與 `.cursor/rules/section-heading.mdc`；**禁止** Tailwind 重刻。
+- **按鈕：** `.swiss-btn` + 變體（`--primary`／`--danger`／`--ghost`／`--secondary`）；詳見 §5
+- **次要操作（非表單列）：** `.swiss-ghost-action`
+- **檔案拖曳區（標準樣式）：** 採 `border border-dashed border-ink-100 bg-surface/95 rounded-sm`，版型以**橫向長方形**為主（例：`w-full max-w-[42rem]`、適中垂直 padding），避免做成近方形或過高區塊。
+- **表格：** 差勤 `.attn-grid-table`；薪資 `.salary-year-table`；表頭 `th` 極緊湊（如 `py-1.5 px-1`）+ Metadata 字級；格內 input 用 `.attn-cell-input` 或透明無框 + `focus:bg-ink-100/50`
+- **司法工具頁／工具型表單—金額欄（與 `civil-tools-sld` 一致）：**
+  - **外殼：** `swiss-control-shell flex items-stretch min-w-0 rounded-sm border border-ink-100 bg-surface overflow-hidden`；**同列須與鄰欄同一高度**（`--swiss-control-h`，見同節「列內對齊」）。
+  - **幣別區：** 左側 `w-8 shrink-0`（或等寬單格），`items-center justify-center self-stretch border-r border-ink-100/80`，文字 `font-mono text-xs text-ink-600 select-none`。
+  - **輸入區：** 底層仍為 `.swiss-input` 系（`font-mono tabular-nums`），置於殼內時 `!border-0 !rounded-none`，金額 **靠右** `!text-right`，垂直緊湊 `!py-0`、`!leading-none`（或 `h-full` 填滿殼高）；強調或標的價額類可用 `font-bold text-accent`，一般請求／本金可用 `font-bold text-ink-900`。
+  - **輸入行為：** 金額欄位輸入時須即時自動套用千分位（如 `1000000` 顯示為 `1,000,000`），運算層再去除分位符後計算。
+  - **空值與佔位：** 金額輸入欄**不**預先填入 `0`、**不**使用數值型 `placeholder`（如 `0`）或其他佔位字元；未輸入時保持空白，顯示層亦不得以 `0` 代替空字串。
+  - **複合列：** 可沿用 `UI.Input` 的 `mono` + `prefix="$"`，並以 `inputClassName` 補上 `!text-right`、`!py-0`、`leading-none`、`text-xs` 等與殼高一致之約束（殼高由 `swiss-control-shell`／`--swiss-control-h` 決定，勿另設高度）。
+- **列內對齊（全站表單／工具列）：** 同一水平列（`flex` / `grid` 單列）內之標籤、文字、按鈕、輸入框、前後綴等，**一律 `items-center`（或等效之垂直置中）**；凡該列含輸入欄，**該列所有輸入控件須相同高度**（統一 `var(--swiss-control-h)`／`h-8`／`swiss-control-shell`），避免同列混用兩種高度，以維持最高秩序感與掃讀一致性。
+- **同項目同列對齊（全站列表/卡列）：** 同一個資料項目在同一水平列中之所有物件（把手、checkbox、文字、圖示按鈕、狀態標記）必須維持同一垂直基準線，預設採 `items-center`；不得以 `mt-*` / `translate-y-*` 造成同列視覺錯位，除非該元件規格明示需偏移。
+- **同區塊功能一致性（強制）：** 同一區塊內功能相同或相近的操作（如「新增」「儲存」「清除」「切換」）必須使用一致樣式語彙（字級、字重、圓角、按鈕高度、前景/背景、陰影層級）；不得同時混用互相衝突的按鈕風格。以維持高度秩序感與掃讀一致性。
+
+### 5. 互動與按鈕
+
+**全站統一按鍵系統（`.swiss-btn`）：** 對齊差勤頁「新增紀錄」之緊湊比例（高度 `var(--swiss-control-h)`／`1.5rem`，**禁止**以 `py-2` 等垂直 padding 撐高）。樣式定義於 `public/css/jcms.css`；**禁止**在頁面內以 Tailwind 重刻主／次／危險／取消按鈕。
+
+| 變體 | 類別 | 用途 |
+|------|------|------|
+| 主操作 | `.swiss-btn.swiss-btn--primary` | 新增、儲存、套用、確認等正向提交 |
+| 危險操作 | `.swiss-btn.swiss-btn--danger` | 刪除、移除（破壞性，需邊框警示） |
+| 幽靈／取消 | `.swiss-btn.swiss-btn--ghost` | 取消、關閉表單（無框文字） |
+| 次要操作 | `.swiss-btn.swiss-btn--secondary` | 有框中性操作（切換、次要提交） |
+| 全寬 | 加 `.swiss-btn--block` | 表單底部單欄提交 |
+
+- **基礎語彙：** `inline-flex items-center gap-1.5`、字級 `0.5625rem`（約 9px，由 CSS 定義）、`font-bold uppercase tracking-widest`、`rounded-sm`。
+- **主按鈕（primary）：** 黑底白字、`shadow-subtle`（由 CSS 定義）、`hover:bg-black`。
+- **新增紀錄類按鍵（強制）：** 凡觸發「新增一筆紀錄／版本／項目」之 primary 按鍵（如「新增紀錄」「新增研習」「新增事件」「新增俸表」「新增工作區」「新增群組」「建立案件」「新增行事」等），**一律**在文字左側加 `<i class="ph ph-plus" aria-hidden="true"></i>`；**不**使用 `ph-plus-circle` 或其他圖示，**不**另設 icon 字級 class（`.swiss-btn` 已處理）。按鍵處於「收合編輯／收合新增」等非新增狀態時**不**顯示 ＋。
+- **同列對齊：** 與輸入並列時直接使用 `.swiss-btn`（已對齊 `--swiss-control-h`），**勿**再加 `h-8`／`py-2`。
+- **表單操作列：** 同一列之「刪除／儲存／取消」**必須**分別使用 `--danger`／`--primary`／`--ghost`，高度與間距一致（`gap-2`）。
+- **`.swiss-ghost-action`：** 僅用於**非表單提交列**之輕量文字操作（展開／收合、切換檢視、列表內連結式操作）；**不得**與 `.swiss-btn--primary` 混用於同一操作列。
+
+- **展開收合縮排（強制）：** 凡列表／表格列點擊展開之編輯區、子面板或 inline form，**展開區塊左緣（含 `bg-panel` 背景）須與同列標題文字起點對齊，不可比標題更外凸**。
+  - **結構慣例：** 展開列 class 以 `__expand-row` 結尾；內層使用 `.attn-inline-panel`（可再加頁面專用 class，如 `training-inline-panel`）。
+  - **CSS 單一來源：** `public/css/jcms.css` 之 `[class$='__expand-row'] > td > .attn-inline-panel` 以 `margin-left` + `width: calc(100% - indent)` 處理縮排；各表格於自身 class 設定 `--swiss-expand-panel-indent`。
+  - **縮排 token（`:root`）：** `--swiss-expand-indent-caret`（年度／caret 後標題）、`--swiss-expand-indent-branch`／`--swiss-expand-indent-branch-child`（職務年表 branch 與子事件）、`--swiss-expand-indent-bullet`（圓點條列列）、`--swiss-expand-indent-btn`／`--swiss-expand-indent-btn-icon`（`.swiss-btn` 觸發）、`--swiss-expand-indent-ghost-px2`（`swiss-ghost-action px-2` 觸發）。標題欄 `padding-left` 與展開面板須共用同一 token，禁止各寫各的 magic number。
+  - **非表格面板：** 加 `.swiss-expand-panel` + 觸發來源修飾（`--from-btn`／`--from-btn-icon`／`--from-ghost-px2`）；按鈕與面板宜包於同一 `inline-flex flex-col items-stretch` 群組，使面板寬度與觸發鈕對齊後再縮排。
+  - **既有對照：** 研習 `training-records-table`、職務 `career-records-table`（子事件展開列加 `__expand-row--child`）、俸表 `payscale-ver-table`、差勤工具列 inline panel、動態人事巢狀收合；預覽 `public/previews/expand-indent-preview.html`。
+  - **React／非表格：** 標題已縮排者（如案件統計年月列），展開或巢狀面板須沿用同一 CSS 變數（例：`pl-[var(--swiss-expand-indent-caret)]`），不得以全寬 `colspan` 面板 bypass 對齊。
+
+- **刪除／關閉圖示按鈕：** `text-ink-400 hover:text-accent transition-colors p-1`（非文字按鈕，modal 右上角 ✕）
+- **Hover 顯示：** `opacity-0 group-hover:opacity-100 transition-opacity`
+- **錯誤與驗證回饋（強制偏好）：** 技術可行時**不以** `window.alert`／`window.prompt` 作為一般錯誤或表單驗證的主要提示；改採頁內訊息（表單區塊上方／欄位旁、既有 notice／inline banner、`aria-live` 區）、或專案內與 Neo-Swiss 一致之非阻斷回饋。`window.confirm` **僅**用於需使用者明確二選一之破壞性或不可逆操作（如刪除確認），且無合適之頁內替代時。
+
+### 6. 交付前檢核（Final Check）
+
+1. 是否誤用 `rounded-md`／`rounded-lg`？→ 改 `rounded-sm` 或無圓角。
+2. 數字欄是否具 `font-mono tabular-nums`？
+3. 表單是否 `.swiss-input` 或專案定義之緊湊無框樣式？
+4. 表單操作列是否使用 `.swiss-btn--primary`／`--danger`／`--ghost` 而非混用 Tailwind 重刻？按鈕高度是否對齊 `--swiss-control-h`（未以 `py-2` 撐高）？**新增紀錄類** primary 是否含 `ph ph-plus` 前綴？
+5. **區塊主標題**是否採 `.swiss-section-heading` 定案結構？主標是否 **10px 深色**、英文副標是否 **8px 淺色**（未以 Tailwind 覆寫）？**表單／modal 欄位標籤**等是否一律 `text-ink-900`？
+6. 修改區塊是否與該區既有 Tailwind 密度與寫法一致？
+7. 日期欄是否支援 **民國 7 碼** 預設慣例與 **西元自動判斷**；有無違反欄位已宣告之格式？
+8. 同一列是否 **垂直置中**，且該列 **輸入高度一致**（`--swiss-control-h`／`swiss-control-shell`／`h-8` 映射）？金額欄是否符合「殼＋幣別格＋右對齊 mono」之司法工具規格？
+9. 單行 `.swiss-input`／`.swiss-select` 是否**緊湊**（`padding: 0.1rem 0.38rem`、`line-height: 1.2`），且**未**以加大 padding 或自訂 `2rem` 高度撐高？`textarea` 是否未誤套固定高度？
+10. 新增之區塊、列表、收合層級是否**避免無理由的裝飾邊框**（符合上文「非必要不套框」）？
+11. 錯誤／驗證提示是否**避免**濫用 `window.alert`（符合上文「錯誤與驗證回饋」）？
+12. 新增或修改之**圖表**是否一律以 **Chart.js** 實作（非 DOM／CSS 手刻、非第二套圖表庫），且色票／mono 數字符合「圖表（Chart.js 強制）」一節？
+13. **展開收合**之 inline 面板左緣（含背景）是否對齊同列標題起點（`__expand-row` + `.attn-inline-panel` + `--swiss-expand-panel-indent`），未外凸於標題？

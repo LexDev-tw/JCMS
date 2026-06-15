@@ -1,0 +1,44 @@
+---
+description: 區塊標題標準樣式（中文主標 10px 深色 + 英文副標 8px 淺色）
+alwaysApply: true
+---
+
+# 區塊標題 — 標準眉標組（定案）
+
+## 原則
+
+- **區塊主標題**一律採上下兩行：中文主標（深色）＋英文副標（淺色）。
+- **CSS 單一來源：** `public/css/jcms.css` — **禁止** Tailwind 重刻字級／色票。
+- **定案字級：** 主標 **10px**、英文副標 **8px** — 不得擅自調整。
+
+## 結構
+
+```html
+<div class="swiss-section-heading">
+  <h2 class="swiss-section-heading__title">每月新分案統計</h2>
+  <p class="swiss-section-subtitle">CASE LIST INTAKE DATES</p>
+</div>
+```
+
+| 元素 | 類別 | 規格 |
+|------|------|------|
+| 外層 | `.swiss-section-heading` | `flex-col`、`gap: 0.125rem` |
+| 主標 | `.swiss-section-heading__title` | 10px、`font-bold`、`#111111`、`letter-spacing: 0.12em`、**不** uppercase |
+| 英文副標 | `.swiss-section-subtitle` | 8px、`font-mono`、`uppercase`、`#999999`、`letter-spacing: 0.14em` |
+| 單行主標 | `.settings-section__title` | 與主標同源（無英文副標時） |
+
+## 實作
+
+| 情境 | 做法 |
+|------|------|
+| Vue 主應用（`JCMS.html`） | 上述 HTML 結構 + `jcms.css` 類別 |
+| React 子應用 | `className="swiss-section-heading"` 等（須載入 `jcms.css`） |
+| 僅中文、無英文 | 省略副標；主標仍用 `__title` 或 `.settings-section__title` |
+| Inline 中英並列 | 中文深色、英文淺色（同色票） |
+
+## 參考
+
+- `public/apps/case-stats-app.jsx` — `ChartBlock` 標題組
+- `public/JCMS.html` — 差勤「加班／休假」、俸表、動態人事等區塊
+
+完整規範見專案根目錄 `.cursorrules`「區塊標題標準樣式」一節。

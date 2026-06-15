@@ -1,0 +1,2522 @@
+        /* Aesthetic Purism: 優化滾動條與動畫效能 */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #EAEAEA; border-radius: 0px; } 
+        ::-webkit-scrollbar-thumb:hover { background: #999999; }
+        
+        [v-cloak] { display: none !important; }
+
+        /* 個人行政等可捲動主區：預留捲軸槽，避免展開列時垂直捲軸出現導致寬度右側跳動 */
+        .jcms-admin-scroll {
+            scrollbar-gutter: stable;
+        }
+
+        /* 全站字級 +20%：rem 底層（Swiss 元件、Tailwind text-*）隨 root 等比放大 */
+        html {
+            font-size: 120%;
+        }
+
+        /* 表單控制項標準高度（輸入、下拉、同列外殼／按鈕對齊） */
+        :root {
+            --swiss-control-h: 1.5rem;
+            /* 展開收合：展開面板左緣對齊同列標題起點（caret／branch／bullet 語彙） */
+            --swiss-expand-indent-caret: calc(0.25rem + 13px + 0.5rem);
+            --swiss-expand-indent-branch: calc(0.25rem + 1rem + 0.125rem);
+            --swiss-expand-indent-branch-child: calc(0.25rem + 1rem + 0.125rem + 0.75rem);
+            --swiss-expand-indent-bullet: calc(0.25rem + 0.375rem + 0.375rem);
+            --swiss-expand-indent-btn: 0.75rem;
+            --swiss-expand-indent-btn-icon: calc(0.75rem + 0.6875rem + 0.375rem);
+            --swiss-expand-indent-ghost-px2: 0.5rem;
+        }
+
+        /* 展開收合：展開區塊（含背景）左緣對齊標題，不可比標題更外凸 */
+        [class$='__expand-row'] > td > .attn-inline-panel,
+        .swiss-expand-panel {
+            box-sizing: border-box;
+            margin-left: var(--swiss-expand-panel-indent, var(--swiss-expand-indent-caret));
+            width: calc(100% - var(--swiss-expand-panel-indent, var(--swiss-expand-indent-caret)));
+        }
+        .swiss-expand-panel--from-btn {
+            --swiss-expand-panel-indent: var(--swiss-expand-indent-btn);
+        }
+        .swiss-expand-panel--from-btn-icon {
+            --swiss-expand-panel-indent: var(--swiss-expand-indent-btn-icon);
+        }
+        .swiss-expand-panel--from-ghost-px2 {
+            --swiss-expand-panel-indent: var(--swiss-expand-indent-ghost-px2);
+        }
+
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1); will-change: opacity; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        
+        .slide-right-enter-active, .slide-right-leave-active { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform; }
+        .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); }
+
+        .animate-fade-in-up { animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: opacity, transform; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        /* 置頂圓點：緩慢閃爍 */
+        .pin-dot {
+            display: inline-block;
+            width: 0.46rem;
+            height: 0.46rem;
+            border-radius: 9999px;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .pin-dot--active {
+            background: #F05A28;
+            animation: pinPulse 2.6s ease-in-out infinite;
+            box-shadow: 0 0 0 1px rgba(240, 90, 40, 0.18);
+        }
+        .pin-dot--idle {
+            background: #EAEAEA;
+        }
+        @keyframes pinPulse {
+            0% { opacity: 0.45; transform: scale(0.92); }
+            50% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.45; transform: scale(0.92); }
+        }
+        
+        /* 提升大型表格的渲染效能 */
+        .table-container { contain: content; }
+
+        /* 民事工具（React）：隱藏 number 微調鈕，與原 Civil_Tools_SLD 一致 */
+        #civil-tools-root input[type="number"]::-webkit-inner-spin-button,
+        #civil-tools-root input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* 民事工具：高密度（對齊 JCMS 表格／差勤密度） */
+        #civil-tools-root.civil-tools-dense {
+            font-size: 120%;
+            line-height: 1.25;
+        }
+        #civil-tools-root.civil-tools-dense .swiss-input,
+        #civil-tools-root.civil-tools-dense .swiss-select {
+            padding: 0.1rem 0.32rem;
+            font-size: 0.625rem;
+        }
+        #civil-tools-root.civil-tools-dense .swiss-field-label {
+            margin-bottom: 0.08rem;
+            color: #333333;
+            font-size: 0.625rem;
+        }
+        /* 薪資：各年度獨立表格（橫式 · 欄位置中 · 無內捲軸） */
+        .salary-years-stack {
+            width: 100%;
+            gap: 0;
+        }
+        .salary-years-stack .salary-year-block + .salary-year-block {
+            margin-top: 0;
+        }
+        .salary-year-block {
+            width: 100%;
+            min-width: 0;
+        }
+        .salary-year-block__toggle {
+            cursor: pointer;
+            border: none;
+            font: inherit;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .salary-year-block__body {
+            width: 100%;
+            min-width: 0;
+        }
+        .salary-year-table {
+            table-layout: fixed;
+            width: 100%;
+            min-width: 0;
+            border-collapse: collapse;
+        }
+        .salary-year-table col.salary-col-label {
+            width: 2.75rem;
+        }
+        .salary-year-table col.salary-col-data {
+            width: auto;
+        }
+        .salary-year-table col.salary-col-sum {
+            width: 3rem;
+        }
+        .salary-year-table col.salary-col-net {
+            width: 3.25rem;
+        }
+        .salary-year-table th,
+        .salary-year-table td {
+            overflow: hidden;
+            vertical-align: middle;
+            padding: 0.2rem 0.12rem;
+        }
+        .salary-year-table > thead > tr > th {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #111111;
+            text-align: center;
+            background: #ffffff;
+            border-bottom: 1px solid #eaeaea;
+            white-space: normal;
+            line-height: 1.2;
+        }
+        .salary-year-table > thead > tr > th.text-accent {
+            color: #f05a28;
+        }
+        .salary-year-table th.salary-th-group {
+            letter-spacing: 0.1em;
+            padding: 0.28rem 0.12rem;
+        }
+        .salary-year-table th.salary-th-sub {
+            font-size: 8px;
+            line-height: 1.15;
+        }
+        .salary-year-table td.salary-year-table__period {
+            text-align: center;
+        }
+        .salary-year-table td.salary-td-num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .salary-year-table input.salary-input {
+            display: block;
+            min-width: 0;
+            width: 100%;
+            box-sizing: border-box;
+            background: transparent;
+            border: 0;
+            outline: none;
+            padding: 0.12rem 0.1rem;
+        }
+        .salary-year-table input.salary-input:focus {
+            background: rgba(234, 234, 234, 0.5);
+        }
+        .salary-inline-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.5rem 0.25rem 0.625rem;
+        }
+        .salary-inline-panel--add-col {
+            margin-left: auto;
+        }
+        .salary-inline-panel--manage {
+            gap: 0.25rem;
+            padding: 0.25rem 0 0.375rem;
+        }
+        .salary-col-manage-table tbody td,
+        .salary-col-manage-table tbody th {
+            padding: 0.12rem 0.1rem;
+            vertical-align: middle;
+            border-bottom: none;
+        }
+        .salary-col-manage-axis {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #111111;
+            text-align: center;
+            vertical-align: middle;
+            background: #ffffff;
+            line-height: 1.2;
+        }
+        .salary-col-manage-section-row + .salary-col-manage-section-row td,
+        .salary-col-manage-section-row + .salary-col-manage-section-row th {
+            border-top: 1px solid rgba(234, 234, 234, 0.8);
+        }
+        .salary-col-manage-add-col-cell {
+            vertical-align: top;
+        }
+        .salary-col-manage-kind.swiss-select {
+            font-size: 8px;
+            line-height: 1.15;
+            text-align: center;
+            padding: 0.05rem 0.1rem;
+            min-width: 0;
+            width: 100%;
+        }
+        .salary-col-manage-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.0625rem;
+            min-width: 0;
+        }
+        .salary-col-manage-input.swiss-input {
+            font-size: 8px;
+            line-height: 1.15;
+            text-align: center;
+            padding: 0.05rem 0.15rem;
+            min-width: 0;
+            width: 100%;
+        }
+        .salary-col-manage-del {
+            align-self: center;
+            padding: 0;
+            line-height: 1;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+        }
+        .salary-col-manage-rows-cell {
+            vertical-align: top;
+        }
+        .salary-col-manage-row-input.swiss-input {
+            width: 2.75rem;
+            min-width: 0;
+            font-size: 8px;
+            line-height: 1.15;
+            text-align: center;
+            padding: 0.05rem 0.1rem;
+        }
+        .salary-year-block__note textarea.swiss-input {
+            height: auto;
+        }
+
+        /* 俸表：棒棒糖圖（Chart.js · lollipop） */
+        .payscale-chart-wrap {
+            border: 1px solid #E8E8E4;
+            background: #FFFFFF;
+        }
+        .payscale-chart-host {
+            position: relative;
+            height: 12.5rem;
+        }
+        .payscale-chart-host canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        /* 俸表：編輯表（對齊薪資年度表 · 各版本獨立區塊） */
+        .payscale-edit-table {
+            table-layout: fixed;
+            width: 100%;
+            min-width: 0;
+            border-collapse: collapse;
+        }
+        .payscale-edit-table col.payscale-edit-col-grade { width: 2.5rem; }
+        .payscale-edit-table col.payscale-edit-col-points { width: 2.75rem; }
+        .payscale-edit-table col.payscale-edit-col-money { width: auto; }
+        .payscale-edit-table col.payscale-edit-col-total { width: 3.25rem; }
+        .payscale-edit-table.salary-year-table > thead > tr > th,
+        .payscale-edit-table thead th {
+            padding: 0.3rem 0.12rem;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #111111;
+            text-align: center;
+            vertical-align: middle;
+            border-bottom: 1px solid #eaeaea;
+            background: #ffffff;
+            line-height: 1.2;
+        }
+        .payscale-edit-table tbody td {
+            padding: 0.2rem 0.12rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(234, 234, 234, 0.55);
+            overflow: hidden;
+        }
+        .payscale-edit-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .payscale-edit-table td.payscale-edit-td-grade {
+            text-align: center;
+            font-size: 0.625rem;
+            font-weight: 700;
+            color: #111111;
+        }
+        .payscale-edit-table td.payscale-edit-td-total {
+            text-align: right;
+            font-size: 0.625rem;
+            font-weight: 700;
+            color: #111111;
+        }
+        .payscale-edit-table .attn-cell-input {
+            font-weight: 600;
+        }
+        .payscale-edit-table .attn-cell-input--points {
+            text-align: center;
+            font-weight: 700;
+        }
+        .payscale-edit-toolbar {
+            padding-bottom: 0.1rem;
+        }
+        .payscale-inline-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+        .payscale-versions-stack {
+            width: 100%;
+            gap: 0;
+        }
+        .payscale-versions-stack .payscale-version-block + .payscale-version-block {
+            margin-top: 0;
+        }
+        /* 俸表版本展開區：左緣對齊標題文字起點（caret + 圓點 + gap） */
+        .payscale-version-block {
+            --swiss-expand-panel-indent: calc(var(--swiss-expand-indent-caret) + 0.375rem + 0.5rem);
+        }
+        .payscale-version-block--new {
+            --swiss-expand-panel-indent: 0.25rem;
+        }
+        .payscale-version-block__body > .swiss-expand-panel {
+            box-sizing: border-box;
+        }
+        .payscale-current-badge {
+            display: inline-flex;
+            align-items: center;
+            line-height: 1;
+            padding: 0.12rem 0.28rem;
+            border: 1px solid #f05a28;
+            border-radius: 1px;
+        }
+
+        /* Swiss 極簡步進器（薪資年度／差勤年月／差勤年度共用） */
+        .swiss-stepper {
+            display: inline-flex;
+            align-items: stretch;
+            background: #FFFFFF;
+            border: 1px solid #EAEAEA;
+        }
+        .swiss-stepper__btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem;
+            margin: 0;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: #999999;
+            cursor: pointer;
+            transition: color 0.12s ease, background 0.12s ease;
+        }
+        .swiss-stepper__btn:hover {
+            color: #111111;
+            background: rgba(17, 17, 17, 0.04);
+        }
+        .swiss-stepper__btn:focus-visible {
+            outline: 2px solid #111111;
+            outline-offset: -2px;
+        }
+        .swiss-stepper__btn:active {
+            background: rgba(17, 17, 17, 0.07);
+        }
+        .swiss-stepper__core {
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0.4rem;
+            min-width: 6.75rem;
+            padding: 0.35rem 0.85rem;
+            border-left: 1px solid #EAEAEA;
+            border-right: 1px solid #EAEAEA;
+        }
+        /* 差勤「月份」步進：無框線、箭頭預設為黑（僅 .swiss-stepper--month） */
+        .swiss-stepper--month {
+            border: none;
+            background: transparent;
+        }
+        .swiss-stepper--month .swiss-stepper__core {
+            min-width: 7.5rem;
+            border-left: none;
+            border-right: none;
+        }
+        .swiss-stepper--month .swiss-stepper__btn {
+            color: #111111;
+        }
+        .swiss-stepper--month .swiss-stepper__btn:hover {
+            color: #111111;
+            background: transparent;
+        }
+        .swiss-stepper--month .swiss-stepper__btn:active {
+            background: transparent;
+        }
+        /* 差勤月份：窄欄（< 11504 > 本月・選擇月份 列） */
+        .swiss-stepper--month.swiss-stepper--month--dense .swiss-stepper__btn {
+            width: 1.5rem;
+        }
+        .swiss-stepper--month.swiss-stepper--month--dense .swiss-stepper__core {
+            min-width: 0;
+            width: max-content;
+            max-width: 5.5rem;
+            padding: 0.2rem 0.25rem;
+        }
+        .swiss-stepper--month.swiss-stepper--month--dense .swiss-stepper__value {
+            font-size: 0.75rem;
+        }
+        /* 差勤：本月／選擇月份、本年／選擇年度（黑字、同字級） */
+        .attn-ot-month-nav-btn,
+        .attn-lv-year-nav-btn {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #111111;
+            background: transparent;
+            border: none;
+            padding: 0.2rem 0.15rem;
+            cursor: pointer;
+            transition: color 0.12s ease;
+        }
+        .attn-ot-month-nav-btn:hover,
+        .attn-lv-year-nav-btn:hover {
+            color: #111111;
+        }
+        .attn-ot-month-nav-btn:focus-visible,
+        .attn-lv-year-nav-btn:focus-visible {
+            outline: 1px solid #111111;
+            outline-offset: 2px;
+        }
+        /* 差勤「休假年度」步進：與月份列同語彙（無框、箭頭黑、dense） */
+        .swiss-stepper--year {
+            border: none;
+            background: transparent;
+        }
+        .swiss-stepper--year .swiss-stepper__core {
+            min-width: 0;
+            border-left: none;
+            border-right: none;
+        }
+        .swiss-stepper--year .swiss-stepper__btn {
+            color: #111111;
+        }
+        .swiss-stepper--year .swiss-stepper__btn:hover {
+            color: #111111;
+            background: transparent;
+        }
+        .swiss-stepper--year .swiss-stepper__btn:active {
+            background: transparent;
+        }
+        .swiss-stepper--year.swiss-stepper--year--dense .swiss-stepper__btn {
+            width: 1.5rem;
+        }
+        .swiss-stepper--year.swiss-stepper--year--dense .swiss-stepper__core {
+            min-width: 0;
+            width: max-content;
+            max-width: 3.25rem;
+            padding: 0.2rem 0.25rem;
+        }
+        .swiss-stepper--year.swiss-stepper--year--dense .swiss-stepper__value {
+            font-size: 0.75rem;
+        }
+        .swiss-stepper__label {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: #999999;
+        }
+        .swiss-stepper__value {
+            font-family: ui-monospace, monospace;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #111111;
+            line-height: 1;
+        }
+        .swiss-stepper__suffix {
+            font-size: 0.625rem;
+            font-weight: 600;
+            color: #666666;
+            letter-spacing: 0.08em;
+        }
+        .swiss-ghost-action {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #999999;
+            background: transparent;
+            border: none;
+            padding: 0.2rem 0.15rem;
+            cursor: pointer;
+            transition: color 0.12s ease;
+        }
+        .swiss-ghost-action:hover {
+            color: #111111;
+        }
+        .swiss-ghost-action:focus-visible {
+            outline: 1px solid #111111;
+            outline-offset: 2px;
+        }
+
+        /* === Swiss Button System（全站統一按鍵 · 對齊差勤「新增紀錄」） === */
+        .swiss-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            height: var(--swiss-control-h);
+            min-height: var(--swiss-control-h);
+            padding: 0 0.75rem;
+            border: 1px solid transparent;
+            border-radius: 0.125rem;
+            font-family: inherit;
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            line-height: 1.2;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.12s ease, background-color 0.12s ease, border-color 0.12s ease;
+        }
+        .swiss-btn:focus-visible {
+            outline: 2px solid #111111;
+            outline-offset: 2px;
+        }
+        .swiss-btn:disabled,
+        .swiss-btn[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .swiss-btn--primary {
+            color: #ffffff;
+            background-color: #111111;
+            border-color: #111111;
+            box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+        }
+        .swiss-btn--primary:hover:not(:disabled):not([disabled]) {
+            background-color: #000000;
+            border-color: #000000;
+        }
+        .swiss-btn--danger {
+            color: #f05a28;
+            background-color: #ffffff;
+            border-color: #f05a28;
+            box-shadow: none;
+        }
+        .swiss-btn--danger:hover:not(:disabled):not([disabled]) {
+            color: #ffffff;
+            background-color: #f05a28;
+        }
+        .swiss-btn--ghost {
+            color: #666666;
+            background-color: transparent;
+            border-color: transparent;
+            box-shadow: none;
+            padding: 0 0.5rem;
+        }
+        .swiss-btn--ghost:hover:not(:disabled):not([disabled]) {
+            color: #111111;
+        }
+        .swiss-btn--secondary {
+            color: #666666;
+            background-color: #ffffff;
+            border-color: #eaeaea;
+            box-shadow: none;
+        }
+        .swiss-btn--secondary:hover:not(:disabled):not([disabled]) {
+            background-color: #f7f7f5;
+            color: #111111;
+        }
+        .swiss-btn--block {
+            width: 100%;
+        }
+        .swiss-btn > .ph,
+        .swiss-btn > [class*="ph-"] {
+            font-size: 0.6875rem;
+            line-height: 1;
+        }
+
+        /* Swiss 開關：橫線＋圓鈕（未領＝圓在左、灰線；已領＝圓在右、橘線＋橘圓勾選） */
+        .swiss-switch-label {
+            position: relative;
+        }
+        .swiss-switch-label input {
+            outline: none;
+        }
+        /* 滑鼠點 label 會讓 checkbox 取得 focus，:focus-within 會一直畫外框；改為僅鍵盤 focus-visible 時顯示 */
+        .swiss-switch-label input:focus-visible ~ .swiss-switch-rail {
+            outline: 2px solid #111111;
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
+        .swiss-switch-rail {
+            position: relative;
+            flex-shrink: 0;
+            width: 46px;
+            height: 20px;
+        }
+        .swiss-switch-line-bg {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            height: 2px;
+            margin-top: -1px;
+            background: #eaeaea;
+            border-radius: 1px;
+            transition: background-color 0.15s ease, height 0.15s ease, margin-top 0.15s ease;
+        }
+        .swiss-switch-rail--on .swiss-switch-line-bg {
+            background: #f05a28;
+            height: 3px;
+            margin-top: -1.5px;
+        }
+        .swiss-switch-knob {
+            position: absolute;
+            top: 50%;
+            width: 18px;
+            height: 18px;
+            margin-top: -9px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: left 0.15s ease, background-color 0.15s ease;
+            box-sizing: border-box;
+        }
+        .swiss-switch-rail--off .swiss-switch-knob {
+            left: 0;
+            background: #999999;
+        }
+        .swiss-switch-rail--on .swiss-switch-knob {
+            left: calc(100% - 18px);
+            background: #f05a28;
+        }
+        /* Swiss 分段切換（pill）：灰底外軌道＋內層小橢圓滑塊平移 */
+        .swiss-segment {
+            display: inline-flex;
+            align-items: stretch;
+            flex-shrink: 0;
+            padding: 0;
+            background: #eaeaea;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .swiss-segment__btn {
+            border: none;
+            margin: 0;
+            padding: 0.35rem 0.75rem;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            color: #666666;
+            background: transparent;
+            border-radius: 0;
+            cursor: pointer;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .swiss-segment__btn--active {
+            background: #f05a28;
+            color: #ffffff;
+        }
+        .swiss-segment__btn:focus-visible {
+            outline: 2px solid #111111;
+            outline-offset: 2px;
+        }
+        .swiss-segment--sliding {
+            position: relative;
+            padding: 2px;
+            overflow: hidden;
+        }
+        .swiss-segment--sliding .swiss-segment__thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: calc((100% - 4px) / 2);
+            height: calc(100% - 4px);
+            border-radius: 9999px;
+            background: #f05a28;
+            transform: translateX(0);
+            transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .swiss-segment--sliding .swiss-segment__thumb--end {
+            transform: translateX(100%);
+        }
+        .swiss-segment--sliding .swiss-segment__btn {
+            position: relative;
+            z-index: 1;
+            flex: 1 1 0;
+            min-width: 0;
+            background: transparent;
+            border-radius: 0;
+            transition: color 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .swiss-segment--sliding .swiss-segment__btn--active {
+            background: transparent;
+            color: #ffffff;
+        }
+        .swiss-segment--sliding .swiss-segment__btn:not(.swiss-segment__btn--active) {
+            color: #666666;
+        }
+        .swiss-form-panel {
+            border: 1px solid #EAEAEA;
+            background: #FFFFFF;
+            padding: 0.75rem;
+        }
+        /* 差勤頁：加班／休假雙欄版面 */
+        .attn-page-grid {
+            align-items: stretch;
+        }
+        .attn-page-col {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-width: 0;
+        }
+        .attn-page-toolbar {
+            row-gap: 0.5rem;
+        }
+        .attn-page-col .attn-inline-panel--full {
+            margin-left: 0;
+            width: 100%;
+        }
+        .attn-page-ot-split {
+            min-width: 0;
+        }
+        /* 差勤儀表板：無框線區塊 */
+        .attn-dash-metric {
+            border: none;
+            background: transparent;
+            padding: 0.5rem 0;
+            display: grid;
+            grid-template-rows: auto minmax(calc(1.35em * 2), auto) auto;
+            gap: 0.5rem;
+            align-content: start;
+        }
+        .attn-dash-metric__summary {
+            align-self: start;
+            width: 100%;
+            line-height: 1.35;
+            min-height: calc(1.35em * 2);
+        }
+        .attn-dash-metric__dots {
+            align-self: start;
+            min-width: 0;
+        }
+        /* 差勤儀表板：圓點矩陣（固定欄數、等寬格線，圓點同尺寸） */
+        .attn-dash-dotgrid {
+            display: grid;
+            width: 100%;
+            max-width: 7.25rem;
+        }
+        .swiss-field-label {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #999999;
+        }
+        /* 區塊標題標準樣式（定案：主標 10px 深色 + 英文副標 8px 淺色）— 單一來源，見 .cursorrules「區塊標題標準樣式」 */
+        .swiss-section-heading {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+            min-width: 0;
+        }
+        .swiss-section-heading__title,
+        h1.swiss-section-heading__title,
+        h2.swiss-section-heading__title,
+        h3.swiss-section-heading__title,
+        h4.swiss-section-heading__title {
+            font-family: inherit;
+            font-size: 0.625rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: #111111;
+            line-height: 1.25;
+            margin: 0;
+            text-transform: none;
+        }
+        .swiss-section-subtitle {
+            font-size: 0.5rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+            font-weight: 400;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: #999999;
+            line-height: 1.2;
+            margin: 0;
+        }
+        .swiss-input,
+        .swiss-select {
+            width: 100%;
+            box-sizing: border-box;
+            font-size: 0.625rem;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+            padding: 0.1rem 0.38rem;
+            min-height: var(--swiss-control-h);
+            background: #FFFFFF;
+            border: 1px solid #EAEAEA;
+            outline: none;
+            transition: border-color 0.12s ease, background 0.12s ease;
+        }
+        input.swiss-input:not([type='checkbox']):not([type='radio']),
+        select.swiss-select {
+            height: var(--swiss-control-h);
+        }
+        textarea.swiss-input {
+            height: auto;
+        }
+        /* 日期／金額等複合輸入外殼：與 .swiss-input 同高 */
+        .swiss-control-shell {
+            height: var(--swiss-control-h);
+            min-height: var(--swiss-control-h);
+        }
+        .swiss-input:focus,
+        .swiss-select:focus {
+            border-color: #111111;
+            background: rgba(234, 234, 234, 0.4);
+        }
+        .swiss-select {
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .swiss-input--readonly {
+            background: rgba(234, 234, 234, 0.25);
+            color: #666666;
+        }
+        .swiss-list {
+            border: 1px solid #EAEAEA;
+            background: #FFFFFF;
+        }
+
+        /* 設定區塊標題（單行、無英文副標）；繼承區塊標題主標規格 */
+        .settings-section__title {
+            font-family: inherit;
+            font-size: 0.625rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: none;
+            color: #111111;
+            line-height: 1.25;
+            margin: 0;
+        }
+        .settings-workspace-card {
+            border: 1px solid #eaeaea;
+            background: #ffffff;
+            padding: 0.85rem 1rem;
+            border-left: 3px solid transparent;
+            transition: border-left-color 0.15s ease, background 0.15s ease;
+        }
+        .settings-workspace-card--active {
+            border-left-color: #f05a28;
+            background: rgba(247, 247, 245, 0.65);
+        }
+
+        /* 差勤：薪資式緊湊表格（單列盡量容納多欄） */
+        .attn-grid-table {
+            table-layout: fixed;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        /* 寬度由 min-w-* 或 .attn-table--ot 控制；勿在 table 設 min-width:0 以免壓扁欄位 */
+        .attn-grid-table.attn-table--ot {
+            width: 100%;
+            min-width: 0;
+            table-layout: fixed;
+        }
+        .attn-grid-table.attn-table--ot td:nth-child(1) {
+            text-align: center;
+        }
+        .attn-grid-table.attn-table--ot td:nth-child(2) {
+            text-align: left;
+        }
+        .attn-grid-table.attn-table--ot th:nth-child(3),
+        .attn-grid-table.attn-table--ot td:nth-child(3),
+        .attn-grid-table.attn-table--ot th:nth-child(4),
+        .attn-grid-table.attn-table--ot td:nth-child(4) {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .attn-grid-table.attn-table--ot td:nth-child(6) {
+            text-align: left;
+        }
+        .attn-grid-table.attn-table--ot td:nth-child(7) {
+            text-align: center;
+        }
+        .attn-grid-table.attn-table--ot td:nth-child(8),
+        .attn-grid-table.attn-table--ot td:nth-child(9) {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-type {
+            width: 8%;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-date {
+            width: 12%;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-time {
+            width: 10%;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-hours {
+            width: 10%;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-note {
+            width: 28%;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-declared {
+            width: 10%;
+        }
+        .attn-grid-table.attn-table--ot col.attn-col-ot-tool {
+            width: 6%;
+        }
+        .attn-grid-table.attn-table--ot > thead > tr > th {
+            text-align: center;
+        }
+        .attn-grid-table.attn-table--lv {
+            width: 100%;
+            min-width: 0;
+        }
+        .attn-grid-table.attn-table--lv col.attn-col-lv-start {
+            width: 14%;
+        }
+        .attn-grid-table.attn-table--lv col.attn-col-lv-end {
+            width: 14%;
+        }
+        .attn-grid-table.attn-table--lv col.attn-col-lv-dh {
+            width: 18%;
+        }
+        .attn-grid-table.attn-table--lv col.attn-col-lv-note {
+            width: 42%;
+        }
+        .attn-grid-table.attn-table--lv col.attn-col-lv-tool {
+            width: 6%;
+        }
+        .attn-grid-table.attn-table--lv > thead > tr > th {
+            text-align: center;
+        }
+        .attn-grid-table.attn-table--lv td:nth-child(1),
+        .attn-grid-table.attn-table--lv td:nth-child(2),
+        .attn-grid-table.attn-table--lv td:nth-child(3) {
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .attn-grid-table.attn-table--lv td:nth-child(4) {
+            text-align: left;
+        }
+        .attn-grid-table.attn-table--lv td:nth-child(5),
+        .attn-grid-table.attn-table--lv td:nth-child(6) {
+            text-align: center;
+            vertical-align: middle;
+        }
+        .attn-grid-table th {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #999999;
+            text-align: left;
+            padding: 0.35rem 0.25rem;
+            border-bottom: 1px solid #EAEAEA;
+            vertical-align: bottom;
+            background: #FFFFFF;
+        }
+        .attn-grid-table th.attn-th-num,
+        .attn-grid-table td.attn-td-num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .attn-grid-table td {
+            padding: 0.2rem 0.25rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(234, 234, 234, 0.9);
+            overflow: hidden;
+        }
+        .attn-grid-table .attn-cell-input {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 0.625rem;
+            font-family: ui-monospace, monospace;
+            min-height: var(--swiss-control-h);
+            padding: 0.1rem 0.2rem;
+            line-height: 1.2;
+        }
+        .attn-grid-table .attn-cell-input:focus {
+            background: rgba(234, 234, 234, 0.45);
+        }
+        .attn-grid-table .attn-cell-input--note {
+            font-family: inherit;
+            font-weight: 600;
+        }
+        .case-grid-table {
+            table-layout: fixed;
+        }
+        .case-grid-table col.case-col-pin {
+            width: 2rem;
+        }
+        .case-grid-table col.case-col-status {
+            width: 2.5rem;
+        }
+        .case-grid-table col.case-col-seq {
+            width: 1.75rem;
+        }
+        .case-grid-table thead th:nth-child(3),
+        .case-grid-table tbody td:nth-child(3) {
+            padding-left: 0.25rem;
+            padding-right: 0.125rem;
+        }
+        .case-grid-table col.case-col-case-num {
+            width: 90px;
+        }
+        .case-grid-table col.case-col-reason {
+            width: 100px;
+        }
+        .case-grid-table col.case-col-party {
+            width: 90px;
+        }
+        .case-grid-table col.case-col-date {
+            width: 4.25rem;
+        }
+        .case-grid-table .case-grid-table__date-head,
+        .case-grid-table .case-grid-table__date-cell {
+            padding-left: 0.2rem;
+            padding-right: 0.1rem;
+        }
+        .case-grid-table .case-cell-input--date {
+            width: 100%;
+            min-width: 0;
+            max-width: none;
+            padding-left: 0;
+            padding-right: 0;
+            font-size: 12px;
+            letter-spacing: 0;
+        }
+        .case-grid-table col.case-col-close-reason {
+            width: 5rem;
+        }
+        .case-grid-table col.case-col-money {
+            width: 5.5rem;
+        }
+        .case-grid-table col.case-col-note {
+            width: auto;
+        }
+        .case-grid-table td {
+            overflow: visible;
+            vertical-align: middle;
+        }
+        .case-grid-table .case-cell-input {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            border: none;
+            background: transparent;
+            outline: none;
+            min-height: 1.5rem;
+            padding: 0.2rem 0.15rem;
+            line-height: 1.2;
+            position: relative;
+            z-index: 1;
+            pointer-events: auto;
+        }
+        .case-grid-table .case-cell-input:focus {
+            background: rgba(234, 234, 234, 0.45);
+        }
+        .case-grid-table .case-cell-input--money {
+            padding-left: 0.2rem;
+            padding-right: 0.45rem;
+            text-align: right;
+        }
+        .case-grid-table .case-grid-table__note-cell {
+            white-space: normal;
+            vertical-align: top;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .case-grid-table .case-cell-input--note {
+            display: block;
+            height: auto;
+            min-height: 1.5rem;
+            margin: 0;
+            padding: 0.125rem 0.15rem;
+            resize: none;
+            overflow: hidden;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.35;
+            font-family: inherit;
+            field-sizing: content;
+        }
+        .case-table-scroll {
+            contain: none;
+        }
+        .case-list-scroll-nav {
+            position: absolute;
+            z-index: 30;
+            right: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.65rem;
+            border: 1px solid #eaeaea;
+            border-radius: 0.125rem;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(4px);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #111111;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            line-height: 1.2;
+            transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+            pointer-events: auto;
+        }
+        .case-list-scroll-nav i {
+            font-size: 12px;
+            line-height: 1;
+        }
+        .case-list-scroll-nav--top {
+            top: calc(var(--case-list-thead-offset, 1.875rem) + 0.35rem);
+        }
+        .case-list-scroll-nav--bottom {
+            bottom: 0.5rem;
+        }
+        .case-list-scroll-nav:hover {
+            border-color: #111111;
+            background: rgba(247, 247, 245, 0.92);
+        }
+        .case-list-scroll-nav:focus-visible {
+            outline: 2px solid #111111;
+            outline-offset: 1px;
+        }
+        .attn-grid-table select.attn-cell-select {
+            width: 100%;
+            min-width: 0;
+            font-size: 0.625rem;
+            font-weight: 700;
+            min-height: var(--swiss-control-h);
+            padding: 0.1rem 0.2rem;
+            line-height: 1.2;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            outline: none;
+        }
+        /* 表格內 Swiss 日期／月分：與 attn-cell-input 同高 */
+        .attn-grid-table td > .flex.w-full.min-w-0.border.border-ink-100 {
+            min-height: var(--swiss-control-h);
+            align-items: stretch;
+        }
+        .attn-grid-table td > .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'] {
+            min-height: var(--swiss-control-h);
+            box-sizing: border-box;
+            align-self: stretch;
+        }
+        .attn-grid-table td > .flex.w-full.min-w-0.border.border-ink-100 > label {
+            align-self: stretch;
+            display: flex;
+            align-items: center;
+        }
+        /* 差勤工具列：雙欄展開面板並排，避免 flex-wrap 使開關漂入表單列 */
+        .attn-toolbar-fields--split {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 0.5rem 1rem;
+            align-items: start;
+        }
+        @media (max-width: 30rem) {
+            .attn-toolbar-fields--split {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+        .attn-inline-panel .attn-ot-limit-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+            width: 100%;
+            align-items: end;
+        }
+        .attn-inline-panel--ot-form .attn-ot-form-head {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 0.4rem 0.65rem;
+            align-items: center;
+            width: 100%;
+            min-width: 0;
+        }
+        .attn-inline-panel--ot-form .attn-ot-form-head__stats {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.35rem 0.65rem;
+            min-width: 0;
+        }
+        @media (max-width: 22rem) {
+            .attn-inline-panel--ot-form .attn-ot-form-head {
+                grid-template-columns: 1fr auto;
+                grid-template-rows: auto auto;
+            }
+            .attn-inline-panel--ot-form .attn-ot-form-head > .swiss-segment {
+                grid-column: 1;
+                grid-row: 1;
+            }
+            .attn-inline-panel--ot-form .attn-ot-form-head > .swiss-switch-label {
+                grid-column: 2;
+                grid-row: 1;
+            }
+            .attn-inline-panel--ot-form .attn-ot-form-head__stats {
+                grid-column: 1 / -1;
+                grid-row: 2;
+                justify-content: flex-start;
+            }
+        }
+        .attn-inline-panel--lv-year .attn-lv-year-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr) auto;
+            gap: 0.5rem;
+            width: 100%;
+            align-items: end;
+        }
+        @media (max-width: 28rem) {
+            .attn-inline-panel--lv-year .attn-lv-year-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .attn-inline-panel--lv-year .attn-lv-year-row__date {
+                grid-column: 1 / -1;
+            }
+            .attn-inline-panel--lv-year .attn-lv-year-row > .swiss-btn {
+                grid-column: 1 / -1;
+                justify-self: end;
+            }
+        }
+        /* 差勤工具列：輸入與日期框等高（含巢狀 flex-col，與兩側欄一致） */
+        .attn-toolbar-fields .swiss-input,
+        .attn-toolbar-fields .swiss-select,
+        .attn-page-toolbar .swiss-input,
+        .attn-page-toolbar .swiss-select,
+        .attn-page-col .attn-inline-panel .swiss-input,
+        .attn-page-col .attn-inline-panel .swiss-select {
+            min-height: var(--swiss-control-h);
+        }
+        .attn-toolbar-fields .flex.flex-col .flex.w-full.min-w-0.border.border-ink-100,
+        .attn-page-col .attn-inline-panel .flex.w-full.min-w-0.border.border-ink-100 {
+            min-height: var(--swiss-control-h);
+            align-items: stretch;
+        }
+        .attn-toolbar-fields .flex.flex-col .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'],
+        .attn-page-col .attn-inline-panel .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'] {
+            min-height: var(--swiss-control-h);
+            box-sizing: border-box;
+            align-self: stretch;
+        }
+        .attn-toolbar-fields .flex.flex-col .flex.w-full.min-w-0.border.border-ink-100 > label,
+        .attn-page-col .attn-inline-panel .flex.w-full.min-w-0.border.border-ink-100 > label {
+            align-self: stretch;
+            display: flex;
+            align-items: center;
+        }
+        .attn-inline-panel .swiss-input,
+        .attn-inline-panel .swiss-select {
+            min-height: var(--swiss-control-h);
+        }
+        .attn-inline-panel--ot-form .attn-ot-datetime-row {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+            width: 100%;
+            align-items: end;
+        }
+        .attn-inline-panel--ot-form .attn-ot-field {
+            min-width: 0;
+        }
+        .attn-inline-panel--ot-form .attn-ot-form-row {
+            display: grid;
+            gap: 0.5rem;
+            width: 100%;
+            align-items: end;
+        }
+        .attn-inline-panel--ot-form .attn-ot-form-row--actions {
+            grid-template-columns: minmax(0, 1fr) auto;
+        }
+        .attn-inline-panel--ot-form .attn-ot-form-row--actions.attn-ot-form-row--with-delete {
+            grid-template-columns: minmax(0, 1fr) auto auto;
+        }
+        .attn-inline-panel--ot-form .attn-ot-field > .flex.w-full.min-w-0.border.border-ink-100 {
+            flex: 1 1 auto;
+            width: 100%;
+            min-width: 0;
+            min-height: var(--swiss-control-h);
+            align-items: stretch;
+        }
+        .attn-inline-panel--ot-form .attn-ot-field > .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'] {
+            min-height: var(--swiss-control-h);
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+        .attn-inline-panel--ot-form .attn-ot-field > .flex.w-full.min-w-0.border.border-ink-100 > label {
+            flex-shrink: 0;
+        }
+        .attn-inline-panel--lv-year .flex.w-full.min-w-0.border.border-ink-100 {
+            min-height: var(--swiss-control-h);
+            align-items: stretch;
+        }
+        .attn-inline-panel--lv-year .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'] {
+            min-height: var(--swiss-control-h);
+            box-sizing: border-box;
+        }
+        .attn-inline-panel--lv-form {
+            container-type: inline-size;
+        }
+        .attn-inline-panel--lv-form .attn-lv-form-row {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+            width: 100%;
+            align-items: end;
+        }
+        @container (min-width: 22rem) {
+            .attn-inline-panel--lv-form .attn-lv-form-row:not(.attn-lv-form-row--actions) {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+        .attn-inline-panel--lv-form .attn-lv-form-row--actions {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+        }
+        .attn-inline-panel--lv-form .attn-lv-form-row--actions .attn-lv-form-row__note {
+            grid-column: 1 / -2;
+        }
+        .attn-inline-panel--lv-form .attn-lv-form-row--actions.attn-lv-form-row--with-delete {
+            grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+        }
+        .attn-inline-panel--lv-form .attn-lv-form-row--actions.attn-lv-form-row--with-delete .attn-lv-form-row__note {
+            grid-column: 1 / -2;
+        }
+        @container (min-width: 26rem) {
+            .attn-inline-panel--lv-form .attn-lv-form-row--actions {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) auto;
+            }
+            .attn-inline-panel--lv-form .attn-lv-form-row--actions .attn-lv-form-row__note {
+                grid-column: auto;
+            }
+            .attn-inline-panel--lv-form .attn-lv-form-row--actions.attn-lv-form-row--with-delete {
+                grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) auto;
+            }
+            .attn-inline-panel--lv-form .attn-lv-form-row--actions.attn-lv-form-row--with-delete .attn-lv-form-row__note {
+                grid-column: auto;
+            }
+        }
+        .attn-inline-panel--lv-form .attn-lv-field > .flex.w-full.min-w-0.border.border-ink-100 {
+            width: 100%;
+            min-height: var(--swiss-control-h);
+            align-items: stretch;
+        }
+        .attn-inline-panel--lv-form .attn-lv-field > .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'] {
+            min-height: var(--swiss-control-h);
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+        }
+        .attn-grid-table select.attn-cell-select:focus {
+            background: rgba(234, 234, 234, 0.45);
+        }
+        .attn-grid-table tr.attn-edit-row {
+            cursor: default;
+        }
+        .attn-grid-table .attn-draft-row {
+            background: rgba(234, 234, 234, 0.2);
+        }
+        .attn-grid-table .attn-add-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 1.75rem;
+            margin: 0 auto;
+            padding: 0;
+            border: 1px solid #EAEAEA;
+            background: #111111;
+            color: #ffffff;
+            cursor: pointer;
+            transition: background 0.12s ease;
+        }
+        .attn-grid-table .attn-add-btn:hover {
+            background: #000000;
+        }
+        .attn-grid-table .attn-add-btn:focus-visible {
+            outline: 2px solid #111111;
+            outline-offset: 1px;
+        }
+        .attn-grid-table .attn-save-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 1.75rem;
+            margin: 0 auto;
+            padding: 0;
+            border: 1px solid #eaeaea;
+            background: #ffffff;
+            color: #111111;
+            cursor: pointer;
+            transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+        }
+        .attn-grid-table .attn-save-btn:hover {
+            background: rgba(17, 17, 17, 0.06);
+            border-color: #111111;
+        }
+        .attn-grid-table .attn-save-btn:focus-visible {
+            outline: 2px solid #111111;
+            outline-offset: 1px;
+        }
+        .attn-attachment-clip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #111111;
+            line-height: 1;
+            vertical-align: middle;
+        }
+        .attn-attachment-clip:hover {
+            color: #f05a28;
+        }
+        /* 研習紀錄 · 緊湊表格（對齊案件統計原始數據表格） */
+        .training-records-table col.training-col-start {
+            width: 16%;
+        }
+        .training-records-table > thead > tr > th {
+            padding: 0.375rem 0.25rem;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #111111;
+            white-space: nowrap;
+            background: #ffffff;
+            border-bottom: 1px solid #eaeaea;
+        }
+        .training-records-table col.training-col-title {
+            width: 38%;
+        }
+        .training-records-table col.training-col-mode {
+            width: 10%;
+        }
+        .training-records-table col.training-col-hours {
+            width: 10%;
+        }
+        .training-records-table col.training-col-attach {
+            width: 8%;
+        }
+        .training-records-table {
+            --swiss-expand-panel-indent: var(--swiss-expand-indent-caret);
+        }
+        .training-records-table th.training-records-table__name-indent,
+        .training-records-table td.training-records-table__name-indent {
+            /* 對齊年度列「民」字左緣：px-1 + caret 13px + gap-2 */
+            padding-left: var(--swiss-expand-indent-caret);
+        }
+        .training-records-table th:nth-child(1),
+        .training-records-table td:nth-child(1) {
+            text-align: left;
+        }
+        .training-records-table th:nth-child(2),
+        .training-records-table td:nth-child(2),
+        .training-records-table th:nth-child(4),
+        .training-records-table td:nth-child(4) {
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .training-records-table th:nth-child(3),
+        .training-records-table td:nth-child(3),
+        .training-records-table th:nth-child(5),
+        .training-records-table td:nth-child(5) {
+            text-align: center;
+        }
+        .training-records-table .training-records-table__year-band td {
+            padding: 0;
+            border-bottom: none;
+            background: transparent;
+        }
+        .training-records-table__year-toggle {
+            cursor: pointer;
+            border: none;
+            font: inherit;
+        }
+        .training-records-table__row td {
+            min-height: 2rem;
+        }
+        .training-mode-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            line-height: 1;
+            padding: 0.12rem 0.28rem;
+            border-radius: 1px;
+        }
+        .training-mode-badge--online {
+            color: #111111;
+            background: rgba(234, 234, 234, 0.55);
+        }
+        .training-mode-badge--offline {
+            color: #666666;
+            background: rgba(247, 247, 245, 1);
+        }
+        .training-records-table__row--expanded {
+            background: rgba(234, 234, 234, 0.28);
+        }
+        .training-records-table__expand-row td {
+            padding: 0;
+            vertical-align: top;
+            border-bottom: 1px solid #eaeaea;
+        }
+        .training-inline-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.55rem 0.65rem 0.65rem;
+            background: rgba(247, 247, 245, 0.92);
+            border-top: 1px solid rgba(234, 234, 234, 0.9);
+        }
+        .training-inline-panel .training-form-label {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #111111;
+            line-height: 1.2;
+        }
+        .training-inline-panel .training-form-row {
+            display: grid;
+            gap: 0.5rem;
+            width: 100%;
+            min-width: 0;
+            align-items: end;
+        }
+        .training-inline-panel .training-form-row--line1 {
+            grid-template-columns:
+                minmax(0, 1.55fr)
+                minmax(0, 0.82fr)
+                minmax(0, 0.82fr)
+                minmax(4rem, 0.36fr)
+                auto
+                minmax(0, 1fr);
+        }
+        .training-inline-panel .training-form-row--actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding-top: 0.2rem;
+            border-top: 1px solid rgba(234, 234, 234, 0.85);
+        }
+        .training-inline-panel .training-form-field {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.15rem;
+            min-width: 0;
+        }
+        .training-inline-panel .training-form-field--attach {
+            gap: 0.15rem;
+        }
+        .training-inline-panel .training-attach-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem 0.5rem;
+            min-width: 0;
+            width: 100%;
+        }
+        .training-inline-panel .training-form-field > .flex.w-full.min-w-0.border.border-ink-100,
+        .training-inline-panel .training-form-field > .swiss-control-shell {
+            width: 100%;
+            min-height: var(--swiss-control-h);
+        }
+        .training-inline-panel .training-form-field > .flex.w-full.min-w-0.border.border-ink-100 > input[type='text'] {
+            min-height: var(--swiss-control-h);
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            text-align: left;
+        }
+        .training-inline-panel .swiss-input,
+        .training-inline-panel .swiss-select {
+            min-height: var(--swiss-control-h);
+        }
+        .training-attach-chips {
+            align-items: center;
+        }
+        .training-attach-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.1rem;
+            max-width: min(100%, 14rem);
+            padding: 0.08rem 0.2rem 0.08rem 0.28rem;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(234, 234, 234, 0.95);
+        }
+        .training-attach-chip__link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            min-width: 0;
+            font-size: 10px;
+            font-weight: 700;
+            color: #111111;
+            text-decoration: none;
+        }
+        .training-attach-chip__link:hover {
+            color: #f05a28;
+        }
+        @media (max-width: 720px) {
+            .training-inline-panel .training-form-row--line1 {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+            .training-inline-panel .training-form-field--hours,
+            .training-inline-panel .training-form-field--mode,
+            .training-inline-panel .training-form-field--venue {
+                grid-column: 1 / -1;
+            }
+        }
+        /* 職務年表 · 緊湊表格（attn-grid-table 語彙，對齊研習紀錄） */
+        .career-records-table__expand-row > td {
+            --swiss-expand-panel-indent: var(--swiss-expand-indent-branch);
+        }
+        /* tr 上自訂屬性在表格排版可能不向下傳遞，縮排改設於 td */
+        .career-records-table__expand-row--child > td {
+            --swiss-expand-panel-indent: var(--swiss-expand-indent-branch-child);
+        }
+        .career-records-table__expand-row > td > .attn-inline-panel {
+            margin-left: var(--swiss-expand-panel-indent);
+            width: calc(100% - var(--swiss-expand-panel-indent));
+        }
+        .career-records-table col.career-col-title {
+            width: 40%;
+        }
+        .career-records-table > thead > tr > th {
+            color: #111111;
+        }
+        .career-records-table col.career-col-start {
+            width: 18%;
+        }
+        .career-records-table col.career-col-period {
+            width: 16%;
+        }
+        .career-records-table col.career-col-attach {
+            width: 8%;
+        }
+        .career-records-table th:nth-child(1),
+        .career-records-table td:nth-child(1) {
+            text-align: left;
+        }
+        .career-records-table th:nth-child(2),
+        .career-records-table td:nth-child(2),
+        .career-records-table th:nth-child(3),
+        .career-records-table td:nth-child(3) {
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+        .career-records-table th:nth-child(4),
+        .career-records-table td:nth-child(4) {
+            text-align: center;
+        }
+        .career-records-table__branch-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1rem;
+            height: 1rem;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 1px;
+            line-height: 1;
+        }
+        .career-records-table__branch-btn:hover i {
+            color: #111111;
+        }
+        .career-records-table__branch-btn:focus-visible {
+            outline: 1px solid #0a0a0a;
+            outline-offset: 1px;
+        }
+        .career-records-table__branch-spacer {
+            display: inline-block;
+            width: 1rem;
+            flex-shrink: 0;
+        }
+        .career-records-table__child-indent {
+            display: inline-block;
+            width: 0.75rem;
+            flex-shrink: 0;
+        }
+        .career-records-table__row--expanded {
+            background: rgba(234, 234, 234, 0.28);
+        }
+        .career-records-table__row--child td {
+            background: rgba(247, 247, 245, 0.35);
+        }
+        .career-records-table__expand-row td {
+            padding: 0;
+            vertical-align: top;
+            overflow: hidden;
+        }
+        .career-tab__table-scroll {
+            scrollbar-gutter: stable;
+        }
+        .career-inline-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            padding: 0.65rem 0.75rem 0.7rem;
+            background: rgba(247, 247, 245, 0.96);
+            max-width: 100%;
+            min-width: 0;
+            overflow-x: auto;
+            scrollbar-gutter: stable;
+        }
+        .career-inline-panel .career-form-label {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #111111;
+            line-height: 1.2;
+            margin-bottom: 0.12rem;
+        }
+        .career-inline-panel__line1 {
+            display: grid;
+            grid-template-columns:
+                minmax(0, 1.45fr)
+                6.25rem
+                minmax(0, 1fr)
+                minmax(0, 0.78fr)
+                minmax(0, 0.78fr)
+                minmax(0, 0.72fr);
+            gap: 0.45rem 0.6rem;
+            align-items: end;
+            width: 100%;
+            min-width: 0;
+        }
+        .career-inline-panel .career-form-field {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            min-width: 0;
+        }
+        .career-inline-panel__empty {
+            display: flex;
+            align-items: center;
+            min-height: var(--swiss-control-h);
+            font-size: 11px;
+            color: #666666;
+        }
+        .career-inline-panel__period {
+            display: flex;
+            align-items: center;
+            min-height: var(--swiss-control-h);
+            font-size: 11px;
+            font-weight: 700;
+            color: #666666;
+            white-space: nowrap;
+        }
+        .career-inline-panel .swiss-segment--compact.swiss-segment--sliding {
+            width: 100%;
+            min-height: var(--swiss-control-h);
+            align-items: stretch;
+        }
+        .career-inline-panel .swiss-segment--compact.swiss-segment--sliding .swiss-segment__btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(var(--swiss-control-h) - 4px);
+            padding: 0 0.25rem;
+            font-size: 10px;
+            letter-spacing: 0.04em;
+        }
+        .career-inline-panel__attach .career-attach-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.35rem 0.5rem;
+            min-width: 0;
+            width: 100%;
+            min-height: var(--swiss-control-h);
+        }
+        .career-inline-panel .career-form-field > .flex.w-full.min-w-0.border.border-ink-100,
+        .career-inline-panel .career-form-field > .swiss-control-shell {
+            width: 100%;
+            min-height: var(--swiss-control-h);
+        }
+        .career-inline-panel .swiss-input,
+        .career-inline-panel .swiss-select {
+            min-height: var(--swiss-control-h);
+        }
+        .career-inline-panel__body .swiss-input {
+            color: #111111;
+        }
+        .career-inline-panel__actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .career-attach-chips {
+            align-items: center;
+        }
+        .career-attach-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.1rem;
+            max-width: min(100%, 14rem);
+            padding: 0.08rem 0.2rem 0.08rem 0.28rem;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(234, 234, 234, 0.95);
+        }
+        .career-attach-chip__link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            min-width: 0;
+            font-size: 10px;
+            font-weight: 700;
+            color: #111111;
+            text-decoration: none;
+        }
+        .career-attach-chip__link:hover {
+            color: #f05a28;
+        }
+        .career-attach-chip__remove:hover {
+            color: #f05a28;
+        }
+        @media (max-width: 900px) {
+            .career-inline-panel__line1 {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+            .career-inline-panel__line1 .career-form-field--title {
+                grid-column: 1 / -1;
+            }
+        }
+        /* 差勤：加班／休假紀錄 — 條列呈現（格線保留結構、邊框不可見） */
+        .attn-grid-table.attn-table--bullet-rows th,
+        .attn-grid-table.attn-table--bullet-rows td {
+            border-bottom-color: transparent;
+        }
+        .attn-grid-table.attn-table--attn-records-compact > thead > tr > th {
+            padding-top: 0.3rem;
+            padding-bottom: 0.3rem;
+        }
+        .attn-grid-table.attn-table--attn-records-compact td {
+            padding-top: 0.16rem;
+            padding-bottom: 0.16rem;
+            vertical-align: middle;
+        }
+        .attn-grid-table.attn-table--ot.attn-table--ot-bulleted col.attn-col-ot-main {
+            width: 100%;
+        }
+        .attn-grid-table.attn-table--ot.attn-table--ot-bulleted > thead > tr > th:nth-child(1) {
+            text-align: left;
+        }
+        .attn-grid-table.attn-table--ot.attn-table--ot-bulleted td:nth-child(1) {
+            text-align: left;
+        }
+        .attn-grid-table.attn-table--lv.attn-table--lv-bulleted col.attn-col-lv-main {
+            width: 100%;
+        }
+        .attn-grid-table.attn-table--lv.attn-table--lv-bulleted > thead > tr > th:nth-child(1) {
+            text-align: left;
+        }
+        .attn-grid-table.attn-table--lv.attn-table--lv-bulleted td:nth-child(1) {
+            text-align: left;
+        }
+        /* 職務年表：時間軸 + 條列（Neo-Swiss，參考建築性年表線條） */
+        .career-timeline-wrap {
+            border: 1px solid #E8E8E4;
+            background: #FFFFFF;
+            scrollbar-gutter: stable;
+        }
+        .career-timeline-axis {
+            position: relative;
+            height: 1px;
+            background: #0A0A0A;
+            margin-top: 0.25rem;
+        }
+        .career-timeline-lane {
+            position: relative;
+            min-height: 6rem;
+            --career-lane-h: 2.125rem;
+        }
+        .career-timeline-seg {
+            position: absolute;
+            min-width: 2px;
+            z-index: 2;
+        }
+        .career-timeline-seg__lift {
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .career-timeline-seg:hover .career-timeline-seg__lift {
+            transform: translateY(-1px);
+            opacity: 0.92;
+        }
+        .career-timeline-seg__bar {
+            height: 2px;
+            background: #0A0A0A;
+            flex-shrink: 0;
+        }
+        .career-timeline-seg__dot {
+            width: 6px;
+            height: 6px;
+            background: #0A0A0A;
+            border-radius: 1px;
+            flex-shrink: 0;
+        }
+        /* 子事件：較細軸線與較小端點，與主要事件區隔（色階同 ink-600 語意） */
+        .career-timeline-seg--child .career-timeline-seg__bar {
+            height: 1px;
+            background: #6b6b68;
+        }
+        .career-timeline-seg--child .career-timeline-seg__dot {
+            width: 4px;
+            height: 4px;
+            background: #6b6b68;
+        }
+        /* 職務年表 · 事件清單：樹狀目錄（範例圖式雙圓 bullet；主要較大、子較小） */
+        .career-tree {
+            border: none;
+            background: transparent;
+        }
+        .career-tree__branch + .career-tree__branch {
+            margin-top: 0.22rem;
+            padding-top: 0;
+            border: none;
+        }
+        .career-tree__row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.35rem;
+            min-width: 0;
+            min-height: 1.1rem;
+            padding: 0.1rem 0;
+            transition: background-color 0.1s ease;
+        }
+        .career-tree__row:hover {
+            background: rgba(10, 10, 10, 0.03);
+        }
+        .career-tree__rail {
+            flex-shrink: 0;
+            width: 1.28rem;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: 0.22rem;
+        }
+        .career-tree__disc {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid #c5c5c1;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: transparent;
+        }
+        .career-tree__disc::after {
+            content: '';
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #0a0a0a;
+        }
+        .career-tree__disc--child {
+            width: 8px;
+            height: 8px;
+            border-color: #d8d8d4;
+        }
+        .career-tree__disc--child::after {
+            width: 2.5px;
+            height: 2.5px;
+            background: #6b6b68;
+        }
+        .career-tree__icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 1px;
+            line-height: 1;
+        }
+        .career-tree__icon-btn:hover .career-tree__disc {
+            border-color: #9a9a96;
+        }
+        .career-tree__icon-btn:focus-visible {
+            outline: 1px solid #0a0a0a;
+            outline-offset: 1px;
+        }
+        .career-tree__icon-static {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            pointer-events: none;
+        }
+        .career-tree__nested {
+            margin-left: 0.22rem;
+            padding-left: 0.75rem;
+            border-left: 1px solid #e8e8e4;
+        }
+        /* 事件清單：標題欄寬度封頂，起訖緊貼標題後並與他列對齊 */
+        .career-tree__cells {
+            display: grid;
+            grid-template-columns: minmax(0, min(34%, 14rem)) minmax(16ch, max-content) minmax(9ch, max-content);
+            column-gap: 0.28rem;
+            align-items: baseline;
+            flex: 1;
+            min-width: 0;
+        }
+        .career-tree__titlecell {
+            display: flex;
+            align-items: baseline;
+            gap: 0.2rem;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .career-tree__title-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .career-tree__attach-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #f05a28;
+        }
+        .career-tree__dates {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            justify-self: start;
+        }
+        .career-tree__period {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            justify-self: start;
+        }
+        /* 職務年表 · 新增／編輯事件浮層：兩欄眉標與控制項對齊 */
+        .career-event-modal__field-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+        /* 切換層級／時間類型時保留右欄高度，避免浮層整體跳動 */
+        .career-event-modal__cell-fixed {
+            min-height: 2.5rem;
+        }
+        /* 附件條列：符號與「附件」標題左緣對齊或略右，不外凸 */
+        .career-event-modal__attach-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            padding-left: 0.2rem;
+        }
+        .career-event-modal__attach-list > li {
+            display: flex;
+            align-items: baseline;
+            gap: 0.45rem;
+            min-width: 0;
+        }
+        .career-event-modal__attach-list__bullet {
+            flex-shrink: 0;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 0.2rem;
+            align-self: flex-start;
+        }
+
+        /* Tailwind h-8 / min-h-8：對齊緊湊控制項高度（字級不變） */
+        .h-8 {
+            height: var(--swiss-control-h);
+        }
+        .min-h-8 {
+            min-height: var(--swiss-control-h);
+        }
+        .h-8.w-8 {
+            width: var(--swiss-control-h);
+        }
+        /* 同列按鈕：固定高度時移除多餘垂直 padding */
+        button.h-8,
+        a.h-8,
+        label.h-8,
+        .h-8.self-end {
+            padding-top: 0;
+            padding-bottom: 0;
+            line-height: 1.2;
+        }
+
+        /* ── 總覽頁（dashboard） ── */
+        .dash-kpi-row {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 1rem;
+            align-items: start;
+        }
+        .dash-kpi-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-width: 0;
+        }
+        .dash-kpi-card--action {
+            cursor: pointer;
+            border-radius: 0.125rem;
+            margin: -0.25rem;
+            padding: 0.25rem;
+            transition: background 0.15s;
+            text-align: left;
+        }
+        .dash-kpi-card--action:hover {
+            background: rgba(247, 247, 245, 0.9);
+        }
+        .dash-kpi-card--action:hover .dash-kpi-value:not(.dash-kpi-value--accent) {
+            color: #f05a28;
+        }
+        .dash-kpi-value.dash-kpi-value--accent {
+            color: #f05a28;
+        }
+        .dash-kpi-label-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.125rem;
+            min-width: 0;
+        }
+        .dash-kpi-label {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #111;
+            letter-spacing: 0.06em;
+            line-height: 1.2;
+        }
+        .dash-kpi-label-en {
+            font-family: ui-monospace, monospace;
+            font-size: 0.5rem;
+            font-weight: 400;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            line-height: 1.2;
+        }
+        .dash-kpi-value {
+            font-size: 2.75rem;
+            font-weight: 300;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: #111;
+            font-variant-numeric: tabular-nums;
+            transition: color 0.15s;
+        }
+        .dash-kpi-sub {
+            display: flex;
+            flex-direction: column;
+            gap: 0.05rem;
+            margin-top: 0.1rem;
+        }
+        .dash-kpi-sub-label {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            color: #111;
+            letter-spacing: 0.04em;
+            line-height: 1.2;
+        }
+        .dash-kpi-sub-value {
+            font-family: ui-monospace, monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #111;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+        .dash-middle-grid {
+            display: grid;
+            grid-template-columns: repeat(12, minmax(0, 1fr));
+            column-gap: 2.5rem;
+            row-gap: 0;
+        }
+        .dash-section-head {
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.85rem;
+            border-bottom: 2px solid #111;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 0.5rem;
+            align-self: stretch;
+            min-width: 0;
+        }
+        .dash-gcal-settings-popover {
+            border: 1px solid #eaeaea;
+            box-shadow: 0 4px 12px rgba(17, 17, 17, 0.06);
+        }
+        .dash-section-head__extra {
+            font-size: 0.75rem;
+            font-family: ui-monospace, monospace;
+            font-weight: 700;
+            color: #999;
+            white-space: nowrap;
+            flex-shrink: 0;
+            padding-bottom: 0.05rem;
+        }
+        .dash-breakdown-body {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .dash-breakdown-list {
+            display: grid;
+            grid-template-rows: repeat(5, 1.75rem);
+            row-gap: 0.5rem;
+            flex: 0 0 auto;
+            align-content: start;
+        }
+        .dash-breakdown-row {
+            display: grid;
+            grid-template-columns: 5.5rem minmax(0, 1fr) 2rem;
+            align-items: center;
+            column-gap: 0.75rem;
+            min-height: 0;
+        }
+        .dash-breakdown-label {
+            width: 5.5rem;
+            flex-shrink: 0;
+        }
+        .dash-breakdown-label__title {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #111;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dash-breakdown-row--placeholder {
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .dash-breakdown-bar {
+            position: relative;
+            height: 2px;
+            background: #f7f7f5;
+            overflow: hidden;
+            min-width: 0;
+        }
+        .dash-breakdown-bar canvas {
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 2px !important;
+        }
+        .dash-breakdown-empty {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .dash-middle-grid > :not(.dash-section-head) {
+            align-self: start;
+        }
+        .dash-cumulative-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .dash-cumulative-item__head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+            margin-bottom: 0.35rem;
+        }
+        .dash-cumulative-item__value {
+            font-family: ui-monospace, monospace;
+            font-size: 0.875rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.2;
+        }
+        .dash-cumulative-item__value--accent {
+            color: #f05a28;
+        }
+        .dash-cumulative-bar {
+            position: relative;
+            height: 2px;
+            background: #f7f7f5;
+            overflow: hidden;
+            width: 100%;
+        }
+        .dash-cumulative-bar canvas {
+            display: block;
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 2px !important;
+        }
+        .dash-stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .dash-stat-item__label {
+            font-size: 0.6875rem;
+            font-weight: 700;
+            color: #111;
+            letter-spacing: 0.06em;
+        }
+        .dash-stat-item__value {
+            font-family: ui-monospace, monospace;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #111;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+        .dash-toggle {
+            display: inline-flex;
+            gap: 0.25rem;
+        }
+        .dash-toggle__btn {
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding: 0.22rem 0.45rem;
+            border-radius: 0.125rem;
+            border: 1px solid #eaeaea;
+            background: #fff;
+            color: #666;
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s, background 0.15s;
+        }
+        .dash-toggle__btn:hover {
+            color: #111;
+            border-color: #111;
+        }
+        .dash-toggle__btn--active {
+            background: #111;
+            border-color: #111;
+            color: #fff;
+        }
+        .dash-week-calendar {
+            min-width: 0;
+        }
+        .dash-week-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 2fr) 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .dash-week-unified-grid {
+            grid-auto-rows: auto;
+            row-gap: 0.35rem;
+            align-items: start;
+        }
+        @media (max-width: 1023px) {
+            .dash-week-grid {
+                grid-template-columns: repeat(4, 2fr) 1fr;
+            }
+        }
+        @media (max-width: 639px) {
+            .dash-week-grid {
+                grid-template-columns: repeat(2, 2fr) 1fr;
+            }
+        }
+        .dash-week-day-head {
+            border-top: 2px solid #eaeaea;
+            padding-top: 0.75rem;
+            min-width: 0;
+        }
+        .dash-week-day-head--today {
+            border-top-color: #f05a28;
+        }
+        .dash-week-day-head--default:hover {
+            border-top-color: #666666;
+        }
+        .dash-week-day-body {
+            min-height: 16rem;
+            padding-top: 0.15rem;
+        }
+        .dash-week-span-bar {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            justify-content: flex-end;
+            gap: 0.15rem;
+            min-width: 0;
+            min-height: 1.4rem;
+            padding: 0 0.05rem 0.05rem;
+            background: transparent;
+            border: none;
+            cursor: default;
+        }
+        .dash-week-span-bar--linked {
+            cursor: pointer;
+        }
+        .dash-week-span-bar--linked:hover .dash-week-span-bar__label {
+            color: #f05a28;
+        }
+        .dash-week-span-bar__label {
+            flex: 0 1 auto;
+            min-width: 0;
+            font-size: 0.625rem;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #111111;
+            transition: color 0.15s;
+        }
+        .dash-week-span-bar__line {
+            display: block;
+            width: 100%;
+            height: 2px;
+            flex-shrink: 0;
+            background: #111111;
+            border-radius: 0;
+            transition: background 0.15s;
+        }
+        .dash-week-span-bar--case .dash-week-span-bar__line {
+            background: #f05a28;
+        }
+        .dash-week-span-bar--linked:hover .dash-week-span-bar__line {
+            background: #666666;
+        }
+        .dash-week-span-bar--case.dash-week-span-bar--linked:hover .dash-week-span-bar__line {
+            background: #f05a28;
+        }
+        .dash-week-allday-pill {
+            min-width: 0;
+        }
