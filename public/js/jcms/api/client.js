@@ -1,6 +1,9 @@
 /** REST API 抽象層 */
 import { util } from '../utils.js';
 import { buildThisWeekSchedule } from '../composables/personal-admin-shared.js';
+import { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl } from '../lib/api-base.js';
+
+export { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl };
 
 function weekIsoRangeForOffset(weekOffset = 0) {
     const { days } = buildThisWeekSchedule(weekOffset);
@@ -12,49 +15,6 @@ function weekIsoRangeForOffset(weekOffset = 0) {
         timeMin: `${startIso}T00:00:00+08:00`,
         timeMax: `${endIso}T23:59:59+08:00`,
     };
-}
-
-/** 自訂基底若只寫「來源:埠」未含 /api，請求會變成 /dynamics/… 而 404；補上 /api。 */
-export function ensureJcmsApiBaseUrl(raw) {
-    let s = String(raw || '').trim().replace(/\/+$/, '');
-    if (!s) return s;
-    if (/\/api$/i.test(s)) return s;
-    if (/^https?:\/\/[^/]+$/i.test(s)) return `${s}/api`;
-    return s;
-}
-
-export function resolveJcmsApiBaseUrl() {
-    if (typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()) {
-        return ensureJcmsApiBaseUrl(window.JCMS_API_BASE.trim());
-    }
-    try {
-        const stored = localStorage.getItem('jcms_api_base');
-        if (stored && String(stored).trim()) {
-            return ensureJcmsApiBaseUrl(String(stored).trim());
-        }
-    } catch (_) {
-        /* ignore */
-    }
-    if (window.location.protocol === 'file:') {
-        return 'http://127.0.0.1:3000/api';
-    }
-    const port = window.location.port;
-    const devStaticPorts = ['5500', '5501', '5173', '4173', '8888'];
-    if (port && devStaticPorts.includes(port)) {
-        return 'http://127.0.0.1:3000/api';
-    }
-    const { protocol, hostname } = window.location;
-    const p = port || (protocol === 'https:' ? '443' : protocol === 'http:' ? '80' : '');
-    // 本機後端固定 3000：API 一律走 IPv4 的 127.0.0.1（與 listen(0.0.0.0) 一致）。網址列為 localhost 時與 127.0.0.1 視為不同源，後端已設 CORS；相對 /api 在 localhost→::1 時仍可能 Failed to fetch
-    if (
-        p === '3000' &&
-        (hostname === 'localhost' || hostname === '127.0.0.1') &&
-        (protocol === 'http:' || protocol === 'https:')
-    ) {
-        return protocol === 'https:' ? 'https://127.0.0.1:3000/api' : 'http://127.0.0.1:3000/api';
-    }
-    // 區網 IP、自訂埠等：與頁面同源
-    return '/api';
 }
 
 export function getJcmsApiBaseUrl() {
@@ -77,7 +37,7 @@ export async function jcmsFetch(input, init) {
         }
         if (name === 'TypeError') {
             throw new Error(
-                `無法連線至 API（基底 ${base}，請求 ${attempted}）。請確認後端已啟動：執行 Start-JCMS.bat，或 pm2 list 見 jcms-api 為 online。勿另開 npm start 佔用 3000 埠。建議開 http://127.0.0.1:3000/JCMS.html。若曾改過 API 位址請執行 localStorage.removeItem('jcms_api_base') 後重整。`
+                `無法連線至 API（基底 ${base}，請求 ${attempted}）。請確認後端服務已啟動且可從目前網域存取 /api。若曾改過 API 位址請執行 localStorage.removeItem('jcms_api_base') 後重整。`
             );
         }
         throw e;
@@ -283,7 +243,7 @@ export const apiService = {
         if (!res.ok || json.success === false) {
             const hint404 =
                 res.status === 404 || /^not\s*found$/i.test(String(json.error || '').trim())
-                    ? ' 後端可能仍為舊版：請執行 Start-JCMS.bat（或 pm2 restart jcms-api）重啟後再試。'
+                    ? ' 後端可能仍為舊版：請重新部署或重啟容器後再試。'
                     : '';
             throw new Error((json.error || `更新俸表失敗 (${res.status})`) + hint404);
         }
@@ -306,7 +266,7 @@ export const apiService = {
         if (!res.ok || json.success === false) {
             const hint404 =
                 res.status === 404 || /^not\s*found$/i.test(String(json.error || '').trim())
-                    ? ' 後端可能仍為舊版：請執行 Start-JCMS.bat（或 pm2 restart jcms-api）重啟後再試。'
+                    ? ' 後端可能仍為舊版：請重新部署或重啟容器後再試。'
                     : '';
             throw new Error((json.error || `刪除俸表失敗 (${res.status})`) + hint404);
         }

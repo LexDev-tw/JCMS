@@ -1,19 +1,14 @@
 {
   "name": "jcms",
-  "version": "0.0.1",
-  "description": "JCMS — Judicial Case Management System (Express + SQLite + Neo-Swiss UI)",
+  "version": "0.1.0",
+  "description": "JCMS — Judicial Case Management System (Docker / VPS deployment)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "start:jcms": "node scripts/start-jcms.js",
     "sync:class-years": "node scripts/sync-class-years-from-roster.js",
     "repair:dynamics-fts": "node scripts/repair-dynamics-fts.js",
     "db:prune-cases-obsolete": "node scripts/pruneCasesObsoleteColumns.js",
     "test:inheritance": "node scripts/test-inheritance-fixtures.mjs",
-    "split:jcms": "node scripts/split-jcms-modules.mjs",
-    "gen:dash-map-preview": "node scripts/gen-dashboard-map-preview.js",
-    "gen:dash-weather-preview": "node scripts/gen-dashboard-map-preview.js",
     "gen:police-geojson": "node scripts/fetch-police-address-data.js && node scripts/convert-police-geojson.js",
     "gen:judicial-geojson": "node scripts/fetch-moj-agency-addresses.js && node scripts/convert-judicial-geojson.js",
     "gen:taipei-police-geojson": "npm run gen:police-geojson"
@@ -33,11 +28,5 @@
     "multer": "^1.4.5-lts.1",
     "sqlite3": "^5.1.7",
     "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "html2pdf.js": "^0.10.1",
-    "nodemon": "^3.1.9",
-    "pdfjs-dist": "^3.11.174",
-    "pm2": "^5.4.3"
   }
 }

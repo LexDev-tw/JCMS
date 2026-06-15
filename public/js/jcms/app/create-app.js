@@ -261,7 +261,7 @@ export function mountJcmsApp() {
               dbBackupBusy.value = true;
               try {
                   if (!(await apiService.checkHealth())) {
-                      throw new Error('目前無法連線後端 API。請確認 JCMS 後端已啟動（Start-JCMS.bat）。');
+                      throw new Error('目前無法連線後端 API。請確認 JCMS 服務已啟動。');
                   }
                   await apiService.downloadAppDbBackup();
               } catch (e) {
@@ -3631,7 +3631,7 @@ export function mountJcmsApp() {
               const data = await apiService.fetchGoogleCalendarOAuthConfig();
               if (!data) {
                   googleCalendarStatus.message =
-                      '無法讀取 OAuth 設定，請確認後端已啟動並以 http://127.0.0.1:3000/JCMS.html 開啟';
+                      '無法讀取 OAuth 設定，請確認後端服務已啟動且可從目前網域存取';
                   return;
               }
               googleCalendarOAuthDraft.clientId = String(data?.clientId || '').trim();
@@ -4336,7 +4336,7 @@ export function mountJcmsApp() {
           }
   
           const UPLOADS_PUBLIC_ORIGIN =
-              window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin;
+              window.location.origin;
   
           function resolveUploadUrl(rel) {
               if (!rel || typeof rel !== 'string') return '';

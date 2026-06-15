@@ -2,92 +2,118 @@
 
 **J**udicial **C**ase **M**anagement **S**ystem — 司法案件與事務管理系統。
 
-本專案為本機優先（local-first）的整合工作台：Express + SQLite 後端，搭配 Neo-Swiss 風格前端（Vue 主應用與 React 子模組），涵蓋案件、差勤、俸表、動態人事、儀表板地圖等模組。
+本儲存庫為 **VPS Docker 部署版**：單一 Express 容器同時提供 API 與靜態前端（`JCMS.html`），資料持久化於 Docker volumes（SQLite、上傳檔）。
 
-**目前版本：** `0.0.1`
+**目前版本：** `0.1.0`
 
 ## 環境需求
 
-- **Node.js** ≥ 18（建議 LTS）
-- **Windows** 建議使用內附 `Start-JCMS.bat` 一鍵啟動（會嘗試自動安裝 Node.js）
-- 資料庫：SQLite（路徑由 `.env` 的 `DB_PATH` 指定，預設 `./data/app.db`）
+- Docker Engine 24+ 與 Docker Compose v2
+- VPS 需能連外網（前端 CDN、氣象／空品 API 等）
+- 建議至少 1 GB RAM、10 GB 磁碟
 
-## 快速開始
+## 快速部署
 
-### 1. 安裝依賴
-
-```bash
-npm install
-```
-
-### 2. 環境變數
-
-複製範例檔並依需要調整：
+### 1. 取得程式碼
 
 ```bash
-copy .env.example .env
+git clone https://github.com/example-org/JCMS.git
+cd JCMS
 ```
 
-主要變數：
-
-| 變數 | 說明 | 預設 |
-|------|------|------|
-| `PORT` | API 與靜態檔服務埠 | `3000` |
-| `DB_PATH` | SQLite 檔案路徑 | `./data/app.db` |
-
-選用整合（Google Calendar、中央氣象署、環境部空氣品質等）請參考 `.env.example` 內註解。**勿將含密鑰的 `.env` 提交至版本庫。**
-
-### 3. 啟動
-
-**Windows（建議）：**
-
-```bat
-Start-JCMS.bat
-```
-
-成功後瀏覽器會開啟：<http://127.0.0.1:3000/JCMS.html>
-
-**手動啟動：**
+### 2. 設定環境變數
 
 ```bash
-npm run start:jcms
-# 或
-npm start
+cp .env.example .env
 ```
 
-停止服務：`Shutdown-JCMS.bat` 或 `node scripts/shutdown-jcms.js`
+編輯 `.env`，至少確認：
 
-> 建議以 `http://127.0.0.1:3000/JCMS.html` 開啟（勿與 `localhost` 混用，以免 API 跨源問題）。後端程序名稱為 PM2 的 `jcms-api`。
+| 變數 | 說明 |
+|------|------|
+| `PORT` | 容器內埠（預設 `3000`，通常不需改） |
+| `DB_PATH` | SQLite 路徑（預設 `/app/data/app.db`） |
+| `JCMS_PUBLIC_URL` | 對外 HTTPS 網址，如 `https://jcms.example.com`（OAuth 建議設定） |
+| `CWA_API_KEY` / `MOENV_API_KEY` | 儀表板氣象／空品（選用） |
+| `GOOGLE_*` | Google Calendar OAuth（選用） |
 
-## 專案結構（摘要）
+**勿將 `.env` 提交至版本庫。**
 
+### 3. 啟動（HTTP，對外埠 3000）
+
+```bash
+docker compose up -d --build
 ```
-├── server.js              # Express 進入點
-├── src/                   # 後端（routes / controllers / services）
-├── public/
-│   ├── JCMS.html          # Vue 主應用
-│   ├── apps/              # React 子應用（案件統計、民事工具等）
-│   ├── js/jcms/           # 前端模組與 composables
-│   └── css/jcms.css       # Neo-Swiss 全域樣式
-├── scripts/               # 啟動、資料轉換、維護腳本
-├── uploads/               # 使用者上傳（不納入版本庫）
-├── case_archive/          # Obsidian 案件筆記庫（不納入版本庫）
-└── data/                  # SQLite 與本機資料（不納入版本庫）
+
+開啟：`http://<VPS_IP>:3000/JCMS.html`（或 `http://<VPS_IP>:3000/`，會自動導向）
+
+### 4. 啟動（HTTPS，Caddy 反向代理）
+
+在 `.env` 設定：
+
+```env
+JCMS_DOMAIN=jcms.example.com
+JCMS_PUBLIC_URL=https://jcms.example.com
+GOOGLE_OAUTH_REDIRECT_URI=https://jcms.example.com/api/google-calendar/oauth/callback
 ```
+
+並將 DNS A 記錄指向 VPS，然後：
+
+```bash
+docker compose --profile tls up -d --build
+```
+
+瀏覽器開啟：`https://jcms.example.com/JCMS.html`
+
+> 使用 `tls` profile 時，建議將 `JCMS_PUBLISH_PORT` 留空或註解，僅由 Caddy 對外 80/443。
 
 ## 常用指令
 
-| 指令 | 說明 |
-|------|------|
-| `npm run dev` | 開發模式（nodemon） |
-| `npm run start:jcms` | 透過啟動腳本 supervision 啟動 |
-| `npm run gen:police-geojson` | 產生警政機關 GeoJSON |
-| `npm run gen:judicial-geojson` | 產生司法機關 GeoJSON |
+```bash
+# 查看狀態
+docker compose ps
 
-## 版本與授權
+# 查看日誌
+docker compose logs -f jcms
 
-- 版本遵循 [Semantic Versioning](https://semver.org/)；首發為 **0.0.1**。
-- 授權：ISC（見 `package.json`）。
+# 停止
+docker compose down
+
+# 資料庫維護（範例）
+docker compose exec jcms node scripts/repair-dynamics-fts.js
+```
+
+## 資料持久化
+
+| Volume | 掛載路徑 | 用途 |
+|--------|----------|------|
+| `jcms-data` | `/app/data` | SQLite 資料庫 |
+| `jcms-uploads` | `/app/uploads` | 使用者上傳附件 |
+| `jcms-case-archive` | `/app/case_archive` | Obsidian 案件筆記庫（選用） |
+
+## 架構摘要
+
+```
+瀏覽器 ──► Caddy :443（選用 tls profile）
+              └──► jcms:3000
+                     ├── /api/*   Express API
+                     ├── /uploads 靜態附件
+                     └── /JCMS.html  Vue 主應用 + React 子模組
+```
+
+前端 API 預設使用同源相對路徑 `/api`，適用於反向代理部署。
+
+## 專案結構
+
+```
+├── Dockerfile / docker-compose.yml / Caddyfile
+├── server.js              # Express 進入點
+├── src/                   # 後端 API
+├── public/                # 前端靜態資源
+├── scripts/               # 維護與 GeoJSON 產生腳本
+├── uploads/               # 上傳目錄結構（實際檔案在 volume）
+└── data/                  # 本機開發用；正式環境使用 volume
+```
 
 ## 連結
 

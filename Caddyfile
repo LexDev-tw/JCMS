@@ -1,0 +1,4 @@
+{$JCMS_DOMAIN} {
+	encode gzip
+	reverse_proxy jcms:3000
+}

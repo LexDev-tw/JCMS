@@ -1,0 +1,55 @@
+services:
+  jcms:
+    build: .
+    image: jcms:0.1.0
+    container_name: jcms
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PATH: /app/data/app.db
+    volumes:
+      - jcms-data:/app/data
+      - jcms-uploads:/app/uploads
+      - jcms-case-archive:/app/case_archive
+    ports:
+      - "${JCMS_PUBLISH_PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  caddy:
+    profiles: ["tls"]
+    image: caddy:2-alpine
+    container_name: jcms-caddy
+    restart: unless-stopped
+    depends_on:
+      jcms:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      JCMS_DOMAIN: ${JCMS_DOMAIN:?set JCMS_DOMAIN in .env for tls profile}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  jcms-data:
+  jcms-uploads:
+  jcms-case-archive:
+  caddy-data:
+  caddy-config:

@@ -7,6 +7,9 @@ data/
 *.log
 .DS_Store
 
+# IDE（本機開發用，不納入 VPS 儲存庫）
+.cursor/
+
 # 執行時產物（啟動腳本／PM2 狀態）
 .jcms-runtime/
 temp/

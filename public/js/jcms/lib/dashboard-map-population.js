@@ -19,12 +19,12 @@
     }
 
     function getApiBase() {
+        if (typeof global.jcmsResolveApiBase === 'function') return global.jcmsResolveApiBase();
         if (typeof global.JCMS_API_BASE === 'string' && global.JCMS_API_BASE.trim()) {
             const s = global.JCMS_API_BASE.trim().replace(/\/+$/, '');
             return /\/api$/i.test(s) ? s : `${s}/api`;
         }
-        if (global.location && global.location.port === '3000') return '/api';
-        return 'http://127.0.0.1:3000/api';
+        return '/api';
     }
 
     function formatRocYmLabel(yyymm) {

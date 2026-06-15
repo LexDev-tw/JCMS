@@ -1,0 +1,27 @@
+# Dependencies & local artifacts
+node_modules/
+npm-debug.log*
+
+# Secrets & runtime data (mounted as volumes in Docker)
+.env
+data/
+*.db
+uploads/**
+!uploads/README.md
+case_archive/**
+!case_archive/README.md
+
+# Dev / IDE
+.git/
+.cursor/
+.cursorrules
+.jcms-runtime/
+temp/
+tmp-*
+*.log
+.DS_Store
+public/dist/
+
+# Windows-only launchers (removed from VPS repo)
+Start-JCMS.bat
+Shutdown-JCMS.bat

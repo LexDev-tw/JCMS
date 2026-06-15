@@ -705,7 +705,7 @@ export function useDynamics(apiService, currentView, isDbConnected) {
         if (!confirm('將清空並重建司法動態全文索引（FTS5），可能需要數秒。確定？')) return;
         if (!(await apiService.checkHealth())) {
             alert(
-                '目前無法連線後端 API（重建索引已中止）。\n請先執行 Start-JCMS.bat，確認 pm2 list 的 jcms-api 為 online，並使用 http://127.0.0.1:3000/JCMS.html 開啟介面。'
+                '目前無法連線後端 API（重建索引已中止）。\n請確認 JCMS 服務已啟動且可從目前網域存取 /api。'
             );
             return;
         }
@@ -737,7 +737,7 @@ export function useDynamics(apiService, currentView, isDbConnected) {
         }
         if (!(await apiService.checkHealth())) {
             alert(
-                '目前無法連線後端 API（清除重複紀錄已中止）。\n請先執行 Start-JCMS.bat，確認 pm2 list 的 jcms-api 為 online，並使用 http://127.0.0.1:3000/JCMS.html 開啟介面。'
+                '目前無法連線後端 API（清除重複紀錄已中止）。\n請確認 JCMS 服務已啟動且可從目前網域存取 /api。'
             );
             return;
         }

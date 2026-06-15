@@ -24,6 +24,8 @@ const { errorHandler } = require('./src/middleware/errorHandler');
 const app = express();
 const PORT = Number(process.env.PORT || process.env.JCMS_PORT) || 3000;
 
+app.set('trust proxy', 1);
+
 /** API 須待 SQLite 初始化完成；先 listen 讓啟動腳本與 PM2 健康檢查不必等遷移／FTS。 */
 let dbReady = false;
 
@@ -109,9 +111,7 @@ async function bootstrap() {
     }
   });
 
-  console.log(
-    `Server listening on http://127.0.0.1:${PORT} (IPv4, LAN); database initializing...`
-  );
+  console.log(`JCMS listening on 0.0.0.0:${PORT}; database initializing...`);
 
   try {
     await initDatabase();

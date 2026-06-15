@@ -4,6 +4,10 @@ const { encrypt, decrypt } = require('./googleCalendarSettingsCrypto');
 const SETTINGS_KEY = 'googleCalendarOAuth';
 
 function defaultRedirectUri() {
+  const publicUrl = String(process.env.JCMS_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  if (publicUrl) {
+    return `${publicUrl}/api/google-calendar/oauth/callback`;
+  }
   const port = Number(process.env.PORT || process.env.JCMS_PORT) || 3000;
   return `http://127.0.0.1:${port}/api/google-calendar/oauth/callback`;
 }

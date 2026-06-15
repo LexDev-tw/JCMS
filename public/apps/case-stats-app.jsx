@@ -381,12 +381,12 @@
   }
 
   function getApiBaseUrl() {
+    if (typeof window.jcmsResolveApiBase === 'function') return window.jcmsResolveApiBase();
     if (typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()) {
       const s = window.JCMS_API_BASE.trim().replace(/\/+$/, '');
       return /\/api$/i.test(s) ? s : `${s}/api`;
     }
-    if (window.location.port === '3000') return '/api';
-    return 'http://127.0.0.1:3000/api';
+    return '/api';
   }
 
   async function fetchCaseSourceFallback() {
@@ -436,12 +436,7 @@
 
   async function checkApiHealth() {
     try {
-      const base =
-        typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()
-          ? window.JCMS_API_BASE.trim()
-          : window.location.port === '3000'
-            ? '/api'
-            : 'http://127.0.0.1:3000/api';
+      const base = getApiBaseUrl();
       const res = await fetch(`${base.replace(/\/+$/, '')}/health`);
       if (!res.ok) return false;
       const j = await res.json();
@@ -453,12 +448,7 @@
 
   async function fetchBlobFromApi() {
     try {
-      const base =
-        typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()
-          ? window.JCMS_API_BASE.trim().replace(/\/+$/, '')
-          : window.location.port === '3000'
-            ? '/api'
-            : 'http://127.0.0.1:3000/api';
+      const base = getApiBaseUrl();
       const url = /\/api$/i.test(base) ? `${base}/case-stats` : `${base}/api/case-stats`;
       const res = await fetch(url);
       if (!res.ok) return null;
@@ -471,12 +461,7 @@
   }
 
   async function saveBlobToApi(blob) {
-    const base =
-      typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()
-        ? window.JCMS_API_BASE.trim().replace(/\/+$/, '')
-        : window.location.port === '3000'
-          ? '/api'
-          : 'http://127.0.0.1:3000/api';
+    const base = getApiBaseUrl();
     const url = /\/api$/i.test(base) ? `${base}/case-stats` : `${base}/api/case-stats`;
     const res = await fetch(url, {
       method: 'PUT',

@@ -548,12 +548,12 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         }
 
         function getDashboardMapApiBase() {
+            if (typeof window.jcmsResolveApiBase === 'function') return window.jcmsResolveApiBase();
             if (typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()) {
                 const s = window.JCMS_API_BASE.trim().replace(/\/+$/, '');
                 return /\/api$/i.test(s) ? s : `${s}/api`;
             }
-            if (window.location.port === '3000') return '/api';
-            return 'http://127.0.0.1:3000/api';
+            return '/api';
         }
 
         if (typeof globalThis.DashboardMapAirQuality !== 'undefined') {
@@ -1638,12 +1638,12 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         }
 
         function csGetApiBase() {
+            if (typeof window.jcmsResolveApiBase === 'function') return window.jcmsResolveApiBase();
             if (typeof window.JCMS_API_BASE === 'string' && window.JCMS_API_BASE.trim()) {
                 const s = window.JCMS_API_BASE.trim().replace(/\/+$/, '');
                 return /\/api$/i.test(s) ? s : `${s}/api`;
             }
-            if (window.location.port === '3000') return '/api';
-            return 'http://127.0.0.1:3000/api';
+            return '/api';
         }
 
         async function loadCaseStatsDashboardData() {
