@@ -2,7 +2,7 @@ node_modules/
 # 建置產物（勘驗離線單檔）
 public/dist/
 .env
-data/
+/data/
 *.db
 *.log
 .DS_Store

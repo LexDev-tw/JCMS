@@ -1,0 +1,1072 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "最高法院",
+        "type": "法院",
+        "jurisdiction": "全國"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.50998229440705,
+          25.04000191426856
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "最高行政法院",
+        "type": "法院",
+        "jurisdiction": "全國"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.5117703759159,
+          25.037350148683615
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "懲戒法院",
+        "type": "法院",
+        "jurisdiction": "全國"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.51223413402288,
+          25.037987735593706
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高等法院",
+        "type": "法院",
+        "jurisdiction": "臺北市、新北市、桃園市、新竹縣、新竹市、基隆市、宜蘭縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.51123242744684,
+          25.038053167573338
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺北高等行政法院",
+        "type": "法院",
+        "jurisdiction": "臺北市、新北市、桃園市、新竹縣、新竹市、基隆市、宜蘭縣、花蓮縣、金門縣、連江縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.51855784813031,
+          25.101545832726448
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "智慧財產及商業法院",
+        "type": "法院",
+        "jurisdiction": "全國"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.46398842898179,
+          25.01403198884259
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高等法院臺中分院",
+        "type": "法院",
+        "jurisdiction": "苗栗縣、臺中市、彰化縣、南投縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.66876609821924,
+          24.127756511712462
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺中高等行政法院",
+        "type": "法院",
+        "jurisdiction": "苗栗縣、臺中市、彰化縣、南投縣、雲林縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.66887989932565,
+          24.127057018236126
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高等法院臺南分院",
+        "type": "法院",
+        "jurisdiction": "雲林縣、嘉義市、嘉義縣、臺南市"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.21083947276342,
+          22.99599487129505
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高等法院高雄分院",
+        "type": "法院",
+        "jurisdiction": "高雄市、屏東縣、澎湖縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.29909433442141,
+          22.662049621583208
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "高雄高等行政法院",
+        "type": "法院",
+        "jurisdiction": "嘉義市、嘉義縣、臺南市、高雄市、屏東縣、臺東縣、澎湖縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.33587389329196,
+          22.73175298555771
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高等法院花蓮分院",
+        "type": "法院",
+        "jurisdiction": "花蓮縣、臺東縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.62733300243818,
+          23.99104918458666
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "福建高等法院金門分院",
+        "type": "法院",
+        "jurisdiction": "金門縣、連江縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.31830880356699,
+          24.43801263083161
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣基隆地方法院",
+        "type": "法院",
+        "jurisdiction": "基隆市、新北市（瑞芳區、雙溪區、平溪區、貢寮區、萬里區、金山區）"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.76404040273705,
+          25.128566357098595
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣士林地方法院",
+        "type": "法院",
+        "jurisdiction": "臺北市（士林區、北投區、大同區、內湖區、南港區）、新北市（汐止區、淡水區、八里區、三芝區、石門區）"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.53303424311673,
+          25.11185993073102
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣臺北地方法院",
+        "type": "法院",
+        "jurisdiction": "臺北市（中正區、萬華區、大安區、中山區、松山區、信義區、文山區）、新北市（新店區、深坑區、石碇區、坪林區、烏來區）"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.51160952917769,
+          25.036941696932427
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣新北地方法院",
+        "type": "法院",
+        "jurisdiction": "新北市（板橋區、永和區、中和區、樹林區、土城區、三峽區、鶯歌區、三重區、蘆洲區、新莊區、泰山區、五股區、林口區）"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.45793929478101,
+          24.985947702380855
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣桃園地方法院",
+        "type": "法院",
+        "jurisdiction": "桃園市"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.2880631912419,
+          25.007103415919712
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣新竹地方法院",
+        "type": "法院",
+        "jurisdiction": "新竹市、新竹縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.01898051228284,
+          24.813186001658668
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣苗栗地方法院",
+        "type": "法院",
+        "jurisdiction": "苗栗縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.81693331664636,
+          24.545926923691976
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣臺中地方法院",
+        "type": "法院",
+        "jurisdiction": "臺中市"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.67574016081825,
+          24.134923503272667
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣彰化地方法院",
+        "type": "法院",
+        "jurisdiction": "彰化縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.57701353220769,
+          23.94908719748984
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣南投地方法院",
+        "type": "法院",
+        "jurisdiction": "南投縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.68878277333032,
+          23.90115007171393
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣雲林地方法院",
+        "type": "法院",
+        "jurisdiction": "雲林縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.43407791027883,
+          23.71569513095202
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣嘉義地方法院",
+        "type": "法院",
+        "jurisdiction": "嘉義市、嘉義縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.46171000140808,
+          23.48732461709483
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣臺南地方法院",
+        "type": "法院",
+        "jurisdiction": "臺南市"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.17182384361003,
+          22.984741652284242
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣橋頭地方法院",
+        "type": "法院",
+        "jurisdiction": "高雄市（楠梓區、左營區、大樹區、大社區、仁武區、鳥松區、岡山區、橋頭區、燕巢區、田寮區、阿蓮區、路竹區、湖內區、茄萣區、彌陀區、永安區、梓官區、旗山區、美濃區、六龜區、甲仙區、杉林區、內門區、茂林區、桃源區、那瑪夏區）"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.3049840043162,
+          22.73858299223511
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高雄少年及家事法院",
+        "type": "法院",
+        "jurisdiction": "高雄市"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.3349827392103,
+          22.731751452922428
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣高雄地方法院",
+        "type": "法院",
+        "jurisdiction": "高雄市（小港區、旗津區、前鎮區、苓雅區、新興區、前金區、三民區、鼓山區、鹽埕區、鳳山區、大寮區、林園區）"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.28977726402279,
+          22.626250328691253
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣屏東地方法院",
+        "type": "法院",
+        "jurisdiction": "屏東縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.48326705065844,
+          22.65674439561445
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣宜蘭地方法院",
+        "type": "法院",
+        "jurisdiction": "宜蘭縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.76128690191241,
+          24.727577051913908
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣花蓮地方法院",
+        "type": "法院",
+        "jurisdiction": "花蓮縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.62037403664914,
+          23.9898327593753
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣臺東地方法院",
+        "type": "法院",
+        "jurisdiction": "臺東縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.15268823137757,
+          22.761738558091157
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "福建連江地方法院",
+        "type": "法院",
+        "jurisdiction": "連江縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.9857616903236,
+          26.226709525467697
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "福建金門地方法院",
+        "type": "法院",
+        "jurisdiction": "金門縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.31847626084213,
+          24.437819606287377
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "臺灣澎湖地方法院",
+        "type": "法院",
+        "jurisdiction": "澎湖縣"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.58394470336717,
+          23.568882700796554
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.512197368551,
+          25.036718256323
+        ]
+      },
+      "properties": {
+        "name": "法務部",
+        "type": "檢察",
+        "jurisdiction": "全國",
+        "address": "臺北市中正區重慶南路1段130號",
+        "phone": "02-21910189共32線"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.318531996719,
+          24.437713005784
+        ]
+      },
+      "properties": {
+        "name": "福建高等檢察署金門檢察分署",
+        "type": "檢察",
+        "jurisdiction": "金門縣、連江縣",
+        "address": "金門縣金城鎮民權路178號",
+        "phone": "082-324581"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          118.318531996719,
+          24.437713005784
+        ]
+      },
+      "properties": {
+        "name": "福建金門地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "金門縣",
+        "address": "金門縣金城鎮民權路178號",
+        "phone": "082-329957"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.952771,
+          26.163488
+        ]
+      },
+      "properties": {
+        "name": "福建連江地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "連江縣",
+        "address": "連江縣南竿鄉復興村210號",
+        "phone": "0836-22823"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.509792851987,
+          25.039241251088
+        ]
+      },
+      "properties": {
+        "name": "最高檢察署",
+        "type": "檢察",
+        "jurisdiction": "全國",
+        "address": "臺北市中正區貴陽街1段235號",
+        "phone": "02-23167000"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.512436168973,
+          25.037930782436
+        ]
+      },
+      "properties": {
+        "name": "臺灣高等檢察署",
+        "type": "檢察",
+        "jurisdiction": "臺北市、新北市、桃園市、新竹縣、新竹市、基隆市、宜蘭縣",
+        "address": "臺北市中正區重慶南路1段124號",
+        "phone": "02-23713261"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.675581926795,
+          24.134617687266
+        ]
+      },
+      "properties": {
+        "name": "臺灣高等檢察署臺中檢察分署",
+        "type": "檢察",
+        "jurisdiction": "苗栗縣、臺中市、彰化縣、南投縣",
+        "address": "臺中市自由路1段91號",
+        "phone": "04-22232311"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.177304018371,
+          23.158479013088
+        ]
+      },
+      "properties": {
+        "name": "臺灣高等檢察署臺南檢察分署",
+        "type": "檢察",
+        "jurisdiction": "雲林縣、嘉義市、嘉義縣、臺南市",
+        "address": "臺南市中山路170號",
+        "phone": "06-2282111"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.299098016833,
+          22.661356005194
+        ]
+      },
+      "properties": {
+        "name": "臺灣高等檢察署高雄檢察分署",
+        "type": "檢察",
+        "jurisdiction": "高雄市、屏東縣、澎湖縣",
+        "address": "高雄市鼓山區明誠3路586號",
+        "phone": "07-5524111（8線）"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.627397659061,
+          23.990785988975
+        ]
+      },
+      "properties": {
+        "name": "臺灣高等檢察署花蓮檢察分署",
+        "type": "檢察",
+        "jurisdiction": "花蓮縣、臺東縣",
+        "address": "花蓮市民權路127號",
+        "phone": "03-8225112"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.508260807725,
+          25.036291491723
+        ]
+      },
+      "properties": {
+        "name": "臺灣高等檢察署智慧財產檢察分署",
+        "type": "檢察",
+        "jurisdiction": "全國",
+        "address": "臺北市中正區延平南路143號5樓",
+        "phone": "02-23898582"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.511103027273,
+          25.036824371217
+        ]
+      },
+      "properties": {
+        "name": "臺灣臺北地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "臺北市（中正區、萬華區、大安區、中山區、松山區、信義區、文山區）、新北市（新店區、深坑區、石碇區、坪林區、烏來區）",
+        "address": "臺北市博愛路131號",
+        "phone": "02-23146881"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.533316663249,
+          25.111821659427
+        ]
+      },
+      "properties": {
+        "name": "臺灣士林地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "臺北市（士林區、北投區、大同區、內湖區、南港區）、新北市（汐止區、淡水區、八里區、三芝區、石門區）",
+        "address": "臺北市士林區士東路190號",
+        "phone": "02-28331911"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.458302988418,
+          24.984475991216
+        ]
+      },
+      "properties": {
+        "name": "臺灣新北地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "新北市（板橋區、永和區、中和區、樹林區、土城區、三峽區、鶯歌區、三重區、蘆洲區、新莊區、泰山區、五股區、林口區）",
+        "address": "新北市土城區金城路2段249號",
+        "phone": "02-22616192代表號(75線)"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.286849566403,
+          25.006193292796
+        ]
+      },
+      "properties": {
+        "name": "臺灣桃園地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "桃園市",
+        "address": "桃園市桃園區正光路898號",
+        "phone": "03-2160123"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.017526025426,
+          24.813215981616
+        ]
+      },
+      "properties": {
+        "name": "臺灣新竹地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "新竹市、新竹縣",
+        "address": "新竹縣竹北市興隆路2段161號",
+        "phone": "03-6677999"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.816509966187,
+          24.546161002734
+        ]
+      },
+      "properties": {
+        "name": "臺灣苗栗地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "苗栗縣",
+        "address": "苗栗縣苗栗市中正路1149號",
+        "phone": "037-353410"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.675581926795,
+          24.134617687266
+        ]
+      },
+      "properties": {
+        "name": "臺灣臺中地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "臺中市",
+        "address": "臺中市西區自由路1段91號",
+        "phone": "04-22232311"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.571451029075,
+          23.966636007636
+        ]
+      },
+      "properties": {
+        "name": "臺灣彰化地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "彰化縣",
+        "address": "彰化縣員林市中山路2段240號",
+        "phone": "04-8357274"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.688201057713,
+          23.900888344729
+        ]
+      },
+      "properties": {
+        "name": "臺灣南投地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "南投縣",
+        "address": "南投縣南投市中興路757號",
+        "phone": "049-2242602"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.434176996552,
+          23.715712713877
+        ]
+      },
+      "properties": {
+        "name": "臺灣雲林地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "雲林縣",
+        "address": "雲林縣虎尾鎮明正路38號",
+        "phone": "05-6334991"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.463243006013,
+          23.488198986039
+        ]
+      },
+      "properties": {
+        "name": "臺灣嘉義地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "嘉義市、嘉義縣",
+        "address": "嘉義市林森東路286號",
+        "phone": "05-2782601"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.170741239642,
+          22.984900904347
+        ]
+      },
+      "properties": {
+        "name": "臺灣臺南地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "臺南市",
+        "address": "臺南市安平區健康路3段310號",
+        "phone": "06-2959731共20線"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.289625963331,
+          22.62607301242
+        ]
+      },
+      "properties": {
+        "name": "臺灣高雄地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "高雄市",
+        "address": "高雄市前金區河東路188號",
+        "phone": "07-2161468共17線"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.482919020803,
+          22.656402007051
+        ]
+      },
+      "properties": {
+        "name": "臺灣屏東地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "屏東縣",
+        "address": "屏東縣屏東市棒球路11號",
+        "phone": "08-7535211"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.149862697883,
+          22.762264019233
+        ]
+      },
+      "properties": {
+        "name": "臺灣臺東地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "臺東縣",
+        "address": "臺東縣臺東市浙江路310號",
+        "phone": "089-310180"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.621327987696,
+          23.989698981861
+        ]
+      },
+      "properties": {
+        "name": "臺灣花蓮地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "花蓮縣",
+        "address": "花蓮縣花蓮市府前路15號",
+        "phone": "03-8226155"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.759496034011,
+          24.727625979449
+        ]
+      },
+      "properties": {
+        "name": "臺灣宜蘭地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "宜蘭縣",
+        "address": "宜蘭縣宜蘭市縣政西路3號",
+        "phone": "03-9253000"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.764453426825,
+          25.128622681428
+        ]
+      },
+      "properties": {
+        "name": "臺灣基隆地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "基隆市、新北市（瑞芳區、雙溪區、平溪區、貢寮區、萬里區、金山區）",
+        "address": "基隆市東信路178號",
+        "phone": "02-24651171"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.5749887,
+          23.56799
+        ]
+      },
+      "properties": {
+        "name": "臺灣澎湖地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "澎湖縣",
+        "address": "澎湖縣馬公市西文里西文澳309號",
+        "phone": "06-9211699"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.304530998834,
+          22.739311979497
+        ]
+      },
+      "properties": {
+        "name": "臺灣橋頭地方檢察署",
+        "type": "檢察",
+        "jurisdiction": "高雄市（楠梓區、左營區、大樹區、大社區、仁武區、鳥松區、岡山區、橋頭區、燕巢區、田寮區、阿蓮區、路竹區、湖內區、茄萣區、彌陀區、永安區、梓官區、旗山區、美濃區、六龜區、甲仙區、杉林區、內門區、茂林區、桃源區、那瑪夏區）",
+        "address": "高雄市橋頭區經武路868號",
+        "phone": "07-6131765"
+      }
+    }
+  ]
+}

@@ -4,7 +4,7 @@ npm-debug.log*
 
 # Secrets & runtime data (mounted as volumes in Docker)
 .env
-data/
+/data/
 *.db
 uploads/**
 !uploads/README.md
