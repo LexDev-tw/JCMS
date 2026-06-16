@@ -1,11 +1,13 @@
 {
   "name": "jcms",
-  "version": "0.1.0",
+  "version": "0.1.20260616",
   "description": "JCMS — Judicial Case Management System (Docker / VPS deployment)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "sync:class-years": "node scripts/sync-class-years-from-roster.js",
+    "sync:html-version": "node scripts/sync-jcms-html-version.js",
+    "version:bump": "node scripts/bump-jcms-version.js",
     "repair:dynamics-fts": "node scripts/repair-dynamics-fts.js",
     "db:prune-cases-obsolete": "node scripts/pruneCasesObsoleteColumns.js",
     "test:inheritance": "node scripts/test-inheritance-fixtures.mjs",
