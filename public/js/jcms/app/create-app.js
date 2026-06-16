@@ -36,6 +36,15 @@ import {
 } from '../lib/work-map-model.js';
 import { createWorkMapHistory, cloneWorkMapDoc } from '../lib/work-map-history.js';
 import {
+    AGENCY_LAYER_KINDS,
+    loadAgencyLayerDoc,
+    saveAgencyLayerDoc,
+    createEmptyAgencyLayerDoc,
+    ensureAgencyLayerInitialized,
+    createDefaultJudicialFeature,
+    createDefaultPoliceFeature,
+} from '../lib/agency-layer-model.js';
+import {
     measureDraft,
     ringAreaSqMeters,
     lineLengthMeters,
@@ -963,6 +972,7 @@ export function mountJcmsApp() {
           const workMapHistory = createWorkMapHistory();
           const workMapUi = reactive({
               activeListId: null,
+              editTarget: 'custom',
               toolMode: null,
               draftCoords: [],
               draftCursor: null,
@@ -970,6 +980,24 @@ export function mountJcmsApp() {
               editingLayerNameId: null,
               editingLayerNameDraft: '',
               notice: '',
+          });
+          const agencyLayerDoc = reactive(createEmptyAgencyLayerDoc());
+          const agencyLayerHistory = createWorkMapHistory();
+          const mapCurrentLocation = reactive({
+              lng: null,
+              lat: null,
+              title: '現在位置',
+              description: '',
+          });
+          const agencyFeatureEditor = reactive({
+              featureId: null,
+              name: '',
+              type: '法院',
+              jurisdiction: '',
+              unit: '',
+              address: '',
+              phone: '',
+              zip: '',
           });
           const workMapFeatureEditor = reactive({
               featureId: null,
@@ -990,10 +1018,33 @@ export function mountJcmsApp() {
           const workMapColorPresets = WORK_MAP_COLOR_PRESETS;
 
           const workMapSelectedFeature = computed(() => {
+              if (workMapUi.editTarget !== 'custom') return null;
               if (!workMapUi.activeListId || !workMapUi.selectedFeatureId) return null;
               const list = workMapDoc.lists.find((l) => l.id === workMapUi.activeListId);
               return list?.features.find((f) => f.id === workMapUi.selectedFeatureId) ?? null;
           });
+
+          const agencySelectedFeature = computed(() => {
+              const kind = workMapUi.editTarget;
+              if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) {
+                  return null;
+              }
+              if (!workMapUi.selectedFeatureId) return null;
+              const features = agencyLayerDoc[kind]?.features || [];
+              return features.find((f) => f.id === workMapUi.selectedFeatureId) ?? null;
+          });
+
+          const agencyFeatureList = computed(() => {
+              const kind = workMapUi.editTarget;
+              if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) {
+                  return [];
+              }
+              return agencyLayerDoc[kind]?.features || [];
+          });
+
+          const hasMapCurrentLocation = computed(() =>
+              Number.isFinite(mapCurrentLocation.lng) && Number.isFinite(mapCurrentLocation.lat)
+          );
 
           const workMapDraftMeasureLabel = computed(() => {
               const drawMode =
@@ -1072,6 +1123,94 @@ export function mountJcmsApp() {
               }
           }
 
+          function snapshotAgencyLayerDoc() {
+              return JSON.parse(JSON.stringify(agencyLayerDoc));
+          }
+
+          function applyAgencyLayerSnapshot(snapshot) {
+              const norm = snapshot && typeof snapshot === 'object'
+                  ? snapshot
+                  : createEmptyAgencyLayerDoc();
+              agencyLayerDoc.judicial = norm.judicial ?? null;
+              agencyLayerDoc.police = norm.police ?? null;
+              if (
+                  workMapUi.selectedFeatureId &&
+                  !agencyLayerDoc[workMapUi.editTarget]?.features?.some(
+                      (f) => f.id === workMapUi.selectedFeatureId
+                  )
+              ) {
+                  workMapUi.selectedFeatureId = null;
+                  resetAgencyFeatureEditor();
+              }
+          }
+
+          function commitAgencyLayerChange(mutator) {
+              agencyLayerHistory.push(snapshotAgencyLayerDoc());
+              mutator();
+          }
+
+          async function reloadAgencyLayerDoc() {
+              const loaded = loadAgencyLayerDoc(currentWorkspace.value);
+              agencyLayerDoc.judicial = loaded.judicial;
+              agencyLayerDoc.police = loaded.police;
+              agencyLayerHistory.clear();
+          }
+
+          async function ensureAgencyLayerReady(kind) {
+              await ensureAgencyLayerInitialized(kind, agencyLayerDoc);
+          }
+
+          function resetAgencyFeatureEditor() {
+              agencyFeatureEditor.featureId = null;
+              agencyFeatureEditor.name = '';
+              agencyFeatureEditor.type = '法院';
+              agencyFeatureEditor.jurisdiction = '';
+              agencyFeatureEditor.unit = '';
+              agencyFeatureEditor.address = '';
+              agencyFeatureEditor.phone = '';
+              agencyFeatureEditor.zip = '';
+          }
+
+          function loadAgencyFeatureEditor(featureId) {
+              const feat = agencySelectedFeature.value;
+              if (!feat || feat.id !== featureId) return;
+              agencyFeatureEditor.featureId = feat.id;
+              agencyFeatureEditor.name = feat.name || '';
+              agencyFeatureEditor.type = feat.type || '法院';
+              agencyFeatureEditor.jurisdiction = feat.jurisdiction || '';
+              agencyFeatureEditor.unit = feat.unit || '';
+              agencyFeatureEditor.address = feat.address || '';
+              agencyFeatureEditor.phone = feat.phone || '';
+              agencyFeatureEditor.zip = feat.zip || '';
+          }
+
+          async function activateWorkMapEditTarget(target) {
+              commitWorkMapFeatureDrafts();
+              if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
+                  await ensureAgencyLayerReady(target);
+              }
+              workMapUi.editTarget = target;
+              workMapUi.activeListId = null;
+              workMapUi.selectedFeatureId = null;
+              workMapUi.draftCoords = [];
+              workMapUi.draftCursor = null;
+              resetWorkMapFeatureEditor();
+              resetAgencyFeatureEditor();
+              workMapUi.toolMode = target === 'currentLocation'
+                  ? WORK_MAP_TOOL_MODES.point
+                  : WORK_MAP_TOOL_MODES.select;
+              workMapEditLayout.clearDraftOnMap?.();
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function selectWorkMapLayerForEdit(listId) {
+              const list = workMapDoc.lists.find((l) => l.id === listId);
+              if (!list) return;
+              if (workMapUi.activeListId === listId && workMapUi.editTarget === 'custom') return;
+              activateWorkMapLayer(listId);
+              workMapUi.editTarget = 'custom';
+          }
+
           function setWorkMapNotice(message) {
               workMapUi.notice = String(message || '');
               if (!message) return;
@@ -1093,6 +1232,7 @@ export function mountJcmsApp() {
                   finishRenameWorkMapLayer(workMapUi.editingLayerNameId);
               }
               workMapUi.activeListId = listId;
+              workMapUi.editTarget = 'custom';
               workMapUi.toolMode = WORK_MAP_TOOL_MODES.select;
               workMapUi.draftCoords = [];
               workMapUi.draftCursor = null;
@@ -1162,13 +1302,6 @@ export function mountJcmsApp() {
               nextTick(() => startRenameWorkMapLayer(listId));
           }
 
-          function selectWorkMapLayerForEdit(listId) {
-              const list = workMapDoc.lists.find((l) => l.id === listId);
-              if (!list) return;
-              if (workMapUi.activeListId === listId) return;
-              activateWorkMapLayer(listId);
-          }
-
           function toggleWorkMapLayerVisible(listId, visible) {
               const list = workMapDoc.lists.find((l) => l.id === listId);
               if (!list) return;
@@ -1231,7 +1364,20 @@ export function mountJcmsApp() {
           }
 
           function setWorkMapToolMode(mode) {
-              if (!workMapUi.activeListId) {
+              if (workMapUi.editTarget === 'currentLocation') {
+                  if (mode !== WORK_MAP_TOOL_MODES.point) {
+                      setWorkMapNotice('現在位置請使用點選工具');
+                      return;
+                  }
+              } else if (
+                  workMapUi.editTarget === AGENCY_LAYER_KINDS.judicial
+                  || workMapUi.editTarget === AGENCY_LAYER_KINDS.police
+              ) {
+                  if (mode !== WORK_MAP_TOOL_MODES.select && mode !== WORK_MAP_TOOL_MODES.point) {
+                      setWorkMapNotice('司法／警察圖層僅支援選取與新增點');
+                      return;
+                  }
+              } else if (!workMapUi.activeListId) {
                   setWorkMapNotice('請先選擇圖層');
                   return;
               }
@@ -1240,15 +1386,98 @@ export function mountJcmsApp() {
               workMapUi.toolMode = mode;
               workMapUi.draftCoords = [];
               workMapUi.draftCursor = null;
-              workMapUi.selectedFeatureId = null;
-              resetWorkMapFeatureEditor();
+              if (workMapUi.editTarget === 'custom') {
+                  workMapUi.selectedFeatureId = null;
+                  resetWorkMapFeatureEditor();
+              }
               workMapEditLayout.clearDraftOnMap?.();
           }
 
           function clearWorkMapSelection() {
               workMapUi.selectedFeatureId = null;
               resetWorkMapFeatureEditor();
+              resetAgencyFeatureEditor();
               workMapEditLayout.syncSelectionOnMap?.();
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function selectAgencyFeature(featureId) {
+              workMapUi.selectedFeatureId = featureId;
+              workMapUi.toolMode = WORK_MAP_TOOL_MODES.select;
+              workMapUi.draftCoords = [];
+              workMapUi.draftCursor = null;
+              loadAgencyFeatureEditor(featureId);
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function saveAgencySelectedFeatureProperties() {
+              const kind = workMapUi.editTarget;
+              if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) {
+                  return false;
+              }
+              const featureId = agencyFeatureEditor.featureId || workMapUi.selectedFeatureId;
+              if (!featureId) return false;
+              const features = agencyLayerDoc[kind]?.features || [];
+              const feat = features.find((f) => f.id === featureId);
+              if (!feat) return false;
+
+              const name = String(agencyFeatureEditor.name || '').trim();
+              if (!name) {
+                  setWorkMapNotice('名稱不可空白');
+                  return false;
+              }
+
+              commitAgencyLayerChange(() => {
+                  feat.name = name;
+                  if (kind === AGENCY_LAYER_KINDS.judicial) {
+                      feat.type = String(agencyFeatureEditor.type || '法院').trim() || '法院';
+                      feat.jurisdiction = String(agencyFeatureEditor.jurisdiction || '').trim();
+                  } else {
+                      feat.unit = String(agencyFeatureEditor.unit || '').trim();
+                      feat.address = String(agencyFeatureEditor.address || '').trim();
+                      feat.phone = String(agencyFeatureEditor.phone || '').trim();
+                      feat.zip = String(agencyFeatureEditor.zip || '').trim();
+                  }
+              });
+              setWorkMapNotice('屬性已儲存');
+              workMapEditLayout.syncOverlayLayers?.();
+              return true;
+          }
+
+          function saveCurrentLocationProperties() {
+              const title = String(mapCurrentLocation.title || '').trim() || '現在位置';
+              mapCurrentLocation.title = title;
+              mapCurrentLocation.description = String(mapCurrentLocation.description || '').trim();
+              setWorkMapNotice('現在位置已儲存');
+              return true;
+          }
+
+          function setCurrentLocationFromMap(lngLat) {
+              mapCurrentLocation.lng = lngLat[0];
+              mapCurrentLocation.lat = lngLat[1];
+              workMapEditLayout.syncOverlayLayers?.();
+              setWorkMapNotice('已設定現在位置');
+          }
+
+          function clearCurrentLocation() {
+              mapCurrentLocation.lng = null;
+              mapCurrentLocation.lat = null;
+              workMapEditLayout.syncOverlayLayers?.();
+              setWorkMapNotice('已清除現在位置');
+          }
+
+          async function removeAgencySelectedFeature(skipConfirm = false) {
+              const kind = workMapUi.editTarget;
+              if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) return;
+              const feat = agencySelectedFeature.value;
+              if (!feat) return;
+              if (!skipConfirm && !window.confirm('確定刪除此地點？')) return;
+              commitAgencyLayerChange(() => {
+                  const features = agencyLayerDoc[kind]?.features || [];
+                  const idx = features.findIndex((f) => f.id === feat.id);
+                  if (idx >= 0) features.splice(idx, 1);
+              });
+              clearWorkMapSelection();
           }
 
           function saveWorkMapSelectedFeatureProperties() {
@@ -1291,6 +1520,17 @@ export function mountJcmsApp() {
           }
 
           function commitWorkMapFeatureDrafts() {
+              if (workMapUi.editTarget === 'currentLocation') {
+                  saveCurrentLocationProperties();
+                  return;
+              }
+              if (
+                  workMapUi.editTarget === AGENCY_LAYER_KINDS.judicial
+                  || workMapUi.editTarget === AGENCY_LAYER_KINDS.police
+              ) {
+                  saveAgencySelectedFeatureProperties();
+                  return;
+              }
               saveWorkMapSelectedFeatureProperties();
           }
 
@@ -1388,6 +1628,38 @@ export function mountJcmsApp() {
                   workMapSuppressClick = false;
                   return;
               }
+
+              if (workMapUi.editTarget === 'currentLocation') {
+                  setCurrentLocationFromMap(lngLat);
+                  return;
+              }
+
+              const agencyKind = workMapUi.editTarget;
+              if (
+                  agencyKind === AGENCY_LAYER_KINDS.judicial
+                  || agencyKind === AGENCY_LAYER_KINDS.police
+              ) {
+                  const features = agencyLayerDoc[agencyKind]?.features || [];
+                  if (workMapUi.toolMode === WORK_MAP_TOOL_MODES.select) {
+                      if (meta.hit?.id) {
+                          selectAgencyFeature(meta.hit.id);
+                      } else {
+                          clearWorkMapSelection();
+                      }
+                      return;
+                  }
+                  if (workMapUi.toolMode === WORK_MAP_TOOL_MODES.point) {
+                      const feat = agencyKind === AGENCY_LAYER_KINDS.judicial
+                          ? createDefaultJudicialFeature(lngLat, features.length)
+                          : createDefaultPoliceFeature(lngLat, features.length);
+                      commitAgencyLayerChange(() => {
+                          features.push(feat);
+                      });
+                      selectAgencyFeature(feat.id);
+                  }
+                  return;
+              }
+
               if (!workMapUi.activeListId) {
                   setWorkMapNotice('請先選擇圖層');
                   return;
@@ -1595,6 +1867,13 @@ export function mountJcmsApp() {
           }
 
           function removeWorkMapSelectedFeature({ skipConfirm = false } = {}) {
+              if (
+                  workMapUi.editTarget === AGENCY_LAYER_KINDS.judicial
+                  || workMapUi.editTarget === AGENCY_LAYER_KINDS.police
+              ) {
+                  void removeAgencySelectedFeature(skipConfirm);
+                  return;
+              }
               const list = getWorkMapActiveList();
               const feat = workMapSelectedFeature.value;
               if (!list || !feat) return;
@@ -1638,6 +1917,7 @@ export function mountJcmsApp() {
               }
               commitWorkMapFeatureDrafts();
               saveWorkMapDoc(currentWorkspace.value, workMapDoc);
+              saveAgencyLayerDoc(currentWorkspace.value, agencyLayerDoc);
               workMapSession.pendingView = workMapEditLayout.getView?.() ?? null;
               workMapSession.entryView = null;
               workMapUi.draftCoords = [];
@@ -1648,6 +1928,7 @@ export function mountJcmsApp() {
           }
 
           reloadWorkMapDoc();
+          reloadAgencyLayerDoc();
 
           useDashboardCharts({
               rootRef: dashRootRef,
@@ -1668,6 +1949,8 @@ export function mountJcmsApp() {
               isActiveRef: dashMapViewActive,
               getWorkspaceId: () => currentWorkspace.value,
               workMapDocRef: workMapDoc,
+              agencyLayerDocRef: agencyLayerDoc,
+              currentLocationRef: mapCurrentLocation,
               pendingViewRef: workMapSession,
           });
 
@@ -1677,6 +1960,20 @@ export function mountJcmsApp() {
               workMapDocRef: workMapDoc,
               workMapUiRef: workMapUi,
               getInitialView: () => workMapSession.entryView,
+              getEditTarget: () => workMapUi.editTarget,
+              getAgencyFeatures: () => {
+                  const kind = workMapUi.editTarget;
+                  if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) {
+                      return [];
+                  }
+                  return agencyLayerDoc[kind]?.features || [];
+              },
+              getAgencySelectedId: () => workMapUi.selectedFeatureId,
+              getCurrentLocation: () => (
+                  Number.isFinite(mapCurrentLocation.lng) && Number.isFinite(mapCurrentLocation.lat)
+                      ? mapCurrentLocation
+                      : null
+              ),
               onMapClick: handleWorkMapEditClick,
               onMapDblClick: handleWorkMapEditDblClick,
               onMapMouseMove: handleWorkMapEditMouseMove,
@@ -1702,8 +1999,17 @@ export function mountJcmsApp() {
               { deep: true }
           );
 
+          watch(
+              () => ({ ws: currentWorkspace.value, doc: agencyLayerDoc }),
+              () => {
+                  saveAgencyLayerDoc(currentWorkspace.value, agencyLayerDoc);
+              },
+              { deep: true }
+          );
+
           watch(currentWorkspace, () => {
               reloadWorkMapDoc();
+              reloadAgencyLayerDoc();
           });
 
           const dashMapTodoPendingCount = computed(() =>
@@ -1714,7 +2020,10 @@ export function mountJcmsApp() {
               [dashStats, dashBreakdownSlots, dashMapViewActive],
               () => {
                   if (dashMapViewActive.value) {
-                      nextTick(() => dashMapLayout.syncLayout());
+                      nextTick(() => {
+                          dashMapLayout.syncLayout();
+                          dashMapLayout.resizeMap();
+                      });
                   }
               },
               { deep: true }
@@ -4711,9 +5020,13 @@ export function mountJcmsApp() {
               casesManager, isLoadingCases, dashStats, dashBreakdownMode, dashBreakdownSlotCount, dashBreakdownSlots, dashBreakdownHasData,
               dashRootRef, dashMapRootRef, workMapEditRootRef, dashMapTodoPendingCount,
               workMapDoc, workMapUi, workMapFeatureEditor,
+              agencyLayerDoc, agencyFeatureEditor, mapCurrentLocation,
+              agencySelectedFeature, agencyFeatureList, hasMapCurrentLocation,
               workMapCanUndo, workMapCanRedo, workMapColorPresets,
               workMapSelectedFeature, workMapSelectedFeatureMeasure, workMapDraftMeasureLabel,
               openWorkMapEdit, saveWorkMapAndReturnDashboard,
+              activateWorkMapEditTarget, selectAgencyFeature,
+              saveAgencySelectedFeatureProperties, saveCurrentLocationProperties, clearCurrentLocation,
               addWorkMapList, startRenameWorkMapLayer, renameWorkMapList, finishRenameWorkMapLayer,
               cancelRenameWorkMapLayer, onWorkMapLayerNameClick,
               selectWorkMapLayerForEdit, toggleWorkMapLayerVisible, toggleWorkMapLayerCheck,

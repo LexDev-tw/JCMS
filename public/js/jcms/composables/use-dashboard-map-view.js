@@ -1,6 +1,32 @@
 /** 地圖總覽：MapLibre + 案件統計圖 + 版面寬度同步 */
 import { watch, onUnmounted, nextTick } from '../vue-api.js';
 import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js';
+import {
+    AGENCY_LAYER_KINDS,
+    resolveAgencyFeatures,
+    agencyFeaturesToGeoJson,
+} from '../lib/agency-layer-model.js';
+
+/** 內建行政區界線（VPS 同源，不依賴外部 CDN） */
+const TW_LOCAL_COUNTIES_GEOJSON_URL = 'data/tw-counties.geojson';
+const TW_LOCAL_TOWNS_GEOJSON_URL = 'data/tw-towns.geojson';
+const TW_COUNTIES_TOPO_URLS = Object.freeze([
+    'https://cdn.jsdelivr.net/npm/taiwan-atlas/counties-10t.json',
+    'https://unpkg.com/taiwan-atlas@latest/counties-10t.json',
+]);
+const TW_TOWNS_TOPO_URLS = Object.freeze([
+    'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json',
+    'https://unpkg.com/taiwan-atlas@latest/towns-10t.json',
+]);
+const TW_BOUNDARY_LAYER_IDS = Object.freeze({
+    countyBoundaries: 'tw-county-boundaries',
+    townBoundaries: 'tw-town-boundaries',
+});
+const TW_MAP_ACCENT = '#F05A28';
+
+/** 跨頁切換保留：避免每次重建地圖都重新 fetch + 競態 */
+let twBoundaryGeoCache = null;
+let twBoundaryFetchPromise = null;
 
 function q(root, id) {
     if (!root) return null;
@@ -8,11 +34,170 @@ function q(root, id) {
     return root.querySelector('#' + raw);
 }
 
+function waitForMapStyleReady(map) {
+    if (!map) return Promise.resolve();
+    if (map.loaded()) return Promise.resolve();
+    return new Promise((resolve) => {
+        map.once('load', resolve);
+    });
+}
+
+function hasTwBoundaryLayers(map) {
+    return Boolean(
+        map?.getLayer(TW_BOUNDARY_LAYER_IDS.countyBoundaries)
+        && map?.getLayer(TW_BOUNDARY_LAYER_IDS.townBoundaries)
+    );
+}
+
+function setTwBoundaryLayersVisible(map) {
+    [TW_BOUNDARY_LAYER_IDS.countyBoundaries, TW_BOUNDARY_LAYER_IDS.townBoundaries].forEach((layerId) => {
+        if (!map.getLayer(layerId)) return;
+        map.setLayoutProperty(layerId, 'visibility', 'visible');
+    });
+}
+
+function applyTwBoundaryLayersToMap(map, counties, towns) {
+    if (!map?.getStyle()) return;
+
+    if (!map.getSource('tw-counties')) {
+        map.addSource('tw-counties', { type: 'geojson', data: counties });
+    }
+    if (!map.getLayer(TW_BOUNDARY_LAYER_IDS.countyBoundaries)) {
+        map.addLayer({
+            id: TW_BOUNDARY_LAYER_IDS.countyBoundaries,
+            type: 'line',
+            source: 'tw-counties',
+            minzoom: 6,
+            paint: {
+                'line-color': TW_MAP_ACCENT,
+                'line-opacity': 0.88,
+                'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.15, 10, 1.45, 14, 1.85],
+            },
+        });
+    }
+
+    if (!map.getSource('tw-towns')) {
+        map.addSource('tw-towns', { type: 'geojson', data: towns });
+    }
+    if (!map.getLayer(TW_BOUNDARY_LAYER_IDS.townBoundaries)) {
+        map.addLayer({
+            id: TW_BOUNDARY_LAYER_IDS.townBoundaries,
+            type: 'line',
+            source: 'tw-towns',
+            minzoom: 7,
+            paint: {
+                'line-color': TW_MAP_ACCENT,
+                'line-opacity': 0.88,
+                'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.65, 11, 0.85, 14, 1.1],
+                'line-dasharray': [3, 2],
+            },
+        });
+    }
+
+    setTwBoundaryLayersVisible(map);
+}
+
+async function fetchGeoJsonResource(url, label) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${label} HTTP ${res.status} @ ${url}`);
+    const data = await res.json();
+    if (!data?.features?.length) throw new Error(`${label} empty`);
+    return data;
+}
+
+async function fetchFirstOkJson(urls, label) {
+    let lastErr = null;
+    for (const url of urls) {
+        try {
+            const res = await fetch(url);
+            if (!res.ok) {
+                lastErr = new Error(`${label} HTTP ${res.status} @ ${url}`);
+                continue;
+            }
+            return await res.json();
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+    throw lastErr || new Error(`${label} load failed`);
+}
+
+async function fetchTwBoundaryGeoJson() {
+    if (twBoundaryGeoCache) return twBoundaryGeoCache;
+    if (twBoundaryFetchPromise) return twBoundaryFetchPromise;
+
+    twBoundaryFetchPromise = (async () => {
+        try {
+            const [counties, towns] = await Promise.all([
+                fetchGeoJsonResource(TW_LOCAL_COUNTIES_GEOJSON_URL, 'local counties'),
+                fetchGeoJsonResource(TW_LOCAL_TOWNS_GEOJSON_URL, 'local towns'),
+            ]);
+            twBoundaryGeoCache = { counties, towns, source: 'local' };
+            return twBoundaryGeoCache;
+        } catch (localErr) {
+            console.warn('[dashboard-map] 本地行政區界線載入失敗，嘗試 CDN', localErr);
+        }
+
+        if (typeof topojson === 'undefined' || typeof topojson.feature !== 'function') {
+            throw new Error('topojson-client 未載入，無法使用 CDN 行政區界線');
+        }
+
+        const [countyTopo, townTopo] = await Promise.all([
+            fetchFirstOkJson(TW_COUNTIES_TOPO_URLS, 'county boundaries'),
+            fetchFirstOkJson(TW_TOWNS_TOPO_URLS, 'town boundaries'),
+        ]);
+        const counties = topojson.feature(countyTopo, countyTopo.objects.counties);
+        const towns = topojson.feature(townTopo, townTopo.objects.towns);
+        twBoundaryGeoCache = { counties, towns, source: 'cdn' };
+        return twBoundaryGeoCache;
+    })();
+
+    try {
+        return await twBoundaryFetchPromise;
+    } finally {
+        twBoundaryFetchPromise = null;
+    }
+}
+
+async function ensureTwBoundaryLayersOnMap(map) {
+    if (!map) return;
+
+    await waitForMapStyleReady(map);
+    if (!map.getStyle()) return;
+
+    if (hasTwBoundaryLayers(map)) {
+        setTwBoundaryLayersVisible(map);
+        return;
+    }
+
+    const { counties, towns } = await fetchTwBoundaryGeoJson();
+    if (!map.getStyle()) return;
+    applyTwBoundaryLayersToMap(map, counties, towns);
+}
+
+function scheduleTwBoundaryLayers(map, isAlive) {
+    const run = async () => {
+        if (!isAlive()) return;
+        try {
+            await ensureTwBoundaryLayersOnMap(map);
+        } catch (err) {
+            console.warn('[dashboard-map] 鄉鎮市區界載入失敗', err);
+        }
+    };
+
+    void run();
+    if (typeof map.once === 'function') {
+        map.once('idle', () => { void run(); });
+    }
+}
+
 export function useDashboardMapView({
     rootRef,
     isActiveRef,
     getWorkspaceId,
     workMapDocRef,
+    agencyLayerDocRef,
+    currentLocationRef,
     pendingViewRef,
 }) {
     let disposed = false;
@@ -21,19 +206,21 @@ export function useDashboardMapView({
     let airQualityApi = null;
     let policeApi = null;
     let judicialApi = null;
+    let currentLocationApi = null;
     let populationApi = null;
     let nlscApi = null;
+    let layerHealthApi = null;
     const caseStatsCharts = [];
     let resizeHandler = null;
     let layoutResizeHandler = null;
     let ro = null;
     let syncTopKpiLayoutWidthsFn = null;
     let stopWatchWorkMapDoc = null;
+    let stopWatchAgencyDoc = null;
+    let stopWatchCurrentLocation = null;
     let layerToggleAbort = null;
     let mountedMapRoot = null;
     let twTownsGeoJson = null;
-    let boundariesLoadPromise = null;
-    let boundariesLoadMap = null;
 
     const MAP_SETTINGS_STORAGE_KEY = 'jcms.dashboard-map.settings';
 
@@ -48,6 +235,24 @@ export function useDashboardMapView({
         return { center: [lng, lat], zoom };
     }
 
+    function normalizeCurrentLocation(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        const lng = Number(raw.lng ?? raw.coordinates?.[0]);
+        const lat = Number(raw.lat ?? raw.coordinates?.[1]);
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+        return {
+            lng,
+            lat,
+            title: String(raw.title || '').trim() || '現在位置',
+            description: String(raw.description || '').trim(),
+        };
+    }
+
+    function getCurrentLocation() {
+        const raw = currentLocationRef?.value ?? currentLocationRef;
+        return normalizeCurrentLocation(raw);
+    }
+
     function loadPersistedMapSettings() {
         try {
             const raw = localStorage.getItem(MAP_SETTINGS_STORAGE_KEY);
@@ -58,6 +263,17 @@ export function useDashboardMapView({
         } catch (err) {
             console.warn('[dashboard-map] 讀取地圖設定失敗', err);
             return null;
+        }
+    }
+
+    function hydrateCurrentLocationFromStorage() {
+        const persisted = loadPersistedMapSettings();
+        const loc = normalizeCurrentLocation(persisted?.currentLocation);
+        if (!loc || !currentLocationRef) return;
+        if (currentLocationRef?.value !== undefined) {
+            Object.assign(currentLocationRef.value, loc);
+        } else if (typeof currentLocationRef === 'object') {
+            Object.assign(currentLocationRef, loc);
         }
     }
 
@@ -109,15 +325,28 @@ export function useDashboardMapView({
 
     function persistMapSettings() {
         try {
+            const loc = getCurrentLocation();
             localStorage.setItem(
                 MAP_SETTINGS_STORAGE_KEY,
                 JSON.stringify({
                     defaultView: mapLayerState.defaultView,
+                    currentLocation: loc,
                 })
             );
         } catch (err) {
             console.warn('[dashboard-map] 儲存地圖設定失敗', err);
         }
+    }
+
+    function syncCurrentLocationOnMap() {
+        if (!mapInstance || !currentLocationApi) return;
+        currentLocationApi.syncCurrentLocation(mapInstance, getCurrentLocation());
+    }
+
+    async function resolveAgencyGeoJson(kind) {
+        const doc = agencyLayerDocRef?.value ?? agencyLayerDocRef ?? null;
+        const features = await resolveAgencyFeatures(kind, doc);
+        return agencyFeaturesToGeoJson(kind, features);
     }
 
     function syncWorkMapLayersOnMap() {
@@ -148,9 +377,9 @@ export function useDashboardMapView({
     function teardown() {
         disposed = true;
         mountedMapRoot = null;
-        boundariesLoadPromise = null;
-        boundariesLoadMap = null;
-        twTownsGeoJson = null;
+        if (twBoundaryGeoCache) {
+            twTownsGeoJson = twBoundaryGeoCache.towns;
+        }
         if (layerToggleAbort) {
             layerToggleAbort.abort();
             layerToggleAbort = null;
@@ -171,6 +400,14 @@ export function useDashboardMapView({
             stopWatchWorkMapDoc();
             stopWatchWorkMapDoc = null;
         }
+        if (stopWatchAgencyDoc) {
+            stopWatchAgencyDoc();
+            stopWatchAgencyDoc = null;
+        }
+        if (stopWatchCurrentLocation) {
+            stopWatchCurrentLocation();
+            stopWatchCurrentLocation = null;
+        }
         if (weatherApi) {
             weatherApi.teardownWeatherRefresh();
             weatherApi = null;
@@ -187,6 +424,9 @@ export function useDashboardMapView({
             judicialApi.teardownJudicialLayers();
             judicialApi = null;
         }
+        if (currentLocationApi?.stopBlink) {
+            currentLocationApi.stopBlink();
+        }
         populationApi = null;
         while (caseStatsCharts.length) {
             const c = caseStatsCharts.pop();
@@ -200,11 +440,14 @@ export function useDashboardMapView({
     }
 
     function boot() {
+        disposed = false;
         const root = getRoot();
-        if (!root || !isActiveRef.value || disposed) return;
+        if (!root || !isActiveRef.value) return;
 
         resetMapLayerTogglesToDefault();
         hydrateDefaultViewFromStorage();
+        hydrateCurrentLocationFromStorage();
+        void fetchTwBoundaryGeoJson().catch(() => { /* 預熱本地界線 */ });
 
         const workspaceId = typeof getWorkspaceId === 'function' ? getWorkspaceId() : 'WS_001';
 
@@ -277,7 +520,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                         'line-opacity': 0.38,
                         'line-width': ['interpolate', ['linear'], ['zoom'], 10, 0.15, 14, 0.9],
                     },
-                    filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'path']]],
+                    filter: ['match', ['get', 'class'], ['minor', 'service', 'path'], true, false],
                 },
                 {
                     id: 'transp-major-roads',
@@ -290,7 +533,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                         'line-opacity': 0.82,
                         'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.35, 10, 1.1, 14, 2.6],
                     },
-                    filter: ['in', ['get', 'class'], ['literal', ['motorway', 'trunk', 'primary', 'secondary', 'tertiary']]],
+                    filter: ['match', ['get', 'class'], ['motorway', 'motorway_link', 'trunk', 'trunk_link', 'primary', 'primary_link', 'secondary', 'secondary_link', 'tertiary', 'tertiary_link', 'street', 'street_limited'], true, false],
                 },
                 {
                     id: 'transp-rail',
@@ -344,7 +587,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                         'fill-color': MAP_COLORS.ink100,
                         'fill-opacity': 0.45,
                     },
-                    filter: ['in', ['get', 'class'], ['literal', ['aerodrome', 'heliport', 'apron']]],
+                    filter: ['match', ['get', 'class'], ['aerodrome', 'heliport', 'apron'], true, false],
                 },
                 {
                     id: 'aeroway-airport-line',
@@ -358,7 +601,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                         'line-opacity': 0.55,
                         'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.3, 12, 1, 14, 2],
                     },
-                    filter: ['in', ['get', 'class'], ['literal', ['runway', 'taxiway']]],
+                    filter: ['match', ['get', 'class'], ['runway', 'taxiway'], true, false],
                 },
                 {
                     id: 'poi-harbor',
@@ -380,9 +623,6 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         };
 
         /** 內政部縣市／鄉鎮市區界（WGS84）；向量圖磚低縮放不含區級邊界 */
-        const TW_COUNTIES_TOPO_URL = 'https://cdn.jsdelivr.net/npm/taiwan-atlas/counties-10t.json';
-        const TW_TOWNS_TOPO_URL = 'https://cdn.jsdelivr.net/npm/taiwan-atlas/towns-10t.json';
-
         const NORTH_TW_BOUNDS = [[120.35, 24.55], [122.05, 25.45]];
         const MAP_FIT_PADDING = { top: 420, bottom: 90, left: 200, right: 200 };
 
@@ -451,6 +691,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             townBoundaries: 'tw-town-boundaries',
             detailRoads: 'road-detail-minor',
             rainAdvisoryFill: 'cwa-rain-advisory-fill',
+            rainAdvisoryLabel: 'cwa-rainfall-label',
             rainAdvisoryLine: 'cwa-rain-advisory-line',
             satelliteCloud: 'cwa-satellite-cloud',
             radarEcho: 'cwa-radar-echo',
@@ -525,7 +766,6 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             weatherApi = globalThis.DashboardMapWeather.createWeatherLayersApi({
                 mapColors: MAP_COLORS,
                 layerIds: LAYER_IDS,
-                getTwTownsGeoJson: () => twTownsGeoJson,
                 getMapLayerState: () => mapLayerState,
                 setWeatherMeta,
             });
@@ -545,6 +785,27 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             nlscApi = globalThis.DashboardMapNlsc.createNlscLayersApi({
                 getMapLayerState: () => mapLayerState,
             });
+        }
+
+        if (typeof globalThis.DashboardMapLayerHealth !== 'undefined') {
+            layerHealthApi = globalThis.DashboardMapLayerHealth.createLayerHealthApi({
+                getRoot: () => getRoot(),
+            });
+        }
+
+        const HEALTH = layerHealthApi?.STATUS || { idle: 'idle', ok: 'ok', warn: 'warn', error: 'error' };
+
+        function setLayerHealth(key, patch) {
+            layerHealthApi?.setLayerHealth(key, patch);
+        }
+
+        function clearInactiveLayerHealth() {
+            if (!layerHealthApi) return;
+            if (!mapLayerState.adminLabels) layerHealthApi.clearLayerHealth('admin');
+            if (!mapLayerState.populationLabels) layerHealthApi.clearLayerHealth('population');
+            if (!mapLayerState.majorTransport) layerHealthApi.clearLayerHealth('transport');
+            if (!mapLayerState.nlscOrthophoto) layerHealthApi.clearLayerHealth('orthophoto');
+            if (!mapLayerState.nlscLandsect) layerHealthApi.clearLayerHealth('landsect');
         }
 
         function getDashboardMapApiBase() {
@@ -572,6 +833,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 layerIds: LAYER_IDS,
                 getMapLayerState: () => mapLayerState,
                 getGeoJsonUrl: () => 'data/police-agencies.geojson',
+                getResolvedGeoJson: () => resolveAgencyGeoJson(AGENCY_LAYER_KINDS.police),
             });
         }
 
@@ -582,6 +844,13 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 getMapLayerState: () => mapLayerState,
                 getGeoJsonUrl: () => 'data/judicial-agencies.geojson',
                 getTwTownsGeoJson: () => twTownsGeoJson,
+                getResolvedGeoJson: () => resolveAgencyGeoJson(AGENCY_LAYER_KINDS.judicial),
+            });
+        }
+
+        if (typeof globalThis.DashboardMapCurrentLocation !== 'undefined') {
+            currentLocationApi = globalThis.DashboardMapCurrentLocation.createCurrentLocationApi({
+                mapColors: MAP_COLORS,
             });
         }
 
@@ -664,7 +933,12 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         }
 
         function syncTwTownsGeoJsonFromMap(map) {
-            if (twTownsGeoJson || !map.getSource('tw-towns')) return;
+            if (twTownsGeoJson) return;
+            if (twBoundaryGeoCache?.towns) {
+                twTownsGeoJson = twBoundaryGeoCache.towns;
+                return;
+            }
+            if (!map.getSource('tw-towns')) return;
             try {
                 const src = map.getSource('tw-towns');
                 const data = typeof src.serialize === 'function'
@@ -676,13 +950,6 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             } catch (_) {
                 /* ignore */
             }
-        }
-
-        function ensureAdminBoundaryLayersVisible(map) {
-            [LAYER_IDS.countyBoundaries, LAYER_IDS.townBoundaries].forEach((layerId) => {
-                if (!map.getLayer(layerId)) return;
-                map.setLayoutProperty(layerId, 'visibility', 'visible');
-            });
         }
 
         function isMapAlive(map) {
@@ -709,103 +976,20 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         }
 
         function waitMapStyleReady(map) {
-            if (map.loaded()) return Promise.resolve();
-            return new Promise((resolve) => {
-                map.once('load', resolve);
-            });
+            return waitForMapStyleReady(map);
         }
 
         async function ensureTaiwanAdminBoundaries(map) {
             if (!isMapAlive(map)) return;
-            await waitMapStyleReady(map);
+            await ensureTwBoundaryLayersOnMap(map);
             if (!isMapAlive(map)) return;
-
-            if (map.getSource('tw-towns')) {
-                syncTwTownsGeoJsonFromMap(map);
-                ensureAdminBoundaryLayersVisible(map);
-                return;
-            }
-
-            if (boundariesLoadPromise && boundariesLoadMap === map) {
-                await boundariesLoadPromise;
-                syncTwTownsGeoJsonFromMap(map);
-                ensureAdminBoundaryLayersVisible(map);
-                return;
-            }
-
-            boundariesLoadMap = map;
-            boundariesLoadPromise = (async () => {
-                if (!map.loaded()) {
-                    await waitMapStyleReady(map);
-                }
-                if (!isMapAlive(map)) return;
-
-                const [countyRes, townRes] = await Promise.all([
-                    fetch(TW_COUNTIES_TOPO_URL),
-                    fetch(TW_TOWNS_TOPO_URL),
-                ]);
-                if (!countyRes.ok) throw new Error(`county boundaries HTTP ${countyRes.status}`);
-                if (!townRes.ok) throw new Error(`town boundaries HTTP ${townRes.status}`);
-
-                const countyTopo = await countyRes.json();
-                const townTopo = await townRes.json();
-                if (!isMapAlive(map)) return;
-
-                const counties = topojson.feature(countyTopo, countyTopo.objects.counties);
-                const towns = topojson.feature(townTopo, townTopo.objects.towns);
-                twTownsGeoJson = towns;
-
-                if (!map.getSource('tw-counties')) {
-                    map.addSource('tw-counties', { type: 'geojson', data: counties });
-                }
-                if (!map.getLayer(LAYER_IDS.countyBoundaries)) {
-                    map.addLayer({
-                        id: LAYER_IDS.countyBoundaries,
-                        type: 'line',
-                        source: 'tw-counties',
-                        minzoom: 6,
-                        paint: {
-                            'line-color': MAP_COLORS.accent,
-                            'line-opacity': 0.88,
-                            'line-width': ['interpolate', ['linear'], ['zoom'], 7, 1.15, 10, 1.45, 14, 1.85],
-                        },
-                    });
-                }
-
-                if (!map.getSource('tw-towns')) {
-                    map.addSource('tw-towns', { type: 'geojson', data: towns });
-                }
-                if (!map.getLayer(LAYER_IDS.townBoundaries)) {
-                    map.addLayer({
-                        id: LAYER_IDS.townBoundaries,
-                        type: 'line',
-                        source: 'tw-towns',
-                        minzoom: 7,
-                        paint: {
-                            'line-color': MAP_COLORS.accent,
-                            'line-opacity': 0.88,
-                            'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.65, 11, 0.85, 14, 1.1],
-                            'line-dasharray': [3, 2],
-                        },
-                    });
-                }
-                ensureAdminBoundaryLayersVisible(map);
-            })();
-
-            try {
-                await boundariesLoadPromise;
-            } finally {
-                if (boundariesLoadMap === map) {
-                    boundariesLoadPromise = null;
-                    boundariesLoadMap = null;
-                }
-            }
+            syncTwTownsGeoJsonFromMap(map);
         }
 
         function ensureAdminLabelLayer(map) {
             if (map.getLayer(LAYER_IDS.adminLabels) || !twTownsGeoJson) return;
 
-            const labelFeatures = twTownsGeoJson.features
+            const labelFeatures = (twTownsGeoJson?.features || [])
                 .map((f) => {
                     const c = featureCentroid(f);
                     const name = String((f.properties && f.properties.TOWNNAME) || '').trim();
@@ -854,75 +1038,176 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             }
         }
 
-        async function applyMapLayerVisibility() {
-            if (!mapInstance) return;
-            try {
-                await ensureTaiwanAdminBoundaries(mapInstance);
-            } catch (err) {
-                console.warn('[dashboard-map] 鄉鎮市區界載入失敗', err);
+        function reconcileLayerStack(map) {
+            if (!map || typeof globalThis.DashboardMapLayerStack?.reconcileDashboardLayerStack !== 'function') {
                 return;
             }
-            if (!mapInstance) return;
-            ensureAdminLabelLayer(mapInstance);
-            if (populationApi) {
-                populationApi.ensurePopulationLabelLayer(mapInstance);
+            globalThis.DashboardMapLayerStack.reconcileDashboardLayerStack(map, mapLayerState, LAYER_IDS);
+        }
+
+        async function applyAdminLayerState(map) {
+            if (!map) return false;
+            try {
+                await ensureTaiwanAdminBoundaries(map);
+            } catch (err) {
+                setLayerHealth('admin', {
+                    status: HEALTH.error,
+                    detail: mapLayerState.adminLabels ? '界線資料載入失敗' : '界線未就緒',
+                });
+                console.warn('[dashboard-map] 鄉鎮市區界載入失敗', err);
+                return false;
             }
-            if (mapInstance.getLayer(LAYER_IDS.adminLabels)) {
-                mapInstance.setLayoutProperty(
+
+            ensureAdminLabelLayer(map);
+            const labelCount = twTownsGeoJson?.features?.length ?? 0;
+
+            if (map.getLayer(LAYER_IDS.adminLabels)) {
+                map.setLayoutProperty(
                     LAYER_IDS.adminLabels,
                     'visibility',
                     mapLayerState.adminLabels ? 'visible' : 'none'
                 );
                 if (mapLayerState.adminLabels) {
-                    raiseAdminLabelLayer(mapInstance);
+                    raiseAdminLabelLayer(map);
                 }
             }
-            if (populationApi) {
-                populationApi.applyPopulationVisibility(mapInstance);
-                if (mapLayerState.populationLabels) {
-                    try {
-                        await populationApi.refreshPopulationLabels(mapInstance);
-                    } catch (_) {
-                        /* refreshPopulationLabels 已記錄 */
-                    }
+
+            if (mapLayerState.adminLabels) {
+                if (!map.getLayer(LAYER_IDS.adminLabels)) {
+                    setLayerHealth('admin', { status: HEALTH.error, detail: '標籤圖層未建立' });
+                } else {
+                    setLayerHealth('admin', {
+                        status: HEALTH.ok,
+                        detail: `${labelCount} 個鄉鎮`,
+                    });
                 }
+            } else {
+                layerHealthApi?.clearLayerHealth('admin');
             }
-            if (mapLayerState.adminLabels && mapInstance.getLayer(LAYER_IDS.adminLabels)) {
-                raiseAdminLabelLayer(mapInstance);
+            return true;
+        }
+
+        async function applyPopulationLayerState(map, adminReady) {
+            if (!map || !populationApi) return;
+            try {
+                populationApi.ensurePopulationLabelLayer(map);
+                populationApi.applyPopulationVisibility(map);
+                if (adminReady && mapLayerState.populationLabels) {
+                    await populationApi.refreshPopulationLabels(map);
+                    const src = map.getSource('tw-town-population-labels');
+                    const featureCount = src?._data?.features?.length ?? 0;
+                    setLayerHealth('population', {
+                        status: featureCount > 0 ? HEALTH.ok : HEALTH.warn,
+                        detail: featureCount > 0 ? `${featureCount} 個標籤` : '無可顯示資料',
+                    });
+                } else if (mapLayerState.populationLabels && !adminReady) {
+                    setLayerHealth('population', {
+                        status: HEALTH.error,
+                        detail: '需先載入行政區界線',
+                    });
+                } else {
+                    layerHealthApi?.clearLayerHealth('population');
+                }
+            } catch (err) {
+                setLayerHealth('population', { status: HEALTH.error, detail: '套用失敗' });
+                console.warn('[dashboard-map] 人口圖層套用失敗', err);
             }
-            MAJOR_TRANSPORT_LAYER_IDS.forEach((layerId) => {
-                if (!mapInstance.getLayer(layerId)) return;
-                mapInstance.setLayoutProperty(
-                    layerId,
-                    'visibility',
-                    mapLayerState.majorTransport ? 'visible' : 'none'
-                );
-            });
-            if (mapInstance.getLayer(LAYER_IDS.detailRoads)) {
-                mapInstance.setLayoutProperty(
-                    LAYER_IDS.detailRoads,
-                    'visibility',
-                    mapLayerState.majorTransport ? 'visible' : 'none'
-                );
+        }
+
+        function applyTransportLayerState(map) {
+            if (!map) return;
+            try {
+                let visibleLayers = 0;
+                MAJOR_TRANSPORT_LAYER_IDS.forEach((layerId) => {
+                    if (!map.getLayer(layerId)) return;
+                    map.setLayoutProperty(
+                        layerId,
+                        'visibility',
+                        mapLayerState.majorTransport ? 'visible' : 'none'
+                    );
+                    if (mapLayerState.majorTransport) visibleLayers += 1;
+                });
+                if (map.getLayer(LAYER_IDS.detailRoads)) {
+                    map.setLayoutProperty(
+                        LAYER_IDS.detailRoads,
+                        'visibility',
+                        mapLayerState.majorTransport ? 'visible' : 'none'
+                    );
+                    if (mapLayerState.majorTransport) visibleLayers += 1;
+                }
+
+                if (mapLayerState.majorTransport) {
+                    setLayerHealth('transport', {
+                        status: visibleLayers > 0 ? HEALTH.ok : HEALTH.error,
+                        detail: visibleLayers > 0 ? `${visibleLayers} 個子圖層` : '子圖層不存在',
+                    });
+                } else {
+                    layerHealthApi?.clearLayerHealth('transport');
+                }
+            } catch (err) {
+                setLayerHealth('transport', { status: HEALTH.error, detail: '套用失敗' });
+                console.warn('[dashboard-map] 交通圖層套用失敗', err);
             }
-            if (nlscApi) {
-                nlscApi.applyNlscLayerVisibility(mapInstance);
+        }
+
+        function applyNlscLayerState(map) {
+            if (!map || !nlscApi) return;
+            try {
+                nlscApi.applyNlscLayerVisibility(map);
+                updateNlscLayerMeta();
+
+                const orthoId = nlscApi.LAYER_IDS?.orthophoto || 'nlsc-photo2';
+                const landId = nlscApi.LAYER_IDS?.landsect || 'nlsc-landsect';
+
+                if (mapLayerState.nlscOrthophoto) {
+                    setLayerHealth('orthophoto', {
+                        status: map.getLayer(orthoId) ? HEALTH.ok : HEALTH.error,
+                        detail: layerHealthApi?.describeMapLayer(map, orthoId) || '圖層未建立',
+                    });
+                } else {
+                    layerHealthApi?.clearLayerHealth('orthophoto');
+                }
+
+                if (mapLayerState.nlscLandsect) {
+                    setLayerHealth('landsect', {
+                        status: map.getLayer(landId) ? HEALTH.ok : HEALTH.error,
+                        detail: layerHealthApi?.describeMapLayer(map, landId) || '圖層未建立',
+                    });
+                } else {
+                    layerHealthApi?.clearLayerHealth('landsect');
+                }
+            } catch (err) {
+                if (mapLayerState.nlscOrthophoto) {
+                    setLayerHealth('orthophoto', { status: HEALTH.error, detail: '套用失敗' });
+                }
+                if (mapLayerState.nlscLandsect) {
+                    setLayerHealth('landsect', { status: HEALTH.error, detail: '套用失敗' });
+                }
+                console.warn('[dashboard-map] NLSC 圖層套用失敗', err);
             }
-            updateNlscLayerMeta();
+        }
+
+        async function applyMapLayerVisibility() {
+            if (!mapInstance) return;
+
+            const adminReady = await applyAdminLayerState(mapInstance);
+            if (!mapInstance) return;
+
+            await applyPopulationLayerState(mapInstance, adminReady);
+            if (!mapInstance) return;
+
+            applyTransportLayerState(mapInstance);
+            applyNlscLayerState(mapInstance);
+            reconcileLayerStack(mapInstance);
+            clearInactiveLayerHealth();
         }
 
         async function applyWeatherLayerVisibility() {
             if (!mapInstance || !weatherApi) return;
             try {
-                await ensureTaiwanAdminBoundaries(mapInstance);
-            } catch (err) {
-                console.warn('[dashboard-map] 鄉鎮市區界載入失敗', err);
-                return;
-            }
-            if (!mapInstance || !weatherApi) return;
-            try {
                 await weatherApi.refreshWeatherLayers(mapInstance);
                 weatherApi.scheduleWeatherRefresh(mapInstance, isWeatherLayerActive);
+                reconcileLayerStack(mapInstance);
             } catch (err) {
                 console.warn('[dashboard-map] 氣象圖層載入失敗', err);
             }
@@ -970,10 +1255,29 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             await applyPoliceLayerVisibility();
             if (!mapInstance || disposed) return;
             await applyJudicialLayerVisibility();
+            if (!mapInstance || disposed) return;
+            reconcileLayerStack(mapInstance);
         }
 
         async function onMapReady(map) {
             if (!isMapAlive(map)) return;
+
+            if (nlscApi) {
+                try {
+                    nlscApi.ensureNlscLayers(map);
+                } catch (err) {
+                    console.warn('[dashboard-map] NLSC 圖層初始化失敗', err);
+                }
+            }
+            if (weatherApi) {
+                try {
+                    weatherApi.ensureRainAdvisoryLayers(map);
+                    weatherApi.ensureSatelliteLayer(map);
+                    weatherApi.ensureRadarLayer(map);
+                } catch (err) {
+                    console.warn('[dashboard-map] 氣象圖層初始化失敗', err);
+                }
+            }
 
             try {
                 await ensureTaiwanAdminBoundaries(map);
@@ -982,21 +1286,17 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             }
             if (!isMapAlive(map)) return;
 
-            if (weatherApi) {
-                weatherApi.ensureRainAdvisoryLayers(map);
-                weatherApi.ensureSatelliteLayer(map);
-                weatherApi.ensureRadarLayer(map);
-            }
-            if (nlscApi) {
-                nlscApi.ensureNlscLayers(map);
-            }
-
-            ensureAdminLabelLayer(map);
-            if (populationApi) {
-                populationApi.ensurePopulationLabelLayer(map);
+            try {
+                ensureAdminLabelLayer(map);
+                if (populationApi) {
+                    populationApi.ensurePopulationLabelLayer(map);
+                }
+            } catch (err) {
+                console.warn('[dashboard-map] 標籤圖層初始化失敗', err);
             }
 
             syncWorkMapLayersOnMap();
+            syncCurrentLocationOnMap();
             if (pendingViewRef?.pendingView) {
                 applyPendingOverviewView();
             } else {
@@ -1746,21 +2046,22 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 attributionControl: true,
             });
 
-            mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
-            bindRestoreDefaultViewSync(mapInstance);
-            mountedMapRoot = getRoot();
-
             const map = mapInstance;
             let mapReadyStarted = false;
             const startMapReady = () => {
                 if (mapReadyStarted || !isMapAlive(map)) return;
                 mapReadyStarted = true;
+                scheduleTwBoundaryLayers(map, () => isMapAlive(map));
                 void onMapReady(map);
             };
             map.once('load', startMapReady);
             if (map.loaded()) {
-                queueMicrotask(startMapReady);
+                startMapReady();
             }
+
+            mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+            bindRestoreDefaultViewSync(mapInstance);
+            mountedMapRoot = getRoot();
 
             resizeHandler = () => {
                 if (mapInstance) mapInstance.resize();
@@ -1772,6 +2073,20 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         bindWorkMapToolbar();
         if (workMapDocRef) {
             stopWatchWorkMapDoc = watch(workMapDocRef, () => syncWorkMapLayersOnMap(), { deep: true });
+        }
+        if (agencyLayerDocRef) {
+            stopWatchAgencyDoc = watch(agencyLayerDocRef, () => {
+                policeApi?.invalidatePoliceGeoJsonCache?.();
+                judicialApi?.invalidateJudicialGeoJsonCache?.();
+                void applyPoliceLayerVisibility();
+                void applyJudicialLayerVisibility();
+            }, { deep: true });
+        }
+        if (currentLocationRef) {
+            stopWatchCurrentLocation = watch(currentLocationRef, () => {
+                syncCurrentLocationOnMap();
+                persistMapSettings();
+            }, { deep: true });
         }
         initMap();
         syncTopKpiLayoutWidthsFn = syncTopKpiLayoutWidths;
@@ -1793,16 +2108,11 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
     watch(
         [isActiveRef, rootRef],
         ([active, root]) => {
-            if (!active || !root) {
-                if (mapInstance) teardown();
-                return;
-            }
-            if (mapInstance && mountedMapRoot === root) {
-                return;
-            }
             teardown();
             disposed = false;
-            nextTick(boot);
+            if (active && root) {
+                nextTick(boot);
+            }
         },
         { immediate: true, flush: 'post' }
     );
@@ -1810,7 +2120,11 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
     onUnmounted(teardown);
 
     return {
-        resizeMap: () => { if (mapInstance) mapInstance.resize(); },
+        resizeMap: () => {
+            if (!mapInstance) return;
+            mapInstance.resize();
+            scheduleTwBoundaryLayers(mapInstance, () => !disposed && mapInstance);
+        },
         syncLayout: () => { try { syncTopKpiLayoutWidthsFn?.(); } catch (_) { /* ignore */ } },
         getView: () => {
             if (!mapInstance) return null;

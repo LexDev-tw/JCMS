@@ -1,0 +1,44 @@
+---
+description: GitHub 推送與 VPS（NPM）Docker 部署約束
+alwaysApply: true
+---
+
+# VPS 部署與 GitHub 推送原則
+
+## 儲存庫定位
+
+- 推送到 **GitHub** 的程式碼僅供 **VPS Docker 部署**；每次 push 後必須能在 VPS 上 `git pull`（或 `clone`）並 **`docker compose up -d --build`** 成功更新運行。
+- **勿**將僅供本機開發的腳本、設定（`.vscode/`、Windows `.bat`、PM2 啟動器等）納入推送內容。
+- 本機 native 開發（`npm start`）為輔助，**不可**與 VPS 部署設定衝突。
+
+## VPS 環境
+
+| 項目 | 值 |
+|------|-----|
+| 供應商 | VPS |
+| OS | Ubuntu |
+| RAM | **2 GB**（映像與依賴須精簡；生產 image 用 `npm ci --omit=dev`） |
+| 反向代理 | **Nginx Proxy Manager（NPM）** |
+| Docker 網路 | 所有服務加入外部網路 **`npm_default`** |
+| 根網域 | `example.com` |
+| JCMS 子網域 | **`jcms.example.com`** |
+
+## Docker / Compose 約束
+
+- **不要**在 `docker-compose.yml` 對 JCMS 綁定主機 `ports`（TLS 與對外由 NPM 處理）；容器僅 `expose: 3000`，並掛載 `npm_default`。
+- **不要**依賴 repo 內建的 Caddy 作為正式環境反向代理；正式 TLS 由 NPM 管理。
+- 環境變數預設對外網址：`JCMS_PUBLIC_URL=https://jcms.example.com`；Google OAuth redirect 須為 `https://jcms.example.com/api/google-calendar/oauth/callback`。
+- 前端 API 預設 **同源 `/api`**；禁止硬編碼 `127.0.0.1:3000` 作為正式環境 fallback。
+- 持久化：`data/`（SQLite）、`uploads/` 使用 Docker volumes；`.env` 與金鑰永不進 Git。
+
+## NPM 代理設定（參考）
+
+- Proxy Host：`jcms.example.com` → `http://jcms:3000`（`jcms` 為 compose 中的 `container_name`）
+- 容器須與 NPM 同在 `npm_default` 網路
+
+## 變更檢查清單（推送前）
+
+1. `docker compose config` 無誤，且使用 `npm_default` 外部網路
+2. README / `.env.example` 與上述網域、NPM 流程一致
+3. 無 localhost 專用邏輯混入正式路徑
+4. 2GB RAM 下可建置並啟動（避免不必要的大型 dev 依賴進 production image）

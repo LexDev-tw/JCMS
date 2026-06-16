@@ -97,17 +97,19 @@
         }
 
         function ensurePopulationLabelLayer(map) {
-            if (map.getLayer(LAYER_ID) || !getTwTownsGeoJson()) return;
+            if (!map.getSource(SOURCE_ID)) {
+                map.addSource(SOURCE_ID, {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: [] },
+                });
+            }
+            if (map.getLayer(LAYER_ID)) return;
 
-            map.addSource(SOURCE_ID, {
-                type: 'geojson',
-                data: { type: 'FeatureCollection', features: [] },
-            });
             map.addLayer({
                 id: LAYER_ID,
                 type: 'symbol',
                 source: SOURCE_ID,
-                minzoom: 8,
+                minzoom: 7,
                 layout: {
                     visibility: 'none',
                     'text-field': ['get', 'label'],

@@ -8,8 +8,6 @@ data/
 *.db
 uploads/**
 !uploads/README.md
-case_archive/**
-!case_archive/README.md
 
 # Dev / IDE
 .git/
@@ -25,3 +23,4 @@ public/dist/
 # Windows-only launchers (removed from VPS repo)
 Start-JCMS.bat
 Shutdown-JCMS.bat
+Caddyfile

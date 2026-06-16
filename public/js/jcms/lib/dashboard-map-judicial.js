@@ -108,12 +108,12 @@
         const address = escapeHtml(props?.address || '');
         const metaLine = [type, jurisdiction].filter(Boolean).join(' · ');
         return [
-            `<p style="margin:0 0 0.25rem;font-size:11px;font-weight:700;color:#111">${name}</p>`,
+            `<p style="font-size:11px;font-weight:700;color:#111">${name}</p>`,
             metaLine
-                ? `<p style="margin:0;font-size:10px;color:#666;line-height:1.35">${metaLine}</p>`
+                ? `<p style="font-size:10px;color:#666;line-height:1.3">${metaLine}</p>`
                 : '',
             address
-                ? `<p style="margin:0.2rem 0 0;font-size:10px;color:#666;line-height:1.35">${address}</p>`
+                ? `<p style="font-size:10px;color:#666;line-height:1.3">${address}</p>`
                 : '',
         ].join('');
     }
@@ -124,6 +124,7 @@
         getMapLayerState,
         getGeoJsonUrl,
         getTwTownsGeoJson,
+        getResolvedGeoJson,
     }) {
         let hoverPopup = null;
         let hoverPopupActive = false;
@@ -143,6 +144,9 @@
         }
 
         async function loadGeoJson() {
+            if (typeof getResolvedGeoJson === 'function') {
+                return getResolvedGeoJson();
+            }
             if (geoJsonCache) return geoJsonCache;
             if (!geoJsonPromise) {
                 geoJsonPromise = fetch(getDataUrl(), { headers: { Accept: 'application/geo+json, application/json' } })
@@ -294,9 +298,9 @@
             hoverPopup = new maplibregl.Popup({
                 closeButton: false,
                 closeOnClick: false,
-                maxWidth: '320px',
+                maxWidth: 'none',
                 className: 'dash-map-judicial-popup',
-                offset: 10,
+                offset: 8,
             });
 
             enterHandler = (e) => {
@@ -404,10 +408,16 @@
             hoverPopupActive = false;
         }
 
+        function invalidateJudicialGeoJsonCache() {
+            geoJsonCache = null;
+            geoJsonPromise = null;
+        }
+
         return {
             ensureLayers,
             refreshJudicialLayers,
             teardownJudicialLayers,
+            invalidateJudicialGeoJsonCache,
             clearJurisdictionHighlight,
             SOURCE_ID,
             JURISDICTION_SOURCE_ID,

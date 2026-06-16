@@ -15,7 +15,7 @@ COPY public ./public
 COPY uploads ./uploads
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
-  && mkdir -p data case_archive uploads
+  && mkdir -p data uploads
 
 ENV NODE_ENV=production \
   PORT=3000 \

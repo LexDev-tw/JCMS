@@ -47,10 +47,10 @@
         const pm25 = props?.pm25 != null && Number.isFinite(props.pm25) ? String(props.pm25) : '—';
         const siteType = String(props?.siteType || '');
         return [
-            `<p style="margin:0 0 0.2rem;font-size:11px;font-weight:700;color:#111">${name}</p>`,
-            county ? `<p style="margin:0 0 0.35rem;font-size:9px;color:#666">${county}${siteType ? ` · ${siteType}` : ''}</p>` : '',
-            `<p style="margin:0;font-family:ui-monospace,monospace;font-size:10px;color:#111">AQI <span style="font-weight:700;color:${aqiColor}">${aqi}</span> · ${status}</p>`,
-            `<p style="margin:0.2rem 0 0;font-family:ui-monospace,monospace;font-size:9px;color:#666">PM2.5 ${pm25} μg/m³</p>`,
+            `<p style="font-size:11px;font-weight:700;color:#111">${name}</p>`,
+            county ? `<p style="font-size:9px;color:#666">${county}${siteType ? ` · ${siteType}` : ''}</p>` : '',
+            `<p style="font-family:ui-monospace,monospace;font-size:10px;color:#111">AQI <span style="font-weight:700;color:${aqiColor}">${aqi}</span> · ${status}</p>`,
+            `<p style="font-family:ui-monospace,monospace;font-size:9px;color:#666">PM2.5 ${pm25} μg/m³</p>`,
         ].join('');
     }
 
@@ -61,8 +61,12 @@
         setAirQualityMeta,
         getApiBase,
     }) {
-        let clickHandler = null;
-        let popup = null;
+        let hoverPopup = null;
+        let hoverPopupActive = false;
+        const aqBoundLayers = new Set();
+        let enterHandler = null;
+        let moveHandler = null;
+        let leaveHandler = null;
 
         function ensureLayers(map) {
             if (map.getSource(SOURCE_ID)) return;
@@ -128,30 +132,50 @@
             });
         }
 
-        function bindClickPopup(map) {
-            if (clickHandler) return;
-            popup = new maplibregl.Popup({
-                closeButton: true,
-                closeOnClick: true,
-                maxWidth: '220px',
-                className: 'dash-map-aq-popup',
-            });
-            clickHandler = (e) => {
-                const mapLayerState = getMapLayerState();
-                if (!mapLayerState?.airQuality) return;
-                const feature = e.features && e.features[0];
-                if (!feature) return;
-                popup
-                    .setLngLat(feature.geometry.coordinates)
-                    .setHTML(popupHtml(feature.properties))
-                    .addTo(map);
-            };
-            map.on('click', layerIds.airQualityCircle, clickHandler);
-            map.on('mouseenter', layerIds.airQualityCircle, () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-            map.on('mouseleave', layerIds.airQualityCircle, () => {
-                map.getCanvas().style.cursor = '';
+        function bindHoverPopup(map) {
+            if (!enterHandler) {
+                hoverPopup = new maplibregl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    maxWidth: 'none',
+                    className: 'dash-map-aq-popup',
+                    offset: 8,
+                });
+
+                enterHandler = (e) => {
+                    const mapLayerState = getMapLayerState();
+                    if (!mapLayerState?.airQuality) return;
+                    const feature = e.features && e.features[0];
+                    if (!feature) return;
+                    map.getCanvas().style.cursor = 'pointer';
+                    hoverPopupActive = true;
+                    hoverPopup
+                        .setLngLat(feature.geometry.coordinates)
+                        .setHTML(popupHtml(feature.properties))
+                        .addTo(map);
+                };
+
+                moveHandler = (e) => {
+                    const mapLayerState = getMapLayerState();
+                    if (!mapLayerState?.airQuality || !hoverPopupActive) return;
+                    const feature = e.features && e.features[0];
+                    if (!feature) return;
+                    hoverPopup.setLngLat(feature.geometry.coordinates);
+                };
+
+                leaveHandler = () => {
+                    map.getCanvas().style.cursor = '';
+                    hoverPopupActive = false;
+                    hoverPopup.remove();
+                };
+            }
+
+            [layerIds.airQualityCircle, layerIds.airQualityLabel].forEach((layerId) => {
+                if (!map.getLayer(layerId) || aqBoundLayers.has(layerId)) return;
+                aqBoundLayers.add(layerId);
+                map.on('mouseenter', layerId, enterHandler);
+                map.on('mousemove', layerId, moveHandler);
+                map.on('mouseleave', layerId, leaveHandler);
             });
         }
 
@@ -162,6 +186,10 @@
             }
             if (map.getLayer(layerIds.airQualityLabel)) {
                 map.setLayoutProperty(layerIds.airQualityLabel, 'visibility', visible);
+            }
+            if (visible === 'none' && hoverPopup) {
+                hoverPopupActive = false;
+                hoverPopup.remove();
             }
         }
 
@@ -181,7 +209,7 @@
                 if (!res.ok) throw new Error(`air-quality HTTP ${res.status}`);
                 const payload = await res.json();
                 ensureLayers(map);
-                bindClickPopup(map);
+                bindHoverPopup(map);
                 map.getSource(SOURCE_ID).setData(buildGeoJson(payload.stations));
                 applyVisibility(map);
                 if (typeof setAirQualityMeta === 'function') {

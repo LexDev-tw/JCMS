@@ -12,8 +12,8 @@
         landsect: 'nlsc-landsect',
     });
 
-    /** 正射影像開啟時隱藏向量底圖填色，避免遮蓋航空影像 */
-    const BASEMAP_COVER_LAYER_IDS = Object.freeze(['landcover', 'landuse']);
+    /** 正射影像開啟時隱藏向量底圖填色（堆疊順序由 layer-stack 模組處理） */
+    const BASEMAP_COVER_LAYER_IDS = Object.freeze(['water', 'landcover', 'landuse']);
 
     function wmtsTileUrl(layerCode) {
         return `https://wmts.nlsc.gov.tw/wmts/${layerCode}/default/GoogleMapsCompatible/{z}/{y}/{x}`;
@@ -47,7 +47,7 @@
             });
         }
 
-        const insertBeforeWater = map.getLayer('water') ? 'water' : undefined;
+        const insertBeforeBasemap = firstExistingLayerId(map, ['landcover', 'landuse', 'water']);
 
         if (!map.getLayer(LAYER_IDS.orthophoto)) {
             map.addLayer({
@@ -56,7 +56,7 @@
                 source: SOURCE_IDS.orthophoto,
                 layout: { visibility: 'none' },
                 paint: { 'raster-opacity': 1 },
-            }, insertBeforeWater);
+            }, insertBeforeBasemap);
         }
 
         const insertBeforeAdmin = firstExistingLayerId(map, [
@@ -119,6 +119,9 @@
 
         applyBasemapCoverVisibility(map, orthophotoOn);
         if (landsectOn) raiseLandsectLayer(map);
+        if (typeof globalThis.DashboardMapLayerStack?.reconcileDashboardLayerStack === 'function') {
+            globalThis.DashboardMapLayerStack.reconcileDashboardLayerStack(map, state);
+        }
     }
 
     function createNlscLayersApi({ getMapLayerState }) {

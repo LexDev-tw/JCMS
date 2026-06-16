@@ -110,7 +110,7 @@
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" v-if="isDbConnected"></span>
                         <span class="relative inline-flex rounded-full h-1.5 w-1.5" :class="isDbConnected ? 'bg-accent' : 'bg-ink-400'"></span>
                     </span>
-                    {{ isDbConnected ? 'Local DB Ready' : 'DB Disconnected' }}
+                    {{ isDbConnected ? 'Ready' : 'DB Disconnected' }}
                 </div>
             </div>
         </header>
@@ -523,6 +523,7 @@
                                     <p id="map-weather-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-air-quality-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-nlsc-layer-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
+                                    <p id="map-layer-health-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta dash-map-toolbar__status--layer-health" hidden aria-live="polite"></p>
                                 </div>
                             </div>
                             <label class="map-layer-switch" for="map-toggle-nlsc-orthophoto">
@@ -627,7 +628,7 @@
                     </div>
 
                     <div
-                        v-if="workMapUi.activeListId"
+                        v-if="workMapUi.activeListId || workMapUi.editTarget !== 'custom'"
                         class="work-map-edit-toolbar"
                         role="toolbar"
                         aria-label="地圖繪製工具"
@@ -672,6 +673,7 @@
                                 :class="workMapUi.toolMode === 'line' ? 'swiss-btn--tool-active' : ''"
                                 :aria-pressed="workMapUi.toolMode === 'line' ? 'true' : 'false'"
                                 title="新增線"
+                                :disabled="workMapUi.editTarget !== 'custom'"
                                 @click="setWorkMapToolMode('line')"
                             ><i class="ph ph-path" aria-hidden="true"></i></button>
                             <button
@@ -680,6 +682,7 @@
                                 :class="workMapUi.toolMode === 'polygon' ? 'swiss-btn--tool-active' : ''"
                                 :aria-pressed="workMapUi.toolMode === 'polygon' ? 'true' : 'false'"
                                 title="新增區域"
+                                :disabled="workMapUi.editTarget !== 'custom'"
                                 @click="setWorkMapToolMode('polygon')"
                             ><i class="ph ph-polygon" aria-hidden="true"></i></button>
                         </div>
@@ -694,7 +697,34 @@
                             </button>
                         </header>
                         <div class="work-map-layer-panel__body">
-                            <p v-if="workMapDoc.lists.length === 0" class="work-map-layer-panel__empty">尚無圖層，請先新增。</p>
+                            <div class="work-map-system-layers" aria-label="系統圖層">
+                                <button
+                                    type="button"
+                                    class="work-map-layer-row"
+                                    :class="workMapUi.editTarget === 'currentLocation' ? 'work-map-layer-row--active' : ''"
+                                    @click="activateWorkMapEditTarget('currentLocation')"
+                                >
+                                    <span class="work-map-layer-row__name">現在位置</span>
+                                    <span v-if="hasMapCurrentLocation" class="work-map-layer-row__meta font-mono tabular-nums">已設定</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="work-map-layer-row"
+                                    :class="workMapUi.editTarget === 'judicial' ? 'work-map-layer-row--active' : ''"
+                                    @click="activateWorkMapEditTarget('judicial')"
+                                >
+                                    <span class="work-map-layer-row__name">司法</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="work-map-layer-row"
+                                    :class="workMapUi.editTarget === 'police' ? 'work-map-layer-row--active' : ''"
+                                    @click="activateWorkMapEditTarget('police')"
+                                >
+                                    <span class="work-map-layer-row__name">警察</span>
+                                </button>
+                            </div>
+                            <p v-if="workMapDoc.lists.length === 0" class="work-map-layer-panel__empty">尚無自訂圖層，可點上方新增。</p>
                             <div
                                 v-for="list in workMapDoc.lists"
                                 :key="list.id"
@@ -766,6 +796,141 @@
                                     </li>
                                 </ul>
                             </div>
+                            <ul
+                                v-if="workMapUi.editTarget === 'judicial' && agencyFeatureList.length"
+                                class="work-map-layer-feature-list"
+                                aria-label="司法地點清單"
+                            >
+                                <li
+                                    v-for="feat in agencyFeatureList"
+                                    :key="feat.id"
+                                    class="work-map-layer-feature-item"
+                                    :class="workMapUi.selectedFeatureId === feat.id ? 'work-map-layer-feature-item--active' : ''"
+                                >
+                                    <button type="button" class="work-map-layer-feature-item__btn" @click.stop="selectAgencyFeature(feat.id)">
+                                        <span class="work-map-layer-feature-item__title" :title="feat.name">{{ feat.name }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+                            <ul
+                                v-if="workMapUi.editTarget === 'police' && agencyFeatureList.length"
+                                class="work-map-layer-feature-list"
+                                aria-label="警察地點清單"
+                            >
+                                <li
+                                    v-for="feat in agencyFeatureList"
+                                    :key="feat.id"
+                                    class="work-map-layer-feature-item"
+                                    :class="workMapUi.selectedFeatureId === feat.id ? 'work-map-layer-feature-item--active' : ''"
+                                >
+                                    <button type="button" class="work-map-layer-feature-item__btn" @click.stop="selectAgencyFeature(feat.id)">
+                                        <span class="work-map-layer-feature-item__title" :title="feat.name">{{ feat.name }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </aside>
+
+                    <aside
+                        v-if="workMapUi.editTarget === 'currentLocation'"
+                        class="work-map-feature-inspector"
+                        aria-label="現在位置設定"
+                        @mousedown.stop
+                        @click.stop
+                    >
+                        <div class="work-map-feature-inspector__head">
+                            <div class="swiss-section-heading min-w-0">
+                                <h2 class="swiss-section-heading__title">現在位置</h2>
+                                <p class="swiss-section-subtitle">ALWAYS ON MAP</p>
+                            </div>
+                        </div>
+                        <p class="work-map-feature-inspector__meta text-[11px] text-ink-600">點選地圖設定座標，儲存後永遠顯示於總覽地圖。</p>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" for="work-map-current-title">標題</label>
+                            <input id="work-map-current-title" type="text" class="swiss-input" v-model="mapCurrentLocation.title" />
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" for="work-map-current-desc">說明</label>
+                            <textarea id="work-map-current-desc" class="swiss-input min-h-[3.5rem]" v-model="mapCurrentLocation.description"></textarea>
+                        </div>
+                        <p v-if="hasMapCurrentLocation" class="work-map-feature-inspector__meta font-mono tabular-nums">
+                            {{ mapCurrentLocation.lng?.toFixed(5) }}, {{ mapCurrentLocation.lat?.toFixed(5) }}
+                        </p>
+                        <div class="work-map-feature-inspector__actions">
+                            <button type="button" class="swiss-btn swiss-btn--secondary" @click="saveCurrentLocationProperties">儲存</button>
+                            <button type="button" class="swiss-btn swiss-btn--secondary" @click="clearCurrentLocation">清除</button>
+                        </div>
+                    </aside>
+
+                    <aside
+                        v-if="agencySelectedFeature && workMapUi.editTarget === 'judicial'"
+                        class="work-map-feature-inspector"
+                        aria-label="司法地點屬性"
+                        @mousedown.stop
+                        @click.stop
+                    >
+                        <div class="work-map-feature-inspector__head">
+                            <div class="swiss-section-heading min-w-0">
+                                <h2 class="swiss-section-heading__title">司法地點</h2>
+                                <p class="swiss-section-subtitle">JUDICIAL</p>
+                            </div>
+                            <button type="button" class="work-map-feature-inspector__close" title="關閉" @click="clearWorkMapSelection">
+                                <i class="ph ph-x" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-jud-name-' + agencySelectedFeature.id">名稱</label>
+                            <input :id="'agency-jud-name-' + agencySelectedFeature.id" type="text" class="swiss-input" v-model="agencyFeatureEditor.name" />
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-jud-type-' + agencySelectedFeature.id">類型</label>
+                            <input :id="'agency-jud-type-' + agencySelectedFeature.id" type="text" class="swiss-input" v-model="agencyFeatureEditor.type" placeholder="法院／檢察" />
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-jud-jur-' + agencySelectedFeature.id">管轄</label>
+                            <textarea :id="'agency-jud-jur-' + agencySelectedFeature.id" class="swiss-input min-h-[3.5rem]" v-model="agencyFeatureEditor.jurisdiction"></textarea>
+                        </div>
+                        <div class="work-map-feature-inspector__actions">
+                            <button type="button" class="swiss-btn swiss-btn--secondary" @click="saveAgencySelectedFeatureProperties">儲存</button>
+                            <button type="button" class="swiss-btn swiss-btn--secondary" @click="removeWorkMapSelectedFeature">刪除</button>
+                        </div>
+                    </aside>
+
+                    <aside
+                        v-if="agencySelectedFeature && workMapUi.editTarget === 'police'"
+                        class="work-map-feature-inspector"
+                        aria-label="警察地點屬性"
+                        @mousedown.stop
+                        @click.stop
+                    >
+                        <div class="work-map-feature-inspector__head">
+                            <div class="swiss-section-heading min-w-0">
+                                <h2 class="swiss-section-heading__title">警察地點</h2>
+                                <p class="swiss-section-subtitle">POLICE</p>
+                            </div>
+                            <button type="button" class="work-map-feature-inspector__close" title="關閉" @click="clearWorkMapSelection">
+                                <i class="ph ph-x" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-pol-name-' + agencySelectedFeature.id">名稱</label>
+                            <input :id="'agency-pol-name-' + agencySelectedFeature.id" type="text" class="swiss-input" v-model="agencyFeatureEditor.name" />
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-pol-unit-' + agencySelectedFeature.id">單位</label>
+                            <input :id="'agency-pol-unit-' + agencySelectedFeature.id" type="text" class="swiss-input" v-model="agencyFeatureEditor.unit" />
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-pol-phone-' + agencySelectedFeature.id">電話</label>
+                            <input :id="'agency-pol-phone-' + agencySelectedFeature.id" type="text" class="swiss-input" v-model="agencyFeatureEditor.phone" />
+                        </div>
+                        <div class="work-map-feature-inspector__field">
+                            <label class="work-map-feature-inspector__label" :for="'agency-pol-addr-' + agencySelectedFeature.id">地址</label>
+                            <textarea :id="'agency-pol-addr-' + agencySelectedFeature.id" class="swiss-input min-h-[3.5rem]" v-model="agencyFeatureEditor.address"></textarea>
+                        </div>
+                        <div class="work-map-feature-inspector__actions">
+                            <button type="button" class="swiss-btn swiss-btn--secondary" @click="saveAgencySelectedFeatureProperties">儲存</button>
+                            <button type="button" class="swiss-btn swiss-btn--secondary" @click="removeWorkMapSelectedFeature">刪除</button>
                         </div>
                     </aside>
 
@@ -4704,6 +4869,9 @@
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
     <script src="js/jcms/lib/api-base-global.js"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js"></script>
     <script src="js/jcms/lib/dashboard-map-nlsc.js"></script>
     <script src="js/jcms/lib/dashboard-map-weather.js"></script>
     <script src="js/jcms/lib/dashboard-map-air-quality.js"></script>

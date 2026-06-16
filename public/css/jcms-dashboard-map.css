@@ -219,9 +219,9 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     align-items: stretch;
-    min-width: 4.75rem;
-    height: var(--swiss-control-h, 1.5rem);
-    padding: 2px;
+    min-width: 3.65rem;
+    height: 1.125rem;
+    padding: 1px;
     border: 1px solid #eaeaea;
     border-radius: 9999px;
     background: #ffffff;
@@ -229,10 +229,10 @@
 }
 .jcms-dash-map-view .dash-breakdown-seg__thumb {
     position: absolute;
-    top: 2px;
-    left: 2px;
-    width: calc(50% - 2px);
-    height: calc(100% - 4px);
+    top: 1px;
+    left: 1px;
+    width: calc(50% - 1px);
+    height: calc(100% - 2px);
     border-radius: 9999px;
     background: #111111;
     transition: transform 0.2s ease;
@@ -249,13 +249,13 @@
     align-items: center;
     justify-content: center;
     min-width: 0;
-    padding: 0 0.35rem;
+    padding: 0 0.25rem;
     margin: 0;
     border: none;
     background: transparent;
-    font-size: 0.5rem;
+    font-size: 0.4375rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: #999999;
     line-height: 1;
@@ -529,6 +529,12 @@
         }
         .jcms-dash-map-view .dash-map-toolbar__status--layer-meta {
             white-space: pre-line;
+        }
+        .jcms-dash-map-view .dash-map-toolbar__status--layer-health {
+            color: #666666;
+            font-size: 0.5rem;
+            line-height: 1.35;
+            max-width: 11rem;
         }
         .jcms-dash-map-view .dash-map-toolbar__status:empty {
             display: none;
@@ -1305,6 +1311,26 @@
             padding-top: 0.35rem;
         }
         .dash-week-compact__day--today { border-top-color: #f05a28; }
+
+        .jcms-dash-map-view .maplibregl-popup {
+            max-width: none;
+        }
+        .jcms-dash-map-view .maplibregl-popup-content {
+            width: max-content;
+            max-width: min(260px, calc(100vw - 2rem));
+            padding: 0.28rem 0.42rem;
+            line-height: 1.25;
+            box-sizing: border-box;
+        }
+        .jcms-dash-map-view .maplibregl-popup-content p {
+            margin: 0;
+        }
+        .jcms-dash-map-view .maplibregl-popup-content p + p {
+            margin-top: 0.18rem;
+        }
+        .jcms-dash-map-view .maplibregl-popup-close-button {
+            display: none;
+        }
 
         .jcms-dash-map-view .maplibregl-ctrl-bottom-right {
             z-index: 11;

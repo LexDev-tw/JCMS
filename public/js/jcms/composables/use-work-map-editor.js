@@ -15,6 +15,12 @@ import {
     syncWorkMapVertexLayer,
     queryWorkMapFeatureAt,
 } from '../lib/work-map-maplibre.js';
+import {
+    syncAgencyEditLayer,
+    clearAgencyEditLayer,
+    queryAgencyFeatureAt,
+} from '../lib/agency-layer-maplibre.js';
+import { AGENCY_LAYER_KINDS } from '../lib/agency-layer-model.js';
 
 export function useWorkMapEditor({
     rootRef,
@@ -22,6 +28,10 @@ export function useWorkMapEditor({
     workMapDocRef,
     workMapUiRef,
     getInitialView,
+    getEditTarget,
+    getAgencyFeatures,
+    getAgencySelectedId,
+    getCurrentLocation,
     onMapClick,
     onMapDblClick,
     onMapMouseMove,
@@ -39,6 +49,7 @@ export function useWorkMapEditor({
     let stopWatchFeatureEditor = null;
     let stopWatchVertices = null;
     let stopWatchToolMode = null;
+    let stopWatchAgency = null;
 
     function getRoot() {
         return rootRef.value;
@@ -69,6 +80,10 @@ export function useWorkMapEditor({
         if (stopWatchToolMode) {
             stopWatchToolMode();
             stopWatchToolMode = null;
+        }
+        if (stopWatchAgency) {
+            stopWatchAgency();
+            stopWatchAgency = null;
         }
         if (resizeHandler) {
             window.removeEventListener('resize', resizeHandler);
@@ -124,11 +139,51 @@ export function useWorkMapEditor({
         return raw?.value ?? raw ?? null;
     }
 
+    function getTarget() {
+        return typeof getEditTarget === 'function' ? getEditTarget() : 'custom';
+    }
+
+    function syncAgencyLayers() {
+        if (!mapInstance) return;
+        const target = getTarget();
+        if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
+            const features = typeof getAgencyFeatures === 'function' ? getAgencyFeatures() : [];
+            const selectedId = typeof getAgencySelectedId === 'function' ? getAgencySelectedId() : null;
+            syncAgencyEditLayer(mapInstance, target, features, selectedId);
+            clearWorkMapDraftLayer(mapInstance);
+            syncWorkMapSelectionLayer(mapInstance, null);
+            syncWorkMapVertexLayer(mapInstance, null, null);
+            return;
+        }
+        clearAgencyEditLayer(mapInstance);
+    }
+
+    function syncCurrentLocationMarker() {
+        if (!mapInstance || typeof globalThis.DashboardMapCurrentLocation === 'undefined') return;
+        const loc = typeof getCurrentLocation === 'function' ? getCurrentLocation() : null;
+        const api = globalThis.DashboardMapCurrentLocation.createCurrentLocationApi({
+            mapColors: { surface: '#FFFFFF', ink900: '#111111' },
+        });
+        api.syncCurrentLocation(mapInstance, loc);
+    }
+
+    function syncOverlayLayers() {
+        syncAgencyLayers();
+        syncCurrentLocationMarker();
+    }
+
     function syncDocLayers() {
         if (!mapInstance) return;
+        const target = getTarget();
+        if (target !== 'custom') {
+            syncWorkMapDocLayers(mapInstance, { version: 1, lists: [] });
+            syncOverlayLayers();
+            return;
+        }
         const doc = getWorkMapDoc();
         if (!doc) return;
         syncWorkMapDocLayers(mapInstance, doc);
+        syncOverlayLayers();
     }
 
     function syncSelection() {
@@ -199,11 +254,17 @@ export function useWorkMapEditor({
         mapInstance.on('mousedown', (e) => {
             if (typeof onMapMouseDown !== 'function') return;
             const ui = getUi();
-            const hit = queryWorkMapFeatureAt(
-                mapInstance,
-                e.point,
-                ui.activeListId
-            );
+            const target = getTarget();
+            let hit = null;
+            if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
+                hit = queryAgencyFeatureAt(mapInstance, e.point);
+            } else {
+                hit = queryWorkMapFeatureAt(
+                    mapInstance,
+                    e.point,
+                    ui.activeListId
+                );
+            }
             onMapMouseDown([e.lngLat.lng, e.lngLat.lat], {
                 point: e.point,
                 hit,
@@ -219,11 +280,17 @@ export function useWorkMapEditor({
         mapInstance.on('click', (e) => {
             if (typeof onMapClick !== 'function') return;
             const ui = getUi();
-            const hit = queryWorkMapFeatureAt(
-                mapInstance,
-                e.point,
-                ui.activeListId
-            );
+            const target = getTarget();
+            let hit = null;
+            if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
+                hit = queryAgencyFeatureAt(mapInstance, e.point);
+            } else {
+                hit = queryWorkMapFeatureAt(
+                    mapInstance,
+                    e.point,
+                    ui.activeListId
+                );
+            }
             onMapClick([e.lngLat.lng, e.lngLat.lat], {
                 point: e.point,
                 hit,
@@ -287,6 +354,16 @@ export function useWorkMapEditor({
             () => getUi().toolMode,
             () => applyMapCursor()
         );
+        stopWatchAgency = watch(
+            () => [
+                getTarget(),
+                typeof getAgencyFeatures === 'function' ? getAgencyFeatures() : null,
+                typeof getAgencySelectedId === 'function' ? getAgencySelectedId() : null,
+                typeof getCurrentLocation === 'function' ? getCurrentLocation() : null,
+            ],
+            () => syncOverlayLayers(),
+            { deep: true }
+        );
     }
 
     watch(
@@ -338,5 +415,6 @@ export function useWorkMapEditor({
         },
         syncSelectionOnMap: syncSelection,
         syncVerticesOnMap: syncVertices,
+        syncOverlayLayers,
     };
 }

@@ -1,5 +1,28 @@
 /** 工作地圖編輯頁 — Neo-Swiss */
 
+.jcms-work-map-edit .work-map-system-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    margin-bottom: 0.55rem;
+    padding-bottom: 0.55rem;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.jcms-work-map-edit .work-map-system-layers .work-map-layer-row {
+    width: 100%;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.jcms-work-map-edit .work-map-layer-row__meta {
+    margin-left: auto;
+    font-size: 0.5625rem;
+    color: #999999;
+}
+
 .jcms-work-map-edit {
 
     position: relative;

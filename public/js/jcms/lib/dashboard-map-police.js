@@ -18,12 +18,12 @@
         const address = escapeHtml(props?.address || '—');
         const titleLine = phone ? `${name} ${phone}` : name;
         const unitLine = unit
-            ? `<p style="margin:0 0 0.2rem;font-size:10px;color:#666;line-height:1.35">${unit}</p>`
+            ? `<p style="font-size:10px;color:#666;line-height:1.3">${unit}</p>`
             : '';
         return [
-            `<p style="margin:0 0 0.25rem;font-size:11px;font-weight:700;color:#111">${titleLine}</p>`,
+            `<p style="font-size:11px;font-weight:700;color:#111">${titleLine}</p>`,
             unitLine,
-            `<p style="margin:0;font-size:10px;color:#666;line-height:1.35">${address}</p>`,
+            `<p style="font-size:10px;color:#666;line-height:1.3">${address}</p>`,
         ].join('');
     }
 
@@ -33,6 +33,7 @@
         getMapLayerState,
         getGeoJsonUrl,
         getGeoJsonUrls,
+        getResolvedGeoJson,
     }) {
         let hoverPopup = null;
         let hoverPopupActive = false;
@@ -52,6 +53,9 @@
         }
 
         async function loadGeoJson() {
+            if (typeof getResolvedGeoJson === 'function') {
+                return getResolvedGeoJson();
+            }
             if (geoJsonCache) return geoJsonCache;
             if (!geoJsonPromise) {
                 geoJsonPromise = Promise.all(
@@ -109,9 +113,9 @@
             hoverPopup = new maplibregl.Popup({
                 closeButton: false,
                 closeOnClick: false,
-                maxWidth: '280px',
+                maxWidth: 'none',
                 className: 'dash-map-police-popup',
-                offset: 10,
+                offset: 8,
             });
 
             enterHandler = (e) => {
@@ -177,10 +181,16 @@
             geoJsonPromise = null;
         }
 
+        function invalidatePoliceGeoJsonCache() {
+            geoJsonCache = null;
+            geoJsonPromise = null;
+        }
+
         return {
             ensureLayers,
             refreshPoliceLayers,
             teardownPoliceLayers,
+            invalidatePoliceGeoJsonCache,
             SOURCE_ID,
         };
     }

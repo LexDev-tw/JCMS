@@ -1,18 +1,31 @@
 /** 地圖總覽：CWA 氣象圖層（preview / composable 共用） */
 (function (global) {
     const WEATHER_SOURCE_IDS = Object.freeze({
-        rainAdvisory: 'cwa-rain-advisory-towns',
+        rainObs: 'cwa-rainfall-stations',
         satelliteCloud: 'cwa-satellite-image',
         radarEcho: 'cwa-radar-image',
     });
 
-    function normalizeAreaDesc(text) {
-        return String(text || '').replace(/臺/g, '台').trim();
+    const RAIN_WATER_BLUE = '#38BDF8';
+    const RAIN_WATER_BLUE_DEEP = '#0369A1';
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
-    function townAreaKey(props) {
-        if (!props) return '';
-        return normalizeAreaDesc(String(props.COUNTYNAME || '') + String(props.TOWNNAME || ''));
+    function formatRainLabel(mm) {
+        const n = Number(mm) || 0;
+        if (n <= 0) return '';
+        return n >= 10 ? String(Math.round(n)) : String(Number(n.toFixed(1)));
+    }
+
+    function rainfallPopupHtml(props) {
+        const name = escapeHtml(props?.name || '雨量站');
+        return `<p style="font-size:11px;font-weight:700;color:#111">${name}</p>`;
     }
 
     function formatObservedAt(iso) {
@@ -27,21 +40,23 @@
         return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
     }
 
-    function buildRainAdvisoryGeoJson(twTownsGeoJson, areas) {
-        if (!twTownsGeoJson || !Array.isArray(areas) || !areas.length) {
+    function buildRainfallGeoJson(stations) {
+        if (!Array.isArray(stations) || !stations.length) {
             return { type: 'FeatureCollection', features: [] };
         }
-        const levelByKey = new Map(
-            areas.map((a) => [normalizeAreaDesc(a.areaDesc), a.level || 'moderate'])
-        );
-        const features = twTownsGeoJson.features
-            .filter((f) => levelByKey.has(townAreaKey(f.properties)))
-            .map((f) => ({
-                ...f,
+        const features = stations
+            .filter((s) => Number.isFinite(s.lng) && Number.isFinite(s.lat))
+            .map((s) => ({
+                type: 'Feature',
                 properties: {
-                    ...f.properties,
-                    rainLevel: levelByKey.get(townAreaKey(f.properties)) || 'moderate',
+                    stationId: s.stationId || '',
+                    name: s.name || '雨量站',
+                    rainMm: Number(s.rainMm) || 0,
+                    rainLabel: formatRainLabel(s.rainMm),
+                    county: s.county || '',
+                    town: s.town || '',
                 },
+                geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
             }));
         return { type: 'FeatureCollection', features };
     }
@@ -56,58 +71,180 @@
         ];
     }
 
+    function formatRainfallMeta(raining, maxRain, obsLabel) {
+        const line1 = raining
+            ? `降雨 ${raining} 站 · 最大 ${maxRain.toFixed(1)}mm`
+            : '降雨 全台無明顯降雨';
+        if (!obsLabel) return line1;
+        return `${line1}\n${obsLabel}`;
+    }
+
     function createWeatherLayersApi({
         mapColors,
         layerIds,
-        getTwTownsGeoJson,
         getMapLayerState,
         setWeatherMeta,
     }) {
-        const RAIN_LEVEL_PAINT = Object.freeze({
-            extreme: { color: mapColors.accent, opacity: 0.38 },
-            heavy: { color: mapColors.ink600, opacity: 0.32 },
-            moderate: { color: mapColors.ink400, opacity: 0.28 },
-        });
+        let rainHoverPopup = null;
+        let rainHoverPopupActive = false;
+        const rainBoundLayers = new Set();
+        let rainEnterHandler = null;
+        let rainMoveHandler = null;
+        let rainLeaveHandler = null;
 
-        function ensureRainAdvisoryLayers(map) {
-            if (map.getSource(WEATHER_SOURCE_IDS.rainAdvisory)) return;
-            map.addSource(WEATHER_SOURCE_IDS.rainAdvisory, {
-                type: 'geojson',
-                data: { type: 'FeatureCollection', features: [] },
+        function setRainLayerVisibility(map, visible) {
+            const layout = visible ? 'visible' : 'none';
+            if (map.getLayer(layerIds.rainAdvisoryFill)) {
+                map.setLayoutProperty(layerIds.rainAdvisoryFill, 'visibility', layout);
+            }
+            if (map.getLayer(layerIds.rainAdvisoryLabel)) {
+                map.setLayoutProperty(layerIds.rainAdvisoryLabel, 'visibility', layout);
+            }
+            if (!visible && rainHoverPopup) {
+                rainHoverPopupActive = false;
+                rainHoverPopup.remove();
+            }
+        }
+
+        function bindRainfallHoverPopup(map) {
+            if (!rainEnterHandler) {
+                rainHoverPopup = new maplibregl.Popup({
+                    closeButton: false,
+                    closeOnClick: false,
+                    maxWidth: 'none',
+                    className: 'dash-map-rainfall-popup',
+                    offset: 8,
+                });
+
+                rainEnterHandler = (e) => {
+                    if (!getMapLayerState()?.rainAdvisory) return;
+                    const feature = e.features && e.features[0];
+                    if (!feature) return;
+                    map.getCanvas().style.cursor = 'pointer';
+                    rainHoverPopupActive = true;
+                    rainHoverPopup
+                        .setLngLat(feature.geometry.coordinates)
+                        .setHTML(rainfallPopupHtml(feature.properties))
+                        .addTo(map);
+                };
+
+                rainMoveHandler = (e) => {
+                    if (!getMapLayerState()?.rainAdvisory || !rainHoverPopupActive) return;
+                    const feature = e.features && e.features[0];
+                    if (!feature) return;
+                    rainHoverPopup.setLngLat(feature.geometry.coordinates);
+                };
+
+                rainLeaveHandler = () => {
+                    map.getCanvas().style.cursor = '';
+                    rainHoverPopupActive = false;
+                    rainHoverPopup.remove();
+                };
+            }
+
+            [layerIds.rainAdvisoryFill, layerIds.rainAdvisoryLabel].forEach((layerId) => {
+                if (!map.getLayer(layerId) || rainBoundLayers.has(layerId)) return;
+                rainBoundLayers.add(layerId);
+                map.on('mouseenter', layerId, rainEnterHandler);
+                map.on('mousemove', layerId, rainMoveHandler);
+                map.on('mouseleave', layerId, rainLeaveHandler);
             });
-            map.addLayer({
-                id: layerIds.rainAdvisoryFill,
-                type: 'fill',
-                source: WEATHER_SOURCE_IDS.rainAdvisory,
-                layout: { visibility: 'none' },
-                paint: {
-                    'fill-color': [
-                        'match',
-                        ['get', 'rainLevel'],
-                        'extreme', RAIN_LEVEL_PAINT.extreme.color,
-                        'heavy', RAIN_LEVEL_PAINT.heavy.color,
-                        RAIN_LEVEL_PAINT.moderate.color,
-                    ],
-                    'fill-opacity': [
-                        'match',
-                        ['get', 'rainLevel'],
-                        'extreme', RAIN_LEVEL_PAINT.extreme.opacity,
-                        'heavy', RAIN_LEVEL_PAINT.heavy.opacity,
-                        RAIN_LEVEL_PAINT.moderate.opacity,
-                    ],
-                },
-            });
-            map.addLayer({
-                id: layerIds.rainAdvisoryLine,
-                type: 'line',
-                source: WEATHER_SOURCE_IDS.rainAdvisory,
-                layout: { visibility: 'none' },
-                paint: {
-                    'line-color': mapColors.ink900,
-                    'line-opacity': 0.35,
-                    'line-width': 0.6,
-                },
-            });
+        }
+
+        function applyRainLabelLayout(map) {
+            if (!map.getLayer(layerIds.rainAdvisoryLabel)) return;
+            map.setLayoutProperty(layerIds.rainAdvisoryLabel, 'text-field', [
+                'case',
+                ['>=', ['coalesce', ['get', 'rainMm'], 0], 10],
+                ['to-string', ['round', ['get', 'rainMm']]],
+                ['to-string', ['/', ['round', ['*', ['get', 'rainMm'], 10]], 10]],
+            ]);
+            map.setLayoutProperty(layerIds.rainAdvisoryLabel, 'text-font', ['Noto Sans Regular']);
+            map.setFilter(layerIds.rainAdvisoryLabel, ['>', ['coalesce', ['get', 'rainMm'], 0], 0]);
+        }
+
+        function applyRainCirclePaint(map) {
+            if (!map.getLayer(layerIds.rainAdvisoryFill)) return;
+            map.setPaintProperty(layerIds.rainAdvisoryFill, 'circle-color', RAIN_WATER_BLUE);
+            map.setPaintProperty(layerIds.rainAdvisoryFill, 'circle-opacity', [
+                'interpolate', ['linear'], ['get', 'rainMm'],
+                0, 0.28,
+                0.1, 0.62,
+                5, 0.78,
+                15, 0.9,
+                40, 1,
+            ]);
+            map.setPaintProperty(layerIds.rainAdvisoryFill, 'circle-stroke-color', mapColors.surface);
+            map.setPaintProperty(layerIds.rainAdvisoryFill, 'circle-stroke-width', 1);
+        }
+
+        function ensureRainObservationLayers(map) {
+            if (!map.getSource(WEATHER_SOURCE_IDS.rainObs)) {
+                map.addSource(WEATHER_SOURCE_IDS.rainObs, {
+                    type: 'geojson',
+                    data: { type: 'FeatureCollection', features: [] },
+                });
+            }
+            if (!map.getLayer(layerIds.rainAdvisoryFill)) {
+                map.addLayer({
+                    id: layerIds.rainAdvisoryFill,
+                    type: 'circle',
+                    source: WEATHER_SOURCE_IDS.rainObs,
+                    layout: { visibility: 'none' },
+                    paint: {
+                        'circle-radius': [
+                            'interpolate', ['linear'], ['zoom'],
+                            7, ['interpolate', ['linear'], ['get', 'rainMm'], 0, 2.5, 10, 4.5, 30, 6.5, 80, 8.5],
+                            11, ['interpolate', ['linear'], ['get', 'rainMm'], 0, 3.5, 10, 6, 30, 9, 80, 12],
+                        ],
+                        'circle-color': RAIN_WATER_BLUE,
+                        'circle-opacity': [
+                            'interpolate', ['linear'], ['get', 'rainMm'],
+                            0, 0.28,
+                            0.1, 0.62,
+                            5, 0.78,
+                            15, 0.9,
+                            40, 1,
+                        ],
+                        'circle-stroke-color': mapColors.surface,
+                        'circle-stroke-width': 1,
+                    },
+                });
+            } else {
+                applyRainCirclePaint(map);
+            }
+            if (!map.getLayer(layerIds.rainAdvisoryLabel)) {
+                map.addLayer({
+                    id: layerIds.rainAdvisoryLabel,
+                    type: 'symbol',
+                    source: WEATHER_SOURCE_IDS.rainObs,
+                    minzoom: 7,
+                    filter: ['>', ['coalesce', ['get', 'rainMm'], 0], 0],
+                    layout: {
+                        visibility: 'none',
+                        'text-field': [
+                            'case',
+                            ['>=', ['coalesce', ['get', 'rainMm'], 0], 10],
+                            ['to-string', ['round', ['get', 'rainMm']]],
+                            ['to-string', ['/', ['round', ['*', ['get', 'rainMm'], 10]], 10]],
+                        ],
+                        'text-font': ['Noto Sans Regular'],
+                        'text-size': ['interpolate', ['linear'], ['zoom'], 7, 10, 11, 11, 14, 12],
+                        'text-offset': [0.9, 0],
+                        'text-anchor': 'left',
+                        'text-allow-overlap': true,
+                        'text-ignore-placement': true,
+                    },
+                    paint: {
+                        'text-color': RAIN_WATER_BLUE_DEEP,
+                        'text-halo-color': mapColors.surface,
+                        'text-halo-width': 1.4,
+                    },
+                });
+            } else {
+                applyRainLabelLayout(map);
+            }
+            bindRainfallHoverPopup(map);
         }
 
         function ensureImageOverlayLayer(map, sourceId, layerId, defaultBounds) {
@@ -153,29 +290,27 @@
 
             try {
                 if (mapLayerState.rainAdvisory) {
-                    const res = await fetch('/api/weather/rain-advisory');
-                    if (!res.ok) throw new Error(`rain HTTP ${res.status}`);
+                    const res = await fetch('/api/weather/rainfall-obs');
+                    if (!res.ok) throw new Error(`rainfall HTTP ${res.status}`);
                     const payload = await res.json();
-                    ensureRainAdvisoryLayers(map);
-                    map.getSource(WEATHER_SOURCE_IDS.rainAdvisory).setData(
-                        buildRainAdvisoryGeoJson(getTwTownsGeoJson(), payload.areas || [])
+                    ensureRainObservationLayers(map);
+                    map.getSource(WEATHER_SOURCE_IDS.rainObs).setData(
+                        buildRainfallGeoJson(payload.stations || [])
                     );
-                    map.setLayoutProperty(layerIds.rainAdvisoryFill, 'visibility', 'visible');
-                    map.setLayoutProperty(layerIds.rainAdvisoryLine, 'visibility', 'visible');
-                    const headline = payload.advisories?.[0]?.headline || '目前無豪雨特報';
-                    const count = payload.areas?.length || 0;
-                    metaParts.push(count ? `降雨 ${headline} · ${count} 鄉鎮` : `降雨 ${headline}`);
+                    setRainLayerVisibility(map, true);
+                    const raining = payload.rainingCount || 0;
+                    const maxRain = payload.maxRainMm || 0;
+                    const obsLabel = formatObservedAt(payload.observedAt);
+                    metaParts.push(formatRainfallMeta(raining, maxRain, obsLabel));
                 } else if (map.getLayer(layerIds.rainAdvisoryFill)) {
-                    map.setLayoutProperty(layerIds.rainAdvisoryFill, 'visibility', 'none');
-                    map.setLayoutProperty(layerIds.rainAdvisoryLine, 'visibility', 'none');
+                    setRainLayerVisibility(map, false);
                 }
             } catch (err) {
-                console.warn('[dashboard-map] 降雨特報載入失敗', err);
+                console.warn('[dashboard-map] 雨量觀測載入失敗', err);
                 if (map.getLayer(layerIds.rainAdvisoryFill)) {
-                    map.setLayoutProperty(layerIds.rainAdvisoryFill, 'visibility', 'none');
-                    map.setLayoutProperty(layerIds.rainAdvisoryLine, 'visibility', 'none');
+                    setRainLayerVisibility(map, false);
                 }
-                metaParts.push('降雨特報載入失敗');
+                metaParts.push('雨量載入失敗');
             }
 
             try {
@@ -247,7 +382,7 @@
         }
 
         return {
-            ensureRainAdvisoryLayers,
+            ensureRainAdvisoryLayers: ensureRainObservationLayers,
             ensureSatelliteLayer,
             ensureRadarLayer,
             refreshWeatherLayers,

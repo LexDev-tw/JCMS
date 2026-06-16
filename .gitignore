@@ -7,8 +7,11 @@ data/
 *.log
 .DS_Store
 
-# IDE（本機開發用，不納入 VPS 儲存庫）
-.cursor/
+# Cursor 本機除錯日誌（規則檔 .cursor/rules/ 可納入版本庫）
+.cursor/*.log
+
+# 本機 IDE（不推送）
+.vscode/
 
 # 執行時產物（啟動腳本／PM2 狀態）
 .jcms-runtime/
@@ -19,8 +22,3 @@ tmp-*
 uploads/**
 !uploads/README.md
 !uploads/**/.gitkeep
-
-# Obsidian 案件筆記庫（與 case_archive/README.md）
-case_archive/**
-!case_archive/README.md
-!case_archive/**/.gitkeep

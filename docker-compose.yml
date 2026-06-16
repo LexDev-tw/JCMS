@@ -13,9 +13,10 @@ services:
     volumes:
       - jcms-data:/app/data
       - jcms-uploads:/app/uploads
-      - jcms-case-archive:/app/case_archive
-    ports:
-      - "${JCMS_PUBLISH_PORT:-3000}:3000"
+    expose:
+      - "3000"
+    networks:
+      - npm_default
     healthcheck:
       test:
         [
@@ -28,28 +29,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 768M
 
-  caddy:
-    profiles: ["tls"]
-    image: caddy:2-alpine
-    container_name: jcms-caddy
-    restart: unless-stopped
-    depends_on:
-      jcms:
-        condition: service_healthy
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      JCMS_DOMAIN: ${JCMS_DOMAIN:?set JCMS_DOMAIN in .env for tls profile}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
+networks:
+  npm_default:
+    external: true
 
 volumes:
   jcms-data:
   jcms-uploads:
-  jcms-case-archive:
-  caddy-data:
-  caddy-config:
