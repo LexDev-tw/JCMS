@@ -581,6 +581,7 @@
     onCommit,
     onClear,
     actionClass,
+    readOnly,
   }) {
     const hasRecord = settleRow.hasRecord;
     const rowValues = useMemo(
@@ -609,6 +610,7 @@
       isPendingPeak && pending === rowValues.pending && rowValues.pending !== '';
 
     const commit = () => {
+      if (readOnly) return;
       const allEmpty = carryOver === '' && newIntake === '' && pending === '';
       if (allEmpty) {
         if (hasRecord) onClear(ym, { silent: true });
@@ -635,6 +637,7 @@
             value={carryOver}
             onChange={setCarryOver}
             onBlur={commit}
+            disabled={readOnly}
             className={SETTLE_CELL_INPUT}
           />
         </div>
@@ -643,6 +646,7 @@
             value={newIntake}
             onChange={setNewIntake}
             onBlur={commit}
+            disabled={readOnly}
             className={SETTLE_CELL_INPUT}
           />
         </div>
@@ -656,6 +660,7 @@
             value={pending}
             onChange={setPending}
             onBlur={commit}
+            disabled={readOnly}
             className={`${SETTLE_CELL_INPUT}${pendingPeakActive ? ' font-bold text-accent' : ''}`}
           />
         </div>
@@ -674,7 +679,7 @@
         </div>
         <div className={`${RAW_CELL} justify-end`}>
           <div className={SETTLE_ACTIONS}>
-            {hasRecord ? (
+            {hasRecord && !readOnly ? (
               <button
                 type="button"
                 className={`swiss-ghost-action text-[10px] ${actionClass}`}
@@ -987,7 +992,7 @@
     );
   }
 
-  function CaseStatsApp() {
+  function CaseStatsApp({ readOnly = false }) {
     const [workspaceId, setWorkspaceId] = useState(getWorkspaceId);
     const [blob, setBlob] = useState({ byWorkspace: {} });
     const [caseSource, setCaseSource] = useState({ cases: [], caseWordGroups: [] });
@@ -1187,7 +1192,7 @@
     }, [workspaceId]);
 
     useEffect(() => {
-      if (!hydrated || suppressSaveRef.current) return undefined;
+      if (readOnly || !hydrated || suppressSaveRef.current) return undefined;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(async () => {
         setSaveState('saving');
@@ -1201,9 +1206,10 @@
       return () => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       };
-    }, [blob, hydrated, persistStatsBlob]);
+    }, [blob, hydrated, persistStatsBlob, readOnly]);
 
     useEffect(() => {
+      if (readOnly) return undefined;
       const onBeforeUnload = () => {
         if (!hydratedRef.current || suppressSaveRef.current) return;
         writeLocalBlob(buildStatsSavePayload(blobRef.current));
@@ -1213,7 +1219,7 @@
         window.removeEventListener('beforeunload', onBeforeUnload);
         flushStatsSave();
       };
-    }, [flushStatsSave]);
+    }, [flushStatsSave, readOnly]);
 
     const alignedMonthGroups = useMemo(
       () => groupMonthsByRocYear(alignedMonths),
@@ -1267,6 +1273,7 @@
 
     const commitSettleRow = useCallback(
       (ym, built, error) => {
+        if (readOnly) return;
         if (error) {
           setNotice(error);
           return;
@@ -1301,11 +1308,12 @@
         });
         setNotice('');
       },
-      [updateWorkspaceData]
+      [updateWorkspaceData, readOnly]
     );
 
     const clearSettleRow = useCallback(
       (ym, { silent } = {}) => {
+        if (readOnly) return;
         const rowYm = normalizeRocMonth5(ym);
         const existing = settlementRows.some((r) => normalizeRocMonth5(r.ym) === rowYm);
         if (!existing) return;
@@ -1316,7 +1324,7 @@
         }));
         setNotice('');
       },
-      [settlementRows, updateWorkspaceData]
+      [settlementRows, updateWorkspaceData, readOnly]
     );
 
     const settleRowActionClass =
@@ -1384,6 +1392,7 @@
               onCommit={commitSettleRow}
               onClear={clearSettleRow}
               actionClass={settleRowActionClass}
+              readOnly={readOnly}
             />
           </div>
         </div>
@@ -1391,13 +1400,15 @@
     };
 
     const saveStatusLabel =
-      saveState === 'saving'
-        ? '儲存中…'
-        : saveState === 'error'
-          ? '儲存失敗'
-          : saveState === 'local'
-            ? '離線未儲存'
-            : null;
+      readOnly
+        ? null
+        : saveState === 'saving'
+          ? '儲存中…'
+          : saveState === 'error'
+            ? '儲存失敗'
+            : saveState === 'local'
+              ? '離線未儲存'
+              : null;
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-surface text-ink-900 font-sans">
@@ -1545,11 +1556,12 @@
     }
   };
 
-  window.__jcmsMountCaseStats = function __jcmsMountCaseStats() {
+  window.__jcmsMountCaseStats = function __jcmsMountCaseStats(options = {}) {
     const el = document.getElementById('case-stats-root');
     if (!el) return;
+    const readOnly = Boolean(options.readOnly);
     window.__jcmsUnmountCaseStats();
     _jcmsCaseStatsRoot = ReactDOM.createRoot(el);
-    _jcmsCaseStatsRoot.render(<CaseStatsApp />);
+    _jcmsCaseStatsRoot.render(<CaseStatsApp readOnly={readOnly} />);
   };
 })();

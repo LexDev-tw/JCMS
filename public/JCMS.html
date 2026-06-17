@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.26.9/babel.min.js"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -87,6 +87,7 @@
                     <i class="ph ph-users text-[22px]"></i>
                 </a>
                 <button
+                    v-if="!isMobileLayout"
                     type="button"
                     @click="exportAppDbBackup"
                     :disabled="dbBackupBusy || !isDbConnected"
@@ -998,7 +999,7 @@
                 =========================================== -->
                 <div v-else-if="currentView === 'dashboardDetail'" ref="dashRootRef" class="p-8 lg:p-10 max-w-[1400px] mx-auto w-full animate-fade-in-up overflow-y-auto h-full flex flex-col gap-6">
 
-                    <div class="dash-detail-nav-entry shrink-0">
+                    <div v-if="!isMobileLayout" class="dash-detail-nav-entry shrink-0">
                         <button type="button" class="swiss-btn swiss-btn--secondary dash-map-detail-btn" @click="switchView('dashboard')">返回地圖總覽</button>
                     </div>
 
@@ -1398,6 +1399,7 @@
                                 <i class="ph ph-funnel-simple font-bold text-[14px]"></i>
                             </button>
                             <button
+                                v-if="!isMobileLayout"
                                 type="button"
                                 @click="casesManager.toggleSettingsPanel()"
                                 class="px-2 py-1.5 text-xs font-bold border transition-colors flex items-center justify-center rounded-sm min-w-[2.25rem]"
@@ -1411,6 +1413,7 @@
                                 <i class="ph ph-gear-six font-bold text-[14px]"></i>
                             </button>
                             <button
+                                v-if="!isMobileLayout"
                                 type="button"
                                 @click="casesManager.batchAdd()"
                                 class="px-2 py-1.5 text-xs font-bold text-ink-900 bg-panel border border-ink-100 hover:bg-ink-100 transition-colors flex items-center justify-center shadow-subtle rounded-sm min-w-[2.25rem]"
@@ -1419,6 +1422,7 @@
                                 <i class="ph ph-stack font-bold text-[14px]"></i>
                             </button>
                             <button
+                                v-if="!isMobileLayout"
                                 type="button"
                                 @click="casesManager.openAddModal()"
                                 class="px-2 py-1.5 text-xs font-bold text-white bg-ink-900 hover:bg-black transition-colors flex items-center justify-center shadow-subtle rounded-sm min-w-[2.25rem]"
@@ -1520,7 +1524,7 @@
                             </button>
                         </div>
                     </div>
-                    <div v-if="casesManager.showSettingsPanel" class="px-4 sm:px-6 py-2.5 border-b border-ink-100 bg-panel/40">
+                    <div v-if="casesManager.showSettingsPanel && !isMobileLayout" class="px-4 sm:px-6 py-2.5 border-b border-ink-100 bg-panel/40">
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 xl:gap-8 items-start">
                             <div class="min-w-0 space-y-2">
                                 <div class="flex flex-wrap items-end justify-between gap-2">
@@ -1643,7 +1647,7 @@
                         </div>
                     </div>
 
-                    <div v-if="casesManager.showAddModal" class="px-6 py-3 border-b border-ink-100 bg-panel/40">
+                    <div v-if="casesManager.showAddModal && !isMobileLayout" class="px-6 py-3 border-b border-ink-100 bg-panel/40">
                         <div
                             v-if="casesManager.addCaseNotice"
                             class="w-full min-w-0 text-[11px] font-mono text-accent leading-snug mb-2"
@@ -1696,7 +1700,7 @@
                             :ref="(el) => casesManager.setCaseTableScrollEl(el)"
                             @scroll.passive="casesManager.onCaseTableScroll"
                         >
-                        <table class="case-grid-table w-full text-left border-collapse whitespace-nowrap min-w-[1100px]">
+                        <table class="case-grid-table w-full text-left border-collapse whitespace-nowrap min-w-[1100px]" :class="{ 'case-grid-table--readonly': isMobileLayout }">
                             <colgroup>
                                 <col class="case-col-pin">
                                 <col class="case-col-status">
@@ -1733,7 +1737,7 @@
                             </thead>
                             <tbody class="divide-y divide-ink-100">
                                 <tr v-for="c in casesManager.filtered" :key="c.id" class="hover:bg-panel transition-colors group">
-                                    <td class="py-0.5 px-1.5 align-middle text-center border-r border-ink-100/50 cursor-pointer" @click.stop="casesManager.togglePin(c)">
+                                    <td class="py-0.5 px-1.5 align-middle text-center border-r border-ink-100/50" :class="isMobileLayout ? '' : 'cursor-pointer'" @click.stop="!isMobileLayout && casesManager.togglePin(c)">
                                         <span class="pin-dot" :class="c.isPinned ? 'pin-dot--active' : 'pin-dot--idle group-hover:opacity-90'"></span>
                                     </td>
                                     <td class="py-0.5 px-1.5 align-middle text-center">
@@ -4868,28 +4872,28 @@
     </div>
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
-    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260616"></script>
-    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260616"></script>
-    <script type="module" src="js/jcms/main.js?v=0.1.20260616"></script>
-    <script src="vendor/pdfjs.min.js?v=0.1.20260616"></script>
-    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260616"></script>
-    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260616"></script>
-    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260616"></script>
-    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260616"></script>
-    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260616"></script>
-    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260616"></script>
-    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260616"></script>
-    <script src="lib/genealogyLayout.js?v=0.1.20260616"></script>
-    <script src="lib/inheritanceCompute.js?v=0.1.20260616"></script>
-    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260616"></script>
-    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260616"></script>
+    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260617"></script>
+    <script type="module" src="js/jcms/main.js?v=0.1.20260617"></script>
+    <script src="vendor/pdfjs.min.js?v=0.1.20260617"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260617"></script>
+    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260617"></script>
+    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260617"></script>
+    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260617"></script>
+    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260617"></script>
+    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260617"></script>
+    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260617"></script>
+    <script src="lib/genealogyLayout.js?v=0.1.20260617"></script>
+    <script src="lib/inheritanceCompute.js?v=0.1.20260617"></script>
+    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260617"></script>
+    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260617"></script>
 </body>
 </html>

@@ -19,6 +19,11 @@ import { useCasesManager } from '../composables/use-cases-manager.js';
 import { useDynamics } from '../composables/use-dynamics.js';
 import { usePayscaleChart } from '../composables/use-payscale-chart.js';
 import { useDashboardCharts } from '../composables/use-dashboard-charts.js';
+import {
+    useMobileLayout,
+    resolveViewForMobileLayout,
+    MOBILE_REDIRECT_VIEWS,
+} from '../composables/use-mobile-layout.js';
 import { useDashboardMapView } from '../composables/use-dashboard-map-view.js';
 import { useWorkMapEditor } from '../composables/use-work-map-editor.js';
 import {
@@ -120,6 +125,8 @@ export function mountJcmsApp() {
               'admin',
               'dynamics',
           ]);
+          const { isMobileLayout } = useMobileLayout();
+
           const readInitialViewFromUrl = () => {
               try {
                   const v = new URLSearchParams(window.location.search).get('view');
@@ -137,17 +144,39 @@ export function mountJcmsApp() {
                   }
               } catch (e) { /* ignore */ }
           };
-          const currentView = ref(readInitialViewFromUrl());
+          const currentView = ref(
+              resolveViewForMobileLayout(readInitialViewFromUrl(), isMobileLayout.value)
+          );
           const isDbConnected = ref(false); // 準備對接後端健康檢查 API
           const dbStatusClass = computed(() => isDbConnected.value ? 'text-ink-400' : 'text-warning');
+
+          const mountCaseStatsApp = () => {
+              if (typeof window.__jcmsMountCaseStats !== 'function') return;
+              window.__jcmsMountCaseStats({ readOnly: isMobileLayout.value });
+          };
   
           const switchView = (view) => {
               if (!JCMS_VALID_VIEWS.has(view)) return;
+              view = resolveViewForMobileLayout(view, isMobileLayout.value);
               if (currentView.value !== view) {
                   isLoading.value = true;
                   setTimeout(() => { currentView.value = view; isLoading.value = false; }, 150); 
               }
           };
+
+          watch(isMobileLayout, (mobile) => {
+              if (mobile && MOBILE_REDIRECT_VIEWS.has(currentView.value)) {
+                  switchView('dashboardDetail');
+              }
+              if (currentView.value === 'caseStats') {
+                  nextTick(() => {
+                      if (typeof window.__jcmsUnmountCaseStats === 'function') {
+                          window.__jcmsUnmountCaseStats();
+                      }
+                      mountCaseStatsApp();
+                  });
+              }
+          });
           window.__jcmsSwitchView = (view) => switchView(view);
   
           watch(currentView, (v, prev) => {
@@ -233,7 +262,7 @@ export function mountJcmsApp() {
                   nextTick(() => {
                       const tryMount = (n = 0) => {
                           if (typeof window.__jcmsMountCaseStats === 'function') {
-                              window.__jcmsMountCaseStats();
+                              mountCaseStatsApp();
                               return;
                           }
                           if (n < 40) setTimeout(() => tryMount(n + 1), 50);
@@ -5014,7 +5043,7 @@ export function mountJcmsApp() {
           });
   
           return {
-              util, time, currentView, switchView, gotoOvertimeAdmin, navClass, exportAppDbBackup, dbBackupBusy, isLoading, isDbConnected, dbStatusClass,
+              util, time, currentView, switchView, gotoOvertimeAdmin, navClass, exportAppDbBackup, dbBackupBusy, isLoading, isDbConnected, dbStatusClass, isMobileLayout,
               currentWorkspace, settings, addWorkspace, removeWorkspace, activeWorkspaceLabel,
               prefixInput, addPrefix, removePrefix,
               casesManager, isLoadingCases, dashStats, dashBreakdownMode, dashBreakdownSlotCount, dashBreakdownSlots, dashBreakdownHasData,

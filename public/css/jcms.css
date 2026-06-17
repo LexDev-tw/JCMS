@@ -1148,6 +1148,15 @@
             font-family: inherit;
             field-sizing: content;
         }
+        .case-grid-table--readonly .case-cell-input,
+        .case-grid-table--readonly .case-cell-input--note {
+            pointer-events: none;
+            cursor: default;
+            user-select: text;
+        }
+        .case-grid-table--readonly .case-cell-input:focus {
+            background: transparent;
+        }
         .case-table-scroll {
             contain: none;
         }
