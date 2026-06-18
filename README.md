@@ -106,6 +106,22 @@ docker compose exec jcms node scripts/repair-dynamics-fts.js
 
 ## 開發日誌
 
+### 2026-06-18
+
+**版號與 UI**
+
+- 版號升至 `0.1.20260618b`；標題列版本改為僅顯示數字（不加 `v` 前綴）。
+
+**手機版版面**
+
+- 新增底部主選單（`jcms-mobile-tabbar`）：總覽、案件、統計、工具、行政、動態。
+- 手機版精簡頂部列：隱藏桌面導覽與時鐘，僅保留工作區選擇與 DB 連線指示。
+- 總覽詳情（`dashboardDetail`）手機版間距、KPI 網格、中欄區塊順序與統計列寬度調整。
+
+**Google 行事曆**
+
+- OAuth 連結改為直接 `<a href>` 導向授權 URL，避免僅按鈕觸發時在部分環境無法開啟。
+
 ### 2026-06-16
 
 **VPS / Docker 部署**

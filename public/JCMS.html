@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JCMS</title>
-    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260618a"></script>
+    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260618b"></script>
     <link rel="icon" href="ico/law-book.ico" type="image/x-icon">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -41,7 +41,7 @@
         }
     </script>
     
-    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260617a">
+    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260618b">
     <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=0.1.20260617a">
     <link rel="stylesheet" href="css/jcms-work-map-edit.css?v=0.1.20260617a">
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
@@ -52,16 +52,16 @@
 
     <div id="app" class="h-screen w-screen flex flex-col relative" v-cloak>
         
-        <header class="h-12 bg-ink-900 border-b border-ink-600/30 flex items-center px-6 shrink-0 relative z-20">
-            <div class="flex items-center gap-6 flex-1">
-                <div class="inline-flex items-end gap-1.5 font-bold text-lg tracking-tight text-white leading-none">
-                    <span>JCMS</span><span class="text-accent font-normal text-[10px] leading-none">v0.1.20260618a</span>
+        <header class="jcms-app-header flex items-center h-12 px-3 md:px-6 bg-ink-900 border-b border-ink-600/30 shrink-0 relative z-20">
+            <div class="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
+                <div class="inline-flex items-end gap-1.5 font-bold text-lg tracking-tight text-white leading-none shrink-0">
+                    <span>JCMS</span><span class="text-accent font-normal text-[10px] leading-none hidden md:inline">0.1.20260618b</span>
                 </div>
                 
-                <div class="relative flex items-center gap-3 pl-6 border-l border-ink-600/40 min-w-0">
+                <div class="relative flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-ink-600/40 min-w-0 flex-1">
                     <i class="ph ph-briefcase text-ink-400 text-base shrink-0"></i>
                     <select v-model="currentWorkspace" 
-                        class="bg-transparent text-xs font-bold text-ink-400 outline-none cursor-pointer hover:text-white focus:ring-0 appearance-none pr-4 max-w-[min(100%,280px)] truncate">
+                        class="bg-transparent text-xs font-bold text-ink-400 outline-none cursor-pointer hover:text-white focus:ring-0 appearance-none pr-4 min-w-0 w-full max-w-full md:max-w-[min(100%,280px)] truncate">
                         <option v-for="ws in settings.data.workspaces" :key="ws.id" :value="ws.id">
                             {{ ws.court }} - {{ ws.division }}
                         </option>
@@ -69,7 +69,7 @@
                 </div>
             </div>
 
-            <nav class="flex items-center gap-1 shrink-0">
+            <nav v-if="!isMobileLayout" class="jcms-app-nav flex items-center gap-1 shrink-0">
                 <a href="#" @click.prevent="switchView('dashboard')" :class="navClass('dashboard')" title="總覽">
                     <i class="ph ph-squares-four text-[22px]"></i>
                 </a>
@@ -82,7 +82,7 @@
                 <a href="#" @click.prevent="switchView('civilTools')" :class="navClass('civilTools')" title="民事實務工具">
                     <i class="ph ph-toolbox text-[22px]"></i>
                 </a>
-                <div class="w-px h-4 bg-ink-600/40 mx-1.5"></div>
+                <div class="w-px h-4 bg-ink-600/40 mx-1.5 shrink-0"></div>
                 <a href="#" @click.prevent="switchView('admin')" :class="navClass('admin')" title="個人行政">
                     <i class="ph ph-identification-card text-[22px]"></i>
                 </a>
@@ -90,7 +90,6 @@
                     <i class="ph ph-users text-[22px]"></i>
                 </a>
                 <button
-                    v-if="!isMobileLayout"
                     type="button"
                     @click="exportAppDbBackup"
                     :disabled="dbBackupBusy || !isDbConnected"
@@ -101,7 +100,7 @@
                 </button>
             </nav>
 
-            <div class="flex items-center justify-end gap-5 text-sm flex-1">
+            <div v-if="!isMobileLayout" class="flex items-center justify-end gap-5 text-sm flex-1 min-w-0">
                 <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold tracking-widest select-none">
                     <span class="text-ink-400">{{ String(time.y).padStart(3, '0') }}{{ time.m }}{{ time.d }}</span>
                     <span class="text-ink-600 w-2 text-center">{{ time.day }}</span>
@@ -116,6 +115,13 @@
                     </span>
                     {{ isDbConnected ? 'Ready' : 'DB Disconnected' }}
                 </div>
+            </div>
+
+            <div v-if="isMobileLayout" class="flex items-center shrink-0 pl-2" :class="dbStatusClass" :title="isDbConnected ? '資料庫已連線' : '資料庫未連線'" aria-label="資料庫連線狀態">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" v-if="isDbConnected"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2" :class="isDbConnected ? 'bg-accent' : 'bg-ink-400'"></span>
+                </span>
             </div>
         </header>
 
@@ -1005,7 +1011,7 @@
                 <!-- ==========================================
                      View: 詳細資訊總覽 (Dashboard Detail)
                 =========================================== -->
-                <div v-else-if="currentView === 'dashboardDetail' || (isMobileLayout && (currentView === 'dashboard' || currentView === 'workMapEdit'))" ref="dashRootRef" class="jcms-dash-detail-view px-8 lg:px-10 pb-8 lg:pb-10 max-w-[1400px] mx-auto w-full animate-fade-in-up overflow-y-auto h-full flex flex-col gap-6">
+                <div v-else-if="currentView === 'dashboardDetail' || (isMobileLayout && (currentView === 'dashboard' || currentView === 'workMapEdit'))" ref="dashRootRef" class="jcms-dash-detail-view px-4 sm:px-6 lg:px-10 pb-6 sm:pb-8 lg:pb-10 max-w-[1400px] mx-auto w-full animate-fade-in-up overflow-y-auto overflow-x-hidden h-full flex flex-col gap-4 sm:gap-6">
 
                     <div class="dash-detail-top shrink-0">
                         <div v-if="!isMobileLayout" class="dash-detail-nav-row">
@@ -1450,6 +1456,9 @@
                                 </div>
                                 <div class="dash-gcal-settings-expand__col">
                                     <p class="dash-gcal-settings-expand__label">帳號連結</p>
+                                    <div class="dash-gcal-settings-expand__actions">
+                                        <a :href="googleCalendarAuthUrl" class="swiss-btn swiss-btn--primary">連結 Google 行事曆</a>
+                                    </div>
                                     <template v-if="googleCalendarStatus.configured">
                                         <template v-if="googleCalendarStatus.connected">
                                             <p class="dash-gcal-settings-expand__hint">
@@ -1466,10 +1475,7 @@
                                                 <button type="button" @click="disconnectGoogleCalendar" :disabled="googleCalendarStatus.busy" class="swiss-btn swiss-btn--ghost">中斷連結</button>
                                             </div>
                                         </template>
-                                        <template v-else>
-                                            <p class="dash-gcal-settings-expand__hint">OAuth 已就緒，尚須授權 Google 帳號。</p>
-                                            <button type="button" @click="connectGoogleCalendar" class="swiss-btn swiss-btn--primary">連結 Google 行事曆</button>
-                                        </template>
+                                        <p v-else class="dash-gcal-settings-expand__hint">OAuth 已就緒，尚須授權 Google 帳號。</p>
                                     </template>
                                     <p v-else class="dash-gcal-settings-expand__hint">請先儲存 OAuth API 設定（含 Client ID 與 Client Secret）</p>
                                 </div>
@@ -5100,31 +5106,58 @@
                 </div>
             </div>
         </div>
+
+        <nav v-if="isMobileLayout" class="jcms-mobile-tabbar shrink-0" aria-label="主選單">
+            <a href="#" @click.prevent="switchView('dashboard')" :class="mobileNavClass('dashboard')" title="總覽">
+                <i class="ph ph-squares-four" aria-hidden="true"></i>
+                <span>總覽</span>
+            </a>
+            <a href="#" @click.prevent="switchView('cases')" :class="mobileNavClass('cases')" title="案件清單">
+                <i class="ph ph-folders" aria-hidden="true"></i>
+                <span>案件</span>
+            </a>
+            <a href="#" @click.prevent="switchView('caseStats')" :class="mobileNavClass('caseStats')" title="案件統計">
+                <i class="ph ph-chart-bar" aria-hidden="true"></i>
+                <span>統計</span>
+            </a>
+            <a href="#" @click.prevent="switchView('civilTools')" :class="mobileNavClass('civilTools')" title="民事實務工具">
+                <i class="ph ph-toolbox" aria-hidden="true"></i>
+                <span>工具</span>
+            </a>
+            <a href="#" @click.prevent="switchView('admin')" :class="mobileNavClass('admin')" title="個人行政">
+                <i class="ph ph-identification-card" aria-hidden="true"></i>
+                <span>行政</span>
+            </a>
+            <a href="#" @click.prevent="switchView('dynamics')" :class="mobileNavClass('dynamics')" title="司法動態">
+                <i class="ph ph-users" aria-hidden="true"></i>
+                <span>動態</span>
+            </a>
+        </nav>
     </div>
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
-    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260618a"></script>
-    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260618a"></script>
-    <script type="module" src="js/jcms/main.js?v=0.1.20260618a"></script>
-    <script src="vendor/pdfjs.min.js?v=0.1.20260618a"></script>
-    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260618a"></script>
-    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260618a"></script>
-    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260618a"></script>
-    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260618a"></script>
-    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260618a"></script>
-    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260618a"></script>
-    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260618a"></script>
-    <script src="lib/genealogyLayout.js?v=0.1.20260618a"></script>
-    <script src="lib/inheritanceCompute.js?v=0.1.20260618a"></script>
-    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260618a"></script>
-    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260618a"></script>
+    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260618b"></script>
+    <script type="module" src="js/jcms/main.js?v=0.1.20260618b"></script>
+    <script src="vendor/pdfjs.min.js?v=0.1.20260618b"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260618b"></script>
+    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260618b"></script>
+    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260618b"></script>
+    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260618b"></script>
+    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260618b"></script>
+    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260618b"></script>
+    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260618b"></script>
+    <script src="lib/genealogyLayout.js?v=0.1.20260618b"></script>
+    <script src="lib/inheritanceCompute.js?v=0.1.20260618b"></script>
+    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260618b"></script>
+    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260618b"></script>
 </body>
 </html>

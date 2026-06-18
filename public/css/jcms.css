@@ -2932,3 +2932,165 @@
             font-size: 0.6875rem;
             color: #999999;
         }
+
+        /* ── 手機版底部主選單 ── */
+        .jcms-mobile-tabbar {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            border-top: 1px solid rgba(102, 102, 102, 0.35);
+            background: #111111;
+            z-index: 30;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .jcms-mobile-tabbar__item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.12rem;
+            min-width: 0;
+            min-height: 3.25rem;
+            padding: 0.35rem 0.1rem 0.42rem;
+            color: #999999;
+            font-size: 0.5625rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            line-height: 1.15;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: color 0.15s;
+        }
+        .jcms-mobile-tabbar__item i {
+            font-size: 1.25rem;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .jcms-mobile-tabbar__item span {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .jcms-mobile-tabbar__item--active {
+            color: #f05a28;
+        }
+        .jcms-mobile-tabbar__item:active {
+            opacity: 0.75;
+        }
+
+        /* ── 手機版總覽（dashboardDetail）── */
+        html.jcms-mobile-layout .jcms-dash-detail-view {
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-bottom: 1.5rem;
+            gap: 1.25rem;
+        }
+        html.jcms-mobile-layout .dash-kpi-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.85rem 0.75rem;
+        }
+        html.jcms-mobile-layout .dash-kpi-value {
+            font-size: 2rem;
+        }
+        html.jcms-mobile-layout .dash-kpi-sub-label {
+            font-size: 0.5rem;
+            line-height: 1.25;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
+        }
+        html.jcms-mobile-layout .dash-kpi-sub-value {
+            font-size: 0.75rem;
+        }
+        html.jcms-mobile-layout .dash-middle-grid--quad {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            width: 100%;
+        }
+        html.jcms-mobile-layout .dash-middle-grid--quad > * {
+            width: 100%;
+            max-width: 100%;
+            align-self: stretch;
+            box-sizing: border-box;
+        }
+        html.jcms-mobile-layout .dash-middle-grid > :not(.dash-section-head) {
+            align-self: stretch;
+        }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(1) { order: 1; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(2) { order: 3; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(3) { order: 5; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(4) { order: 7; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(5) { order: 2; margin-bottom: 1.5rem; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(6) { order: 4; margin-bottom: 1.5rem; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(7) { order: 6; margin-bottom: 1.5rem; }
+        html.jcms-mobile-layout .dash-middle-grid--quad > :nth-child(8) { order: 8; }
+        html.jcms-mobile-layout .dash-section-head {
+            margin-bottom: 0.65rem;
+        }
+        html.jcms-mobile-layout .jcms-dash-detail-view .dash-detail-stats-list .dash-breakdown-row {
+            grid-template-columns: minmax(5.5rem, 36%) minmax(0, 1fr) auto;
+        }
+        html.jcms-mobile-layout .jcms-dash-detail-view .dash-detail-stats-list .dash-breakdown-label {
+            width: auto;
+            min-width: 0;
+        }
+        html.jcms-mobile-layout .jcms-dash-detail-view .dash-detail-stats-list .dash-breakdown-label__title {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: unset;
+        }
+        html.jcms-mobile-layout .jcms-dash-detail-view .dash-cum-amount-row {
+            grid-template-columns: minmax(5.5rem, 36%) minmax(0, 1fr) auto;
+        }
+        html.jcms-mobile-layout .dash-breakdown-body,
+        html.jcms-mobile-layout .dash-breakdown-list,
+        html.jcms-mobile-layout .dash-detail-attn-grid {
+            width: 100%;
+            max-width: 100%;
+        }
+        html.jcms-mobile-layout .dash-calendar-section .dash-section-head {
+            flex-wrap: wrap;
+            align-items: flex-start;
+            row-gap: 0.65rem;
+        }
+        html.jcms-mobile-layout .dash-calendar-section .dash-section-head > .flex {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        @media (max-width: 767px) {
+            .jcms-dash-detail-view {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            .dash-kpi-row {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.85rem 0.75rem;
+            }
+            .dash-kpi-value {
+                font-size: 2rem;
+            }
+            .dash-middle-grid--quad {
+                display: flex;
+                flex-direction: column;
+                gap: 0;
+                width: 100%;
+            }
+            .dash-middle-grid--quad > * {
+                width: 100%;
+                max-width: 100%;
+                align-self: stretch;
+                box-sizing: border-box;
+            }
+            .dash-middle-grid > :not(.dash-section-head) {
+                align-self: stretch;
+            }
+            .dash-middle-grid--quad > :nth-child(1) { order: 1; }
+            .dash-middle-grid--quad > :nth-child(2) { order: 3; }
+            .dash-middle-grid--quad > :nth-child(3) { order: 5; }
+            .dash-middle-grid--quad > :nth-child(4) { order: 7; }
+            .dash-middle-grid--quad > :nth-child(5) { order: 2; margin-bottom: 1.5rem; }
+            .dash-middle-grid--quad > :nth-child(6) { order: 4; margin-bottom: 1.5rem; }
+            .dash-middle-grid--quad > :nth-child(7) { order: 6; margin-bottom: 1.5rem; }
+            .dash-middle-grid--quad > :nth-child(8) { order: 8; }
+        }

@@ -303,6 +303,13 @@ export function mountJcmsApp() {
                       : currentView.value === view;
               return `relative flex items-center justify-center w-9 h-9 rounded transition-colors duration-200 ${active ? 'text-accent bg-white/10' : 'text-ink-400 hover:text-white hover:bg-white/10'}`;
           };
+          const mobileNavClass = (view) => {
+              const active =
+                  view === 'dashboard'
+                      ? currentView.value === 'dashboard' || currentView.value === 'dashboardDetail'
+                      : currentView.value === view;
+              return `jcms-mobile-tabbar__item${active ? ' jcms-mobile-tabbar__item--active' : ''}`;
+          };
           const dbBackupBusy = ref(false);
           const exportAppDbBackup = async () => {
               if (dbBackupBusy.value) return;
@@ -5471,7 +5478,7 @@ export function mountJcmsApp() {
           });
   
           return {
-              util, time, currentView, switchView, gotoOvertimeAdmin, navClass, exportAppDbBackup, dbBackupBusy, isLoading, isDbConnected, dbStatusClass, isMobileLayout,
+              util, time, currentView, switchView, gotoOvertimeAdmin, navClass, mobileNavClass, exportAppDbBackup, dbBackupBusy, isLoading, isDbConnected, dbStatusClass, isMobileLayout,
               currentWorkspace, settings, addWorkspace, removeWorkspace, activeWorkspaceLabel, dashWorkspaceStartDateRoc7,
               prefixInput, addPrefix, removePrefix,
               casesManager, isLoadingCases, dashStats, dashBreakdownMode, dashBreakdownSlotCount, dashBreakdownSlots, dashBreakdownHasData, dashBreakdownLabelDisplay,
@@ -5602,6 +5609,7 @@ export function mountJcmsApp() {
               loadGoogleCalendarOAuthConfig,
               saveGoogleCalendarOAuthConfig,
               formatGoogleSyncAt,
+              googleCalendarAuthUrl: apiService.getGoogleCalendarAuthUrl(),
               connectGoogleCalendar,
               syncGoogleCalendarNow,
               disconnectGoogleCalendar,

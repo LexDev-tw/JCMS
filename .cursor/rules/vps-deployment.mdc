@@ -42,3 +42,9 @@ alwaysApply: true
 2. README / `.env.example` 與上述網域、NPM 流程一致
 3. 無 localhost 專用邏輯混入正式路徑
 4. 2GB RAM 下可建置並啟動（避免不必要的大型 dev 依賴進 production image）
+5. **更新 `README.md`「開發日誌」**：每次 push 前新增當日條目（`### YYYY-MM-DD`），簡述本次變更；版號 bump 時一併記錄
+
+## 版號
+
+- 格式：`大.小.YYYYMMDD[a-z]`（例 `0.1.20260618b`）；`package.json` 為單一來源，執行 `npm run sync:html-version` 同步 `JCMS.html` script `?v=`。
+- 標題列版本僅顯示數字，**不加** `v` 前綴。
