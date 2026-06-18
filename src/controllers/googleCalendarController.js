@@ -61,6 +61,15 @@ const getEvents = wrapAsyncController(async (req, res) => {
   res.status(200).json({ success: true, data });
 });
 
+const syncEvents = wrapAsyncController(async (_req, res) => {
+  const status = await googleCalendarService.getStatus();
+  if (!status.connected) {
+    return res.status(200).json({ success: true, data: { connected: false } });
+  }
+  const data = await googleCalendarService.syncNow();
+  res.status(200).json({ success: true, data });
+});
+
 const disconnect = wrapAsyncController(async (req, res) => {
   await googleCalendarService.disconnect();
   res.status(200).json({ success: true, data: { connected: false } });
@@ -73,5 +82,6 @@ module.exports = {
   getOAuthConfig,
   putOAuthConfig,
   getEvents,
+  syncEvents,
   disconnect,
 };

@@ -91,7 +91,13 @@ import {
   buildCareerTimelineTicks,
   sanitizeCareerTimelineLinks,
   syncCalendarWeek,
+  syncCalendarScroll,
   buildThisWeekSchedule,
+  buildContinuousCalendarSchedule,
+  formatCalendarViewMonthLabel,
+  findWeekIndexForRocDate,
+  findTodayWeekIndex,
+  MONTH_DOW_LABELS,
   careerRowInterval,
   careerRowAttachments,
   careerAttachmentLabelFromUrl,
@@ -147,6 +153,10 @@ export function mountJcmsApp() {
           const currentView = ref(
               resolveViewForMobileLayout(readInitialViewFromUrl(), isMobileLayout.value)
           );
+          if (isMobileLayout.value) {
+              const resolved = resolveViewForMobileLayout(currentView.value, true);
+              if (resolved !== currentView.value) currentView.value = resolved;
+          }
           const isDbConnected = ref(false); // 準備對接後端健康檢查 API
           const dbStatusClass = computed(() => isDbConnected.value ? 'text-ink-400' : 'text-warning');
 
@@ -845,6 +855,12 @@ export function mountJcmsApp() {
               if (!c && !d) return '（尚未命名工作區）';
               return [c, d].filter(Boolean).join(' — ');
           });
+
+          const dashWorkspaceStartDateRoc7 = computed(() => {
+              const ws = settings.data.workspaces.find((w) => w.id === currentWorkspace.value);
+              const d7 = util.normalizeRocDate7(ws?.startDate || '');
+              return d7.length === 7 ? d7 : '';
+          });
   
           const prefixInput = ref('');
           function addPrefix() {
@@ -870,6 +886,19 @@ export function mountJcmsApp() {
               return (allCases.value || []).filter(
                   (c) => String(c.workspaceId || 'WS_001') === ws
               );
+          });
+
+          const dashStatsCases = computed(() => {
+              const list = dashWsCases.value;
+              const floor = dashWorkspaceStartDateRoc7.value;
+              if (floor.length !== 7) return list;
+              return list.filter((c) => {
+                  const d =
+                      util.normalizeRocDate7(c.dates || '') ||
+                      util.toRocDate7FromAny(c.dates || '') ||
+                      '';
+                  return d.length === 7 && d >= floor;
+              });
           });
 
           function dashResolveGroupLabel(word) {
@@ -923,6 +952,14 @@ export function mountJcmsApp() {
               return slots;
           }
 
+          function dashBreakdownLabelDisplay(label, mode) {
+              const text = String(label || '').trim();
+              if (mode !== 'reason') return text;
+              const chars = [...text];
+              if (chars.length <= 6) return text;
+              return `${chars.slice(0, 6).join('')}…`;
+          }
+
           const dashBreakdownMode = ref('word');
 
           const dashBreakdownSlotCount = computed(() =>
@@ -930,16 +967,26 @@ export function mountJcmsApp() {
           );
 
           const dashStats = computed(() => {
-              const list = dashWsCases.value;
+              const list = dashStatsCases.value;
               const currentMonth = util.todayRocDate7().slice(0, 5);
-              const unresolved = list.filter((c) => !c.closeDate).length;
+              const unresolvedList = list.filter((c) => !c.closeDate);
+              const unresolved = unresolvedList.length;
               const closedThisMonthList = list.filter(
                   (c) => String(c.closeDate || '').slice(0, 5) === currentMonth
               );
               const closed = closedThisMonthList.length;
-              const newlyReceived = list.filter(
+              const newlyReceivedList = list.filter(
                   (c) => String(c.dates || '').slice(0, 5) === currentMonth
-              ).length;
+              );
+              const newlyReceived = newlyReceivedList.length;
+              const monthNewlyReceivedTarget = newlyReceivedList.reduce(
+                  (sum, c) => sum + util.parseMoney(c.targetAmount),
+                  0
+              );
+              const unresolvedTargetAmount = unresolvedList.reduce(
+                  (sum, c) => sum + util.parseMoney(c.targetAmount),
+                  0
+              );
               const notProceeding = list.filter((c) => casesManager.isCaseNotProceeding(c)).length;
               const proceedingThisMonth = list.filter((c) =>
                   casesManager.caseHasProceedingInMonth(c, currentMonth)
@@ -969,6 +1016,8 @@ export function mountJcmsApp() {
                   notProceeding,
                   proceedingThisMonth,
                   monthClosedTarget,
+                  monthNewlyReceivedTarget,
+                  unresolvedTargetAmount,
                   clearanceRate,
                   currentMonth5: currentMonth,
                   cumulativeReceived,
@@ -981,7 +1030,7 @@ export function mountJcmsApp() {
 
           const dashBreakdownSlots = computed(() =>
               padDashBreakdownSlots(
-                  buildDashTop5Breakdown(dashWsCases.value, dashBreakdownMode.value),
+                  buildDashTop5Breakdown(dashStatsCases.value, dashBreakdownMode.value),
                   5
               )
           );
@@ -991,11 +1040,22 @@ export function mountJcmsApp() {
           );
 
           const dashRootRef = ref(null);
+          const dashCalendarScrollRef = ref(null);
+          const CALENDAR_SCROLL_MONTH_RADIUS = 24;
+          let calendarScrollFromNav = false;
+          let calendarScrollRaf = 0;
+          let calendarTodayScrollToken = 0;
+          let calendarShouldSnapToday = true;
+          let calendarSnapPending = true;
+          let calendarUserScrolled = false;
           const dashMapRootRef = ref(null);
           const workMapEditRootRef = ref(null);
-          const dashViewActive = computed(() => currentView.value === 'dashboardDetail');
-          const dashMapViewActive = computed(() => currentView.value === 'dashboard');
-          const workMapEditViewActive = computed(() => currentView.value === 'workMapEdit');
+          const dashViewActive = computed(() => {
+              if (currentView.value === 'dashboardDetail') return true;
+              return isMobileLayout.value && MOBILE_REDIRECT_VIEWS.has(currentView.value);
+          });
+          const dashMapViewActive = computed(() => currentView.value === 'dashboard' && !isMobileLayout.value);
+          const workMapEditViewActive = computed(() => currentView.value === 'workMapEdit' && !isMobileLayout.value);
 
           const workMapDoc = reactive(createEmptyWorkMapDoc());
           const workMapHistory = createWorkMapHistory();
@@ -2430,6 +2490,90 @@ export function mountJcmsApp() {
               const cap = dashMapOtMonthLimits.value.project;
               return cap > 0 ? formatOvertimeHoursPlain(cap) : '—';
           });
+
+          function buildAttnDashBarSpec(usedRaw, capRaw) {
+              const used = Math.max(0, Number(usedRaw) || 0);
+              const cap = Number(capRaw) || 0;
+              if (!(cap > 0)) {
+                  return { inactive: true, usedPct: 0, remainPct: 0 };
+              }
+              const usedPct = Math.min(100, Math.round((used / cap) * 1000) / 10);
+              return {
+                  inactive: false,
+                  usedPct,
+                  remainPct: Math.max(0, Math.round((100 - usedPct) * 10) / 10),
+              };
+          }
+
+          const dashDetailOtRegularBarSpec = computed(() =>
+              buildAttnDashBarSpec(
+                  overtimeMonthMetrics.value.regular.h,
+                  dashMapOtMonthLimits.value.regular
+              )
+          );
+          const dashDetailOtProjectBarSpec = computed(() =>
+              buildAttnDashBarSpec(
+                  overtimeMonthMetrics.value.project.h,
+                  dashMapOtMonthLimits.value.project
+              )
+          );
+          const dashDetailLeaveBarSpec = computed(() =>
+              buildAttnDashBarSpec(
+                  attendanceThisYearLeaveUsedDaysEq.value,
+                  attendanceDashLeaveQuotaNum.value
+              )
+          );
+
+          function buildAttnDashYearBarSpec(hoursRaw, scaleRaw) {
+              const used = Math.max(0, Number(hoursRaw) || 0);
+              const scale = Math.max(Number(scaleRaw) || 0, used, 1);
+              if (used <= 0) {
+                  return { inactive: true, usedPct: 0, remainPct: 0 };
+              }
+              const usedPct = Math.min(100, Math.round((used / scale) * 1000) / 10);
+              return {
+                  inactive: false,
+                  usedPct,
+                  remainPct: Math.max(0, Math.round((100 - usedPct) * 10) / 10),
+              };
+          }
+
+          const dashDetailOtYearBarScale = computed(() =>
+              Math.max(
+                  overtimeMetrics.value.regular.h,
+                  overtimeMetrics.value.project.h,
+                  1
+              )
+          );
+          const dashDetailOtYearRegularBarSpec = computed(() =>
+              buildAttnDashYearBarSpec(
+                  overtimeMetrics.value.regular.h,
+                  dashDetailOtYearBarScale.value
+              )
+          );
+          const dashDetailOtYearProjectBarSpec = computed(() =>
+              buildAttnDashYearBarSpec(
+                  overtimeMetrics.value.project.h,
+                  dashDetailOtYearBarScale.value
+              )
+          );
+          const dashDetailOtYearRegularDisplay = computed(() =>
+              formatOvertimeHoursPlain(overtimeMetrics.value.regular.h)
+          );
+          const dashDetailOtYearProjectDisplay = computed(() =>
+              formatOvertimeHoursPlain(overtimeMetrics.value.project.h)
+          );
+
+          const dashMapOtRegularRemainingDisplay = computed(() =>
+              dashMapOtRegularRemaining.value === null
+                  ? '—'
+                  : formatOvertimeHoursPlain(dashMapOtRegularRemaining.value)
+          );
+          const dashMapOtProjectRemainingDisplay = computed(() =>
+              dashMapOtProjectRemaining.value === null
+                  ? '—'
+                  : formatOvertimeHoursPlain(dashMapOtProjectRemaining.value)
+          );
   
           function pad2(n) {
               const x = Number(n) || 0;
@@ -2646,6 +2790,10 @@ export function mountJcmsApp() {
           );
           const attnDashLeaveRemainingLineDisplay = computed(() =>
               formatLeaveDaysZh(attendanceDashLeaveRemainingDays.value)
+          );
+
+          const dashDetailLeaveTooltip = computed(() =>
+              `休假${attnDashLeaveQuotaLineDisplay.value}，已休${attnDashLeaveUsedLineDisplay.value}，尚餘${attnDashLeaveRemainingLineDisplay.value}`
           );
   
           const attendanceLeaveRows = computed(() => {
@@ -3829,6 +3977,9 @@ export function mountJcmsApp() {
               weekBodyGridRow: 2,
               weekRange: '',
               weekOffset: 0,
+              scrollWeeks: [],
+              monthRange: formatCalendarViewMonthLabel(0),
+              calendarViewMonthOffset: 0,
               handleClick() {},
           });
   
@@ -3944,6 +4095,10 @@ export function mountJcmsApp() {
               email: '',
               configSource: 'none',
               busy: false,
+              syncing: false,
+              lastFullSyncAt: '',
+              lastDeltaSyncAt: '',
+              lastError: '',
               message: '',
           });
           const googleCalendarOAuthDraft = reactive({
@@ -3963,6 +4118,24 @@ export function mountJcmsApp() {
               googleCalendarStatus.connected = !!data?.connected;
               googleCalendarStatus.email = String(data?.email || '').trim();
               googleCalendarStatus.configSource = String(data?.configSource || 'none');
+              googleCalendarStatus.lastFullSyncAt = String(data?.lastFullSyncAt || '').trim();
+              googleCalendarStatus.lastDeltaSyncAt = String(data?.lastDeltaSyncAt || '').trim();
+              googleCalendarStatus.lastError = String(data?.lastError || '').trim();
+          }
+
+          function formatGoogleSyncAt(iso) {
+              const raw = String(iso || '').trim();
+              if (!raw) return '—';
+              const d = new Date(raw);
+              if (Number.isNaN(d.getTime())) return raw;
+              return d.toLocaleString('zh-TW', {
+                  hour12: false,
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+              });
           }
 
           async function loadGoogleCalendarOAuthConfig() {
@@ -4028,11 +4201,26 @@ export function mountJcmsApp() {
                   await apiService.disconnectGoogleCalendar();
                   googleCalendarStatus.connected = false;
                   googleCalendarStatus.email = '';
-                  await refreshCalendarWeek();
+                  await refreshCalendars();
               } catch (e) {
                   googleCalendarStatus.message = String(e?.message || e);
               } finally {
                   googleCalendarStatus.busy = false;
+              }
+          }
+
+          async function syncGoogleCalendarNow() {
+              googleCalendarStatus.syncing = true;
+              googleCalendarStatus.message = '';
+              try {
+                  await apiService.syncGoogleCalendarNow();
+                  await loadGoogleCalendarStatus();
+                  await refreshCalendars();
+                  googleCalendarStatus.message = 'Google 行事曆已完成同步';
+              } catch (e) {
+                  googleCalendarStatus.message = String(e?.message || e);
+              } finally {
+                  googleCalendarStatus.syncing = false;
               }
           }
 
@@ -4044,7 +4232,7 @@ export function mountJcmsApp() {
                   if (gcal === 'connected') {
                       googleCalendarSettingsOpen.value = true;
                       googleCalendarStatus.message = 'Google 行事曆已連結';
-                      loadGoogleCalendarStatus().then(() => refreshCalendarWeek());
+                      loadGoogleCalendarStatus().then(() => refreshCalendars());
                   } else if (gcal === 'error') {
                       googleCalendarStatus.message = 'Google 行事曆授權失敗，請重試';
                   }
@@ -4077,6 +4265,202 @@ export function mountJcmsApp() {
               const googleEvents = await apiService.fetchGoogleCalendarEvents(events.weekOffset);
               if (gen !== googleCalendarFetchGen) return;
               syncCalendarWeek(personalAdmin, events, { linkedEvents: [...linked, ...googleEvents] });
+          }
+
+          async function refreshCalendarScroll() {
+              const linked = buildLinkedCalendarEvents();
+              const { weeks: scrollWeeksBase } = buildContinuousCalendarSchedule({
+                  monthRadius: CALENDAR_SCROLL_MONTH_RADIUS,
+              });
+              const years = [
+                  ...new Set(
+                      scrollWeeksBase
+                          .flatMap((w) => w.days || [])
+                          .map((d) => util.rocDate7ToIso(d.fullDate))
+                          .filter(Boolean)
+                          .map((iso) => parseInt(iso.slice(0, 4), 10))
+                  ),
+              ];
+              await ensureTaiwanHolidaysForYears(years);
+
+              let linkedEvents = linked;
+              if (googleCalendarStatus.connected) {
+                  const googleEvents = await apiService.fetchGoogleCalendarEventsForScroll(
+                      CALENDAR_SCROLL_MONTH_RADIUS
+                  );
+                  linkedEvents = [...linked, ...googleEvents];
+              }
+
+              syncCalendarScroll(personalAdmin, events, {
+                  linkedEvents,
+                  scrollWeeksBase,
+              });
+              if (dashViewActive.value && shouldSnapCalendarToToday()) {
+                  scheduleScrollCalendarToToday('auto');
+              }
+          }
+
+          function shouldSnapCalendarToToday() {
+              return calendarSnapPending || calendarShouldSnapToday;
+          }
+
+          function getCalendarScrollDowPad(container) {
+              const dowRow = container?.querySelector('.dash-month-dow-row--sticky');
+              return dowRow ? dowRow.offsetHeight : 0;
+          }
+
+          function getCalendarWeekScrollTop(container, row, dowPad) {
+              const rowRect = row.getBoundingClientRect();
+              const containerRect = container.getBoundingClientRect();
+              return container.scrollTop + (rowRect.top - containerRect.top) - dowPad;
+          }
+
+          function isTodayWeekAtScrollTop() {
+              const container = dashCalendarScrollRef.value;
+              if (!container) return false;
+              const idx = findTodayWeekIndex(events.scrollWeeks);
+              if (idx < 0) return false;
+              const row = container.querySelector(`[data-week-idx="${idx}"]`);
+              if (!row) return false;
+              const dowPad = getCalendarScrollDowPad(container);
+              const targetTop = getCalendarWeekScrollTop(container, row, dowPad);
+              return Math.abs(container.scrollTop - targetTop) < 10;
+          }
+
+          async function refreshCalendars() {
+              await loadGoogleCalendarStatus();
+              await Promise.all([refreshCalendarWeek(), refreshCalendarScroll()]);
+          }
+
+          function scrollCalendarToWeekIndex(weekIdx, behavior = 'auto') {
+              const container = dashCalendarScrollRef.value;
+              if (!container || weekIdx < 0) return false;
+              const row = container.querySelector(`[data-week-idx="${weekIdx}"]`);
+              if (!row) return false;
+              const dowPad = getCalendarScrollDowPad(container);
+              const top = Math.max(0, getCalendarWeekScrollTop(container, row, dowPad));
+              calendarScrollFromNav = true;
+              if (behavior === 'auto') {
+                  container.scrollTop = top;
+              } else {
+                  container.scrollTo({ top, behavior });
+              }
+              window.setTimeout(() => {
+                  calendarScrollFromNav = false;
+              }, behavior === 'smooth' ? 420 : 60);
+              return true;
+          }
+
+          function findTodayWeekIndexInScroll() {
+              const byFlag = findTodayWeekIndex(events.scrollWeeks);
+              if (byFlag >= 0) return byFlag;
+              return findWeekIndexForRocDate(events.scrollWeeks, util.todayRocDate7());
+          }
+
+          function scrollCalendarToToday(behavior = 'auto') {
+              events.calendarViewMonthOffset = 0;
+              events.monthRange = formatCalendarViewMonthLabel(0);
+              const idx = findTodayWeekIndexInScroll();
+              if (idx < 0) return false;
+              return scrollCalendarToWeekIndex(idx, behavior);
+          }
+
+          function scrollCalendarToRocDate(roc7, behavior = 'auto') {
+              const idx = findWeekIndexForRocDate(events.scrollWeeks, roc7);
+              if (idx < 0) return false;
+              return scrollCalendarToWeekIndex(idx, behavior);
+          }
+
+          function scrollCalendarToMonthOffset(monthOffset, behavior = 'smooth') {
+              calendarSnapPending = false;
+              calendarShouldSnapToday = false;
+              calendarUserScrolled = true;
+              events.calendarViewMonthOffset = monthOffset;
+              events.monthRange = formatCalendarViewMonthLabel(monthOffset);
+              const ref = new Date();
+              ref.setMonth(ref.getMonth() + monthOffset, 1);
+              const pad = (n) => String(n).padStart(2, '0');
+              const roc7 = util.isoToRocDate7(
+                  `${ref.getFullYear()}-${pad(ref.getMonth() + 1)}-01`
+              );
+              scrollCalendarToRocDate(roc7, behavior);
+          }
+
+          function scheduleScrollCalendarToToday(behavior = 'auto') {
+              const token = ++calendarTodayScrollToken;
+              const tryScroll = (attemptsLeft) => {
+                  if (token !== calendarTodayScrollToken) return;
+                  nextTick(() => {
+                      window.requestAnimationFrame(() => {
+                          if (token !== calendarTodayScrollToken) return;
+                          const container = dashCalendarScrollRef.value;
+                          const idx = findTodayWeekIndexInScroll();
+                          if (!container || idx < 0) {
+                              if (attemptsLeft > 0) {
+                                  window.setTimeout(() => tryScroll(attemptsLeft - 1), 80);
+                              }
+                              return;
+                          }
+                          scrollCalendarToToday(behavior);
+                          window.requestAnimationFrame(() => {
+                              if (token !== calendarTodayScrollToken) return;
+                              if (isTodayWeekAtScrollTop()) {
+                                  calendarSnapPending = false;
+                                  calendarShouldSnapToday = false;
+                                  return;
+                              }
+                              if (attemptsLeft > 0) {
+                                  window.setTimeout(() => tryScroll(attemptsLeft - 1), 80);
+                              }
+                          });
+                      });
+                  });
+              };
+              tryScroll(16);
+          }
+
+          function isCalendarPastDay(day) {
+              const r = util.normalizeRocDate7(day?.fullDate);
+              const today = util.todayRocDate7();
+              if (r.length !== 7 || today.length !== 7) return false;
+              return r.localeCompare(today) < 0;
+          }
+
+          function onDashCalendarScroll() {
+              if (calendarScrollFromNav) return;
+              calendarUserScrolled = true;
+              calendarSnapPending = false;
+              if (calendarScrollRaf) window.cancelAnimationFrame(calendarScrollRaf);
+              calendarScrollRaf = window.requestAnimationFrame(() => {
+                  calendarScrollRaf = 0;
+                  const container = dashCalendarScrollRef.value;
+                  if (!container || !events.scrollWeeks.length) return;
+                  const scrollTop = container.scrollTop;
+                  const dowRow = container.querySelector('.dash-month-dow-row--sticky');
+                  const dowPad = dowRow ? dowRow.offsetHeight : 0;
+                  const rows = container.querySelectorAll('[data-week-idx]');
+                  let topIdx = 0;
+                  rows.forEach((row) => {
+                      if (row.offsetTop <= scrollTop + dowPad + 6) {
+                          topIdx = Number(row.dataset.weekIdx) || 0;
+                      }
+                  });
+                  const week = events.scrollWeeks[topIdx];
+                  const monday = week?.days?.[0];
+                  if (!monday?.fullDate) return;
+                  const iso = util.rocDate7ToIso(monday.fullDate);
+                  if (!iso) return;
+                  const d = new Date(`${iso}T12:00:00`);
+                  if (Number.isNaN(d.getTime())) return;
+                  const today = new Date();
+                  const off =
+                      (d.getFullYear() - today.getFullYear()) * 12 +
+                      (d.getMonth() - today.getMonth());
+                  if (off !== events.calendarViewMonthOffset) {
+                      events.calendarViewMonthOffset = off;
+                      events.monthRange = formatCalendarViewMonthLabel(off);
+                  }
+              });
           }
 
           function openLinkedCalendarTarget(target) {
@@ -4118,10 +4502,21 @@ export function mountJcmsApp() {
               events.weekOffset += delta;
               refreshCalendarWeek();
           }
+
+          function shiftCalendarMonth(delta) {
+              scrollCalendarToMonthOffset(events.calendarViewMonthOffset + delta);
+          }
   
           function goToThisWeek() {
               events.weekOffset = 0;
               refreshCalendarWeek();
+          }
+
+          function goToCalendarToday() {
+              calendarUserScrolled = false;
+              calendarSnapPending = true;
+              calendarShouldSnapToday = true;
+              scrollCalendarToToday('smooth');
           }
   
           const eventModal = reactive({
@@ -4961,61 +5356,93 @@ export function mountJcmsApp() {
                   isLinked: false,
               });
               eventModal.open = false;
-              refreshCalendarWeek();
+              refreshCalendars();
           }
   
           function removeCalendarEventById(id) {
               personalAdmin.calendarEvents = personalAdmin.calendarEvents.filter((e) => e.id !== id);
-              refreshCalendarWeek();
+              refreshCalendars();
           }
   
           watch(
               () => personalAdmin.calendarEvents,
-              () => refreshCalendarWeek(),
+              () => refreshCalendars(),
               { deep: true }
           );
           watch(
               () => personalAdmin.overtimeEntries,
-              () => refreshCalendarWeek(),
+              () => refreshCalendars(),
               { deep: true }
           );
           watch(
               () => personalAdmin.leaveRecords,
-              () => refreshCalendarWeek(),
+              () => refreshCalendars(),
               { deep: true }
           );
           watch(
               () => personalAdmin.trainingRecords,
-              () => refreshCalendarWeek(),
+              () => refreshCalendars(),
               { deep: true }
           );
           watch(
               allCases,
-              () => refreshCalendarWeek(),
+              () => refreshCalendars(),
               { deep: true }
           );
           watch(
               currentWorkspace,
-              () => refreshCalendarWeek(),
+              () => refreshCalendars(),
               { deep: true }
           );
           watch(googleCalendarSettingsOpen, (open) => {
               if (open) loadGoogleCalendarOAuthConfig();
           });
+          watch(
+              () => googleCalendarStatus.connected,
+              (connected, wasConnected) => {
+                  if (connected && !wasConnected) refreshCalendars();
+              }
+          );
+
+          watch(
+              dashViewActive,
+              (active) => {
+                  if (active) {
+                      calendarShouldSnapToday = true;
+                      calendarSnapPending = true;
+                      calendarUserScrolled = false;
+                      if (googleCalendarStatus.connected) {
+                          refreshCalendarScroll();
+                      } else if (events.scrollWeeks.length) {
+                          scheduleScrollCalendarToToday('auto');
+                      }
+                  }
+              },
+              { immediate: true }
+          );
+
+          watch(
+              () => events.scrollWeeks.length,
+              (len) => {
+                  if (len > 0 && dashViewActive.value && shouldSnapCalendarToToday()) {
+                      scheduleScrollCalendarToToday('auto');
+                  }
+              }
+          );
 
           onMounted(async () => {
               handleGoogleCalendarReturnQuery();
               await loadGoogleCalendarStatus();
-              refreshCalendarWeek();
+              refreshCalendars();
 
               try {
                   isDbConnected.value = await apiService.checkHealth();
                   if (isDbConnected.value) {
                       await loadGoogleCalendarStatus();
-                      await refreshCalendarWeek();
+                      await refreshCalendars();
                       await hydrateSettingsFromDb();
                       await hydratePersonalAdminFromDb();
-                      refreshCalendarWeek();
+                      refreshCalendars();
                       syncAttendanceMonthLimitFromStore();
                       syncAttendanceLeaveYearPanelFromStore();
                       if (adminActiveTab.value === 'payscale') {
@@ -5034,7 +5461,7 @@ export function mountJcmsApp() {
                           casesManager.load();
                           await hydrateSettingsFromDb();
                           await hydratePersonalAdminFromDb();
-                          refreshCalendarWeek();
+                          refreshCalendars();
                           syncAttendanceMonthLimitFromStore();
                           syncAttendanceLeaveYearPanelFromStore();
                       }
@@ -5044,10 +5471,10 @@ export function mountJcmsApp() {
   
           return {
               util, time, currentView, switchView, gotoOvertimeAdmin, navClass, exportAppDbBackup, dbBackupBusy, isLoading, isDbConnected, dbStatusClass, isMobileLayout,
-              currentWorkspace, settings, addWorkspace, removeWorkspace, activeWorkspaceLabel,
+              currentWorkspace, settings, addWorkspace, removeWorkspace, activeWorkspaceLabel, dashWorkspaceStartDateRoc7,
               prefixInput, addPrefix, removePrefix,
-              casesManager, isLoadingCases, dashStats, dashBreakdownMode, dashBreakdownSlotCount, dashBreakdownSlots, dashBreakdownHasData,
-              dashRootRef, dashMapRootRef, workMapEditRootRef, dashMapTodoPendingCount,
+              casesManager, isLoadingCases, dashStats, dashBreakdownMode, dashBreakdownSlotCount, dashBreakdownSlots, dashBreakdownHasData, dashBreakdownLabelDisplay,
+              dashRootRef, dashMapRootRef, dashCalendarScrollRef, workMapEditRootRef, dashMapTodoPendingCount,
               workMapDoc, workMapUi, workMapFeatureEditor,
               agencyLayerDoc, agencyFeatureEditor, mapCurrentLocation,
               agencySelectedFeature, agencyFeatureList, hasMapCurrentLocation,
@@ -5076,6 +5503,10 @@ export function mountJcmsApp() {
               dashMapOtRegularTooltip, dashMapOtProjectTooltip,
               dashMapOtRegularUsedDisplay, dashMapOtProjectUsedDisplay,
               dashMapOtRegularReportableDisplay, dashMapOtProjectReportableDisplay,
+              dashMapOtRegularRemainingDisplay, dashMapOtProjectRemainingDisplay,
+              dashDetailOtRegularBarSpec, dashDetailOtProjectBarSpec, dashDetailLeaveBarSpec,
+              dashDetailOtYearRegularBarSpec, dashDetailOtYearProjectBarSpec,
+              dashDetailOtYearRegularDisplay, dashDetailOtYearProjectDisplay,
               attnDashOtLimitRegularNum,
               attnDashOtLimitProjectNum,
               attnDashOtLimitRegularDisplay,
@@ -5158,12 +5589,20 @@ export function mountJcmsApp() {
               events,
               shiftWeek,
               goToThisWeek,
+              shiftCalendarMonth,
+              goToCalendarToday,
+              onDashCalendarScroll,
+              isCalendarPastDay,
+              MONTH_DOW_LABELS,
+              dashDetailLeaveTooltip,
               googleCalendarSettingsOpen,
               googleCalendarStatus,
               googleCalendarOAuthDraft,
               loadGoogleCalendarOAuthConfig,
               saveGoogleCalendarOAuthConfig,
+              formatGoogleSyncAt,
               connectGoogleCalendar,
+              syncGoogleCalendarNow,
               disconnectGoogleCalendar,
               eventModal, openEventModalGlobal, openEventModalForDay, saveEventModal, removeCalendarEventById,
               addPersonalTodo, removePersonalTodo, togglePersonalTodoDone,

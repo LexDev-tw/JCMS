@@ -39,6 +39,136 @@ export function buildThisWeekSchedule(weekOffset = 0) {
     return { days, weekRange };
 }
 
+export const MONTH_DOW_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+/** 月行事曆格線（週一為一週起始，含前後月補齊列） */
+export function buildMonthSchedule(monthOffset = 0) {
+    const realToday = new Date();
+    const ref = new Date(realToday.getFullYear(), realToday.getMonth() + monthOffset, 1);
+    const year = ref.getFullYear();
+    const monthIdx = ref.getMonth();
+    const pad = (n) => String(n).padStart(2, '0');
+    const firstOfMonth = new Date(year, monthIdx, 1);
+    const lastOfMonth = new Date(year, monthIdx + 1, 0);
+
+    const gridStart = new Date(firstOfMonth);
+    const startDow = gridStart.getDay();
+    gridStart.setDate(gridStart.getDate() + (startDow === 0 ? -6 : 1 - startDow));
+
+    const gridEnd = new Date(lastOfMonth);
+    const endDow = gridEnd.getDay();
+    if (endDow !== 0) gridEnd.setDate(gridEnd.getDate() + (7 - endDow));
+
+    const weeks = [];
+    const cursor = new Date(gridStart);
+    while (cursor <= gridEnd) {
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(cursor);
+            d.setDate(cursor.getDate() + i);
+            const fullDate = util.isoToRocDate7(
+                `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+            );
+            days.push({
+                fullDate,
+                label: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
+                day: MONTH_DOW_LABELS[i],
+                isToday: d.toDateString() === realToday.toDateString(),
+                isHoliday: isTaiwanGovHoliday(fullDate),
+                holidayLabel: getTaiwanGovHolidayDisplayLabel(fullDate),
+                isCurrentMonth: d.getMonth() === monthIdx,
+                events: [],
+            });
+        }
+        weeks.push({ days });
+        cursor.setDate(cursor.getDate() + 7);
+    }
+
+    const firstRoc5 = util.isoToRocDate7(`${year}-${pad(monthIdx + 1)}-01`);
+    const monthRange =
+        firstRoc5.length === 7
+            ? `${firstRoc5.slice(0, 3)}年${firstRoc5.slice(3, 5)}月`
+            : `${year}年${pad(monthIdx + 1)}月`;
+
+    return { weeks, monthRange };
+}
+
+/** 連續月曆：週一為起始，前後各 monthRadius 個月 */
+export function buildContinuousCalendarSchedule(options = {}) {
+    const realToday = new Date();
+    const monthRadius = Number(options.monthRadius) > 0 ? Number(options.monthRadius) : 24;
+    const pad = (n) => String(n).padStart(2, '0');
+
+    const rangeStart = new Date(realToday.getFullYear(), realToday.getMonth() - monthRadius, 1);
+    const gridStart = new Date(rangeStart);
+    const startDow = gridStart.getDay();
+    gridStart.setDate(gridStart.getDate() + (startDow === 0 ? -6 : 1 - startDow));
+
+    const rangeEnd = new Date(realToday.getFullYear(), realToday.getMonth() + monthRadius + 1, 0);
+    const gridEnd = new Date(rangeEnd);
+    const endDow = gridEnd.getDay();
+    if (endDow !== 0) gridEnd.setDate(gridEnd.getDate() + (7 - endDow));
+
+    const weeks = [];
+    const cursor = new Date(gridStart);
+    while (cursor <= gridEnd) {
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(cursor);
+            d.setDate(cursor.getDate() + i);
+            const fullDate = util.isoToRocDate7(
+                `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+            );
+            days.push({
+                fullDate,
+                label: `${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
+                day: MONTH_DOW_LABELS[i],
+                isToday: d.toDateString() === realToday.toDateString(),
+                isHoliday: isTaiwanGovHoliday(fullDate),
+                holidayLabel: getTaiwanGovHolidayDisplayLabel(fullDate),
+                events: [],
+            });
+        }
+        weeks.push({
+            days,
+            weekStart: days[0].fullDate,
+            weekEnd: days[6].fullDate,
+        });
+        cursor.setDate(cursor.getDate() + 7);
+    }
+
+    return { weeks };
+}
+
+export function formatCalendarViewMonthLabel(monthOffset = 0) {
+    const realToday = new Date();
+    const ref = new Date(realToday.getFullYear(), realToday.getMonth() + monthOffset, 1);
+    const pad = (n) => String(n).padStart(2, '0');
+    const firstRoc5 = util.isoToRocDate7(
+        `${ref.getFullYear()}-${pad(ref.getMonth() + 1)}-01`
+    );
+    if (firstRoc5.length === 7) {
+        return `${firstRoc5.slice(0, 3)}年${firstRoc5.slice(3, 5)}月`;
+    }
+    return `${ref.getFullYear()}年${pad(ref.getMonth() + 1)}月`;
+}
+
+export function findTodayWeekIndex(weeks) {
+    if (!Array.isArray(weeks)) return -1;
+    return weeks.findIndex((week) => (week.days || []).some((d) => d.isToday));
+}
+
+export function findWeekIndexForRocDate(weeks, roc7) {
+    const r = util.normalizeRocDate7(roc7);
+    if (r.length !== 7 || !Array.isArray(weeks)) return -1;
+    return weeks.findIndex((week) => {
+        const start = week.weekStart || week.days?.[0]?.fullDate;
+        const end = week.weekEnd || week.days?.[6]?.fullDate;
+        if (!start || !end) return false;
+        return compareRocDate7(start, r) <= 0 && compareRocDate7(r, end) <= 0;
+    });
+}
+
 function compareRocDate7(a, b) {
     return String(a || '').localeCompare(String(b || ''));
 }
@@ -141,6 +271,8 @@ function mapCalendarEventView(e) {
         isLinked: !!e?.isLinked,
         isGoogle: !!e?.isGoogle,
         linkTarget: e?.linkTarget || null,
+        googleStart: e?.googleStart || null,
+        googleEnd: e?.googleEnd || null,
     };
 }
 
@@ -192,30 +324,11 @@ function buildWeekSpanBars(spanEvents, weekDays) {
     return assignWeekSpanBarRows(bars);
 }
 
-export function syncCalendarWeek(personalAdmin, eventsTarget, options = {}) {
-    const off = typeof eventsTarget.weekOffset === 'number' ? eventsTarget.weekOffset : 0;
-    const { days, weekRange } = buildThisWeekSchedule(off);
-    eventsTarget.weekRange = weekRange;
-    const linkedEvents = Array.isArray(options.linkedEvents) ? options.linkedEvents : [];
-    const allEvents = [
-        ...(Array.isArray(personalAdmin.calendarEvents) ? personalAdmin.calendarEvents : []),
-        ...linkedEvents,
-    ]
-        .map((e) => mapCalendarEventView(enrichGoogleCalendarEvent(e)))
-        .filter((e) => e.dateRoc.length === 7 || e.startRoc7.length === 7);
-
-    const spanEvents = allEvents.filter(
-        (e) => compareRocDate7(e.startRoc7, e.endRoc7) !== 0
-    );
-    const singleDayEvents = allEvents.filter(
-        (e) => compareRocDate7(e.startRoc7, e.endRoc7) === 0
-    );
-
-    const weekSpanBars = buildWeekSpanBars(spanEvents, days);
-    eventsTarget.weekSpanBars = weekSpanBars;
-    eventsTarget.weekBodyGridRow =
+function enrichWeekDaysWithEvents(weekDays, singleDayEvents, spanEvents) {
+    const weekSpanBars = buildWeekSpanBars(spanEvents, weekDays);
+    const weekBodyGridRow =
         weekSpanBars.reduce((max, bar) => Math.max(max, bar.row || 0), 0) + 2;
-    eventsTarget.weeklySchedule = days.map((day, dayIdx) => {
+    const days = weekDays.map((day, dayIdx) => {
         const dayEvents = singleDayEvents.filter(
             (e) => (e.dateRoc || e.startRoc7) === day.fullDate
         );
@@ -236,6 +349,50 @@ export function syncCalendarWeek(personalAdmin, eventsTarget, options = {}) {
             spanCovered,
         };
     });
+    return { days, spanBars: weekSpanBars, bodyGridRow: weekBodyGridRow };
+}
+
+function collectCalendarEventsForSync(personalAdmin, options = {}) {
+    const linkedEvents = Array.isArray(options.linkedEvents) ? options.linkedEvents : [];
+    const allEvents = [
+        ...(Array.isArray(personalAdmin.calendarEvents) ? personalAdmin.calendarEvents : []),
+        ...linkedEvents,
+    ]
+        .map((e) => mapCalendarEventView(enrichGoogleCalendarEvent(e)))
+        .filter((e) => e.dateRoc.length === 7 || e.startRoc7.length === 7);
+
+    return {
+        spanEvents: allEvents.filter((e) => compareRocDate7(e.startRoc7, e.endRoc7) !== 0),
+        singleDayEvents: allEvents.filter((e) => compareRocDate7(e.startRoc7, e.endRoc7) === 0),
+    };
+}
+
+export function syncCalendarWeek(personalAdmin, eventsTarget, options = {}) {
+    const off = typeof eventsTarget.weekOffset === 'number' ? eventsTarget.weekOffset : 0;
+    const { days, weekRange } = buildThisWeekSchedule(off);
+    eventsTarget.weekRange = weekRange;
+    const { spanEvents, singleDayEvents } = collectCalendarEventsForSync(personalAdmin, options);
+    const enriched = enrichWeekDaysWithEvents(days, singleDayEvents, spanEvents);
+    eventsTarget.weekSpanBars = enriched.spanBars;
+    eventsTarget.weekBodyGridRow = enriched.bodyGridRow;
+    eventsTarget.weeklySchedule = enriched.days;
+}
+
+export function syncCalendarScroll(personalAdmin, eventsTarget, options = {}) {
+    const baseWeeks = Array.isArray(options.scrollWeeksBase)
+        ? options.scrollWeeksBase
+        : buildContinuousCalendarSchedule(options.continuous || {}).weeks;
+    const off =
+        typeof eventsTarget.calendarViewMonthOffset === 'number'
+            ? eventsTarget.calendarViewMonthOffset
+            : 0;
+    eventsTarget.monthRange = formatCalendarViewMonthLabel(off);
+    const { spanEvents, singleDayEvents } = collectCalendarEventsForSync(personalAdmin, options);
+    eventsTarget.scrollWeeks = baseWeeks.map((week) => ({
+        ...enrichWeekDaysWithEvents(week.days, singleDayEvents, spanEvents),
+        weekStart: week.weekStart,
+        weekEnd: week.weekEnd,
+    }));
 }
 
 export const PERSONAL_ADMIN_KEY = 'jcms_personal_admin_v1';

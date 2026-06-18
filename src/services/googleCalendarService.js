@@ -7,10 +7,14 @@ const oauthConfigService = require('./googleCalendarOAuthConfigService');
 const SCOPES = ['https://www.googleapis.com/auth/calendar.readonly'];
 const CALENDAR_ID = 'primary';
 const TAIPEI_TZ = 'Asia/Taipei';
+const SYNC_STALE_MS = 5 * 60 * 1000;
+const FULL_SYNC_PAST_DAYS = 365;
+const FULL_SYNC_FUTURE_DAYS = 365 * 3;
 
 /** @type {Map<string, number>} */
 const pendingOAuthStates = new Map();
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+let googleSyncPromise = null;
 
 function pruneOAuthStates() {
   const now = Date.now();
@@ -249,6 +253,7 @@ async function handleOAuthCallback(code) {
     expiresAt,
     email: email || null,
   });
+  await clearGoogleEventStore();
 
   return { email };
 }
@@ -263,6 +268,12 @@ async function getStatus() {
   const { configured, redirectUri, source } = await oauthConfigService.resolveOAuthConfig();
   const row = await getStoredTokenRow();
   const connected = Boolean(row?.refresh_token_enc);
+  const db = getDb();
+  const sync = await db
+    .getAsync(
+      'SELECT last_full_sync_at, last_delta_sync_at, last_error FROM google_calendar_sync_state WHERE id = 1'
+    )
+    .catch(() => null);
   return {
     configured,
     connected,
@@ -270,25 +281,271 @@ async function getStatus() {
     redirectUri: configured ? redirectUri : '',
     calendarId: CALENDAR_ID,
     configSource: source,
+    lastFullSyncAt: sync?.last_full_sync_at || null,
+    lastDeltaSyncAt: sync?.last_delta_sync_at || null,
+    lastError: sync?.last_error || '',
   };
 }
 
-async function listEvents(timeMin, timeMax) {
-  const auth = await getAuthorizedClient();
-  if (!auth) return [];
+async function getSyncState() {
+  const db = getDb();
+  const row = await db.getAsync('SELECT * FROM google_calendar_sync_state WHERE id = 1');
+  return row || {};
+}
 
-  const calendar = google.calendar({ version: 'v3', auth });
-  const res = await calendar.events.list({
-    calendarId: CALENDAR_ID,
-    timeMin: String(timeMin),
-    timeMax: String(timeMax),
-    singleEvents: true,
-    orderBy: 'startTime',
-    maxResults: 250,
+async function updateSyncState(next) {
+  const db = getDb();
+  await db.runAsync(
+    `UPDATE google_calendar_sync_state
+     SET
+       sync_token = ?,
+       last_full_sync_at = COALESCE(?, last_full_sync_at),
+       last_delta_sync_at = COALESCE(?, last_delta_sync_at),
+       last_error = ?,
+       updated_at = datetime('now')
+     WHERE id = 1`,
+    [
+      next.syncToken === undefined ? null : next.syncToken,
+      next.lastFullSyncAt || null,
+      next.lastDeltaSyncAt || null,
+      next.lastError || null,
+    ]
+  );
+}
+
+function parseIsoDatePart(v) {
+  return String(v || '').trim().slice(0, 10);
+}
+
+function parseJsonSafe(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function buildFullSyncWindowIsoRange() {
+  const now = new Date();
+  const min = new Date(now);
+  const max = new Date(now);
+  min.setDate(now.getDate() - FULL_SYNC_PAST_DAYS);
+  max.setDate(now.getDate() + FULL_SYNC_FUTURE_DAYS);
+  const p = (n) => String(n).padStart(2, '0');
+  const minIso = `${min.getFullYear()}-${p(min.getMonth() + 1)}-${p(min.getDate())}`;
+  const maxIso = `${max.getFullYear()}-${p(max.getMonth() + 1)}-${p(max.getDate())}`;
+  return {
+    timeMin: `${minIso}T00:00:00+08:00`,
+    timeMax: `${maxIso}T23:59:59+08:00`,
+  };
+}
+
+async function upsertGoogleEvents(events) {
+  const db = getDb();
+  for (const ev of events) {
+    await db.runAsync(
+      `INSERT INTO google_calendar_events (
+        id, date_roc, start_roc7, end_roc7, time_roc4, title, is_google, html_link, google_start_json, google_end_json, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, datetime('now'))
+      ON CONFLICT(id) DO UPDATE SET
+        date_roc = excluded.date_roc,
+        start_roc7 = excluded.start_roc7,
+        end_roc7 = excluded.end_roc7,
+        time_roc4 = excluded.time_roc4,
+        title = excluded.title,
+        html_link = excluded.html_link,
+        google_start_json = excluded.google_start_json,
+        google_end_json = excluded.google_end_json,
+        updated_at = datetime('now')`,
+      [
+        ev.id,
+        ev.dateRoc,
+        ev.startRoc7 || ev.dateRoc,
+        ev.endRoc7 || ev.startRoc7 || ev.dateRoc,
+        ev.time || '',
+        ev.title || '（無標題）',
+        ev.linkTarget?.externalUrl || null,
+        ev.googleStart ? JSON.stringify(ev.googleStart) : null,
+        ev.googleEnd ? JSON.stringify(ev.googleEnd) : null,
+      ]
+    );
+  }
+}
+
+async function deleteGoogleEventsByIds(ids) {
+  if (!ids.length) return;
+  const db = getDb();
+  for (const id of ids) {
+    await db.runAsync('DELETE FROM google_calendar_events WHERE id = ?', [id]);
+  }
+}
+
+async function runFullSync(calendar) {
+  const db = getDb();
+  const all = [];
+  let pageToken;
+  let nextSyncToken = null;
+  const range = buildFullSyncWindowIsoRange();
+  do {
+    const res = await calendar.events.list({
+      calendarId: CALENDAR_ID,
+      timeMin: range.timeMin,
+      timeMax: range.timeMax,
+      singleEvents: true,
+      orderBy: 'startTime',
+      maxResults: 2500,
+      pageToken,
+      showDeleted: true,
+    });
+    const items = Array.isArray(res.data?.items) ? res.data.items : [];
+    for (const ge of items) {
+      if (String(ge?.status || '').toLowerCase() === 'cancelled') continue;
+      const mapped = mapGoogleEventToJcms(ge);
+      if (mapped) all.push(mapped);
+    }
+    pageToken = res.data?.nextPageToken || undefined;
+    nextSyncToken = res.data?.nextSyncToken || nextSyncToken;
+  } while (pageToken);
+  await db.runAsync('DELETE FROM google_calendar_events');
+  await upsertGoogleEvents(all);
+  const now = new Date().toISOString();
+  await updateSyncState({
+    syncToken: nextSyncToken || null,
+    lastFullSyncAt: now,
+    lastDeltaSyncAt: now,
+    lastError: '',
   });
+}
 
-  const items = Array.isArray(res.data?.items) ? res.data.items : [];
-  return items.map(mapGoogleEventToJcms).filter(Boolean);
+async function runDeltaSync(calendar, syncToken) {
+  const upserts = [];
+  const deletions = [];
+  let pageToken;
+  let nextSyncToken = syncToken;
+  do {
+    const res = await calendar.events.list({
+      calendarId: CALENDAR_ID,
+      singleEvents: true,
+      maxResults: 2500,
+      syncToken,
+      pageToken,
+      showDeleted: true,
+    });
+    const items = Array.isArray(res.data?.items) ? res.data.items : [];
+    for (const ge of items) {
+      const id = `GCAL_${String(ge?.id || '').replace(/[^\w-]/g, '_')}`;
+      if (String(ge?.status || '').toLowerCase() === 'cancelled') {
+        deletions.push(id);
+        continue;
+      }
+      const mapped = mapGoogleEventToJcms(ge);
+      if (mapped) upserts.push(mapped);
+    }
+    pageToken = res.data?.nextPageToken || undefined;
+    nextSyncToken = res.data?.nextSyncToken || nextSyncToken;
+  } while (pageToken);
+  await upsertGoogleEvents(upserts);
+  await deleteGoogleEventsByIds(deletions);
+  await updateSyncState({
+    syncToken: nextSyncToken || null,
+    lastDeltaSyncAt: new Date().toISOString(),
+    lastError: '',
+  });
+}
+
+function shouldSyncNow(syncState) {
+  const last = syncState?.last_delta_sync_at || syncState?.last_full_sync_at;
+  if (!last) return true;
+  const ms = new Date(last).getTime();
+  if (!Number.isFinite(ms)) return true;
+  return Date.now() - ms >= SYNC_STALE_MS;
+}
+
+async function ensureGoogleEventsSynced(force = false) {
+  if (googleSyncPromise) {
+    await googleSyncPromise;
+    return;
+  }
+  googleSyncPromise = (async () => {
+    const auth = await getAuthorizedClient();
+    if (!auth) return;
+    const syncState = await getSyncState();
+    if (!force && !shouldSyncNow(syncState)) return;
+    const calendar = google.calendar({ version: 'v3', auth });
+    try {
+      if (syncState?.sync_token) {
+        await runDeltaSync(calendar, String(syncState.sync_token));
+      } else {
+        await runFullSync(calendar);
+      }
+    } catch (err) {
+      const code = Number(err?.code || err?.response?.status || 0);
+      if (code === 410) {
+        await runFullSync(calendar);
+      } else {
+        await updateSyncState({
+          syncToken: syncState?.sync_token || null,
+          lastDeltaSyncAt: new Date().toISOString(),
+          lastError: String(err?.message || err || 'Google Calendar sync failed'),
+        });
+        throw err;
+      }
+    }
+  })();
+  try {
+    await googleSyncPromise;
+  } finally {
+    googleSyncPromise = null;
+  }
+}
+
+async function queryStoredEvents(timeMin, timeMax) {
+  const fromRoc = isoToRocDate7(parseIsoDatePart(timeMin));
+  const toRoc = isoToRocDate7(parseIsoDatePart(timeMax));
+  if (fromRoc.length !== 7 || toRoc.length !== 7) return [];
+  const db = getDb();
+  const rows = await db.allAsync(
+    `SELECT *
+     FROM google_calendar_events
+     WHERE start_roc7 <= ? AND end_roc7 >= ?
+     ORDER BY start_roc7 ASC, time_roc4 ASC, title COLLATE NOCASE ASC`,
+    [toRoc, fromRoc]
+  );
+  return (rows || []).map((r) => ({
+    id: r.id,
+    dateRoc: r.date_roc,
+    startRoc7: r.start_roc7,
+    endRoc7: r.end_roc7,
+    time: r.time_roc4 || '',
+    title: r.title || '（無標題）',
+    isCase: false,
+    isLinked: true,
+    isGoogle: true,
+    linkTarget: r.html_link ? { externalUrl: String(r.html_link) } : null,
+    googleStart: parseJsonSafe(r.google_start_json),
+    googleEnd: parseJsonSafe(r.google_end_json),
+  }));
+}
+
+async function syncNow() {
+  await ensureGoogleEventsSynced(true);
+  return getSyncState();
+}
+
+async function listEvents(timeMin, timeMax) {
+  await ensureGoogleEventsSynced();
+  return queryStoredEvents(timeMin, timeMax);
+}
+
+async function clearGoogleEventStore() {
+  const db = getDb();
+  await db.runAsync('DELETE FROM google_calendar_events');
+  await db.runAsync(
+    `UPDATE google_calendar_sync_state
+     SET sync_token = NULL, last_full_sync_at = NULL, last_delta_sync_at = NULL, last_error = NULL, updated_at = datetime('now')
+     WHERE id = 1`
+  );
 }
 
 async function disconnect() {
@@ -301,6 +558,7 @@ async function disconnect() {
     }
   }
   await clearTokenRow();
+  await clearGoogleEventStore();
 }
 
 module.exports = {
@@ -309,6 +567,7 @@ module.exports = {
   generateAuthUrl,
   handleOAuthCallback,
   getStatus,
+  syncNow,
   listEvents,
   disconnect,
 };

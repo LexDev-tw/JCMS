@@ -297,9 +297,50 @@ CREATE TABLE IF NOT EXISTS google_calendar_tokens (
 );
 `;
 
+const CREATE_GOOGLE_CALENDAR_EVENTS_TABLE = `
+CREATE TABLE IF NOT EXISTS google_calendar_events (
+  id TEXT PRIMARY KEY,
+  date_roc TEXT NOT NULL,
+  start_roc7 TEXT NOT NULL,
+  end_roc7 TEXT NOT NULL,
+  time_roc4 TEXT,
+  title TEXT NOT NULL,
+  is_google INTEGER NOT NULL DEFAULT 1 CHECK (is_google IN (0, 1)),
+  html_link TEXT,
+  google_start_json TEXT,
+  google_end_json TEXT,
+  updated_at TEXT
+);
+`;
+
+const CREATE_GOOGLE_CALENDAR_SYNC_STATE_TABLE = `
+CREATE TABLE IF NOT EXISTS google_calendar_sync_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  sync_token TEXT,
+  last_full_sync_at TEXT,
+  last_delta_sync_at TEXT,
+  last_error TEXT,
+  updated_at TEXT
+);
+`;
+
 async function ensureGoogleCalendarTokensRow(database) {
   await database.runAsync(CREATE_GOOGLE_CALENDAR_TOKENS_TABLE);
   await database.runAsync(`INSERT OR IGNORE INTO google_calendar_tokens (id) VALUES (1)`);
+}
+
+async function ensureGoogleCalendarEventStore(database) {
+  await database.runAsync(CREATE_GOOGLE_CALENDAR_EVENTS_TABLE);
+  await database.runAsync(CREATE_GOOGLE_CALENDAR_SYNC_STATE_TABLE);
+  await database.runAsync(
+    `INSERT OR IGNORE INTO google_calendar_sync_state (id, sync_token, last_error) VALUES (1, NULL, NULL)`
+  );
+  await database.runAsync(
+    'CREATE INDEX IF NOT EXISTS idx_google_calendar_events_start ON google_calendar_events(start_roc7)'
+  );
+  await database.runAsync(
+    'CREATE INDEX IF NOT EXISTS idx_google_calendar_events_end ON google_calendar_events(end_roc7)'
+  );
 }
 
 async function ensureAppSettingsAndPersonalAdminRows(database) {
@@ -662,6 +703,7 @@ async function initDatabase() {
   await ensureCasesObsoleteTriggersAndViewsDropped(db);
   await ensurePersonalPayscaleRow(db);
   await ensureAppSettingsAndPersonalAdminRows(db);
+  await ensureGoogleCalendarEventStore(db);
   await ensureDynamicsTables(db);
   await ensureDynamicsPersonSchema(db);
   await ensureDynamicsFts(db);

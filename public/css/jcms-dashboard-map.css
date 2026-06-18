@@ -28,10 +28,43 @@
     padding-right: 0.72rem;
     white-space: nowrap;
 }
-.dash-detail-nav-entry {
+.dash-detail-nav-row {
     display: flex;
     justify-content: center;
-    width: 100%;
+    align-items: center;
+    padding: 0.65rem 0;
+}
+.dash-detail-nav-entry {
+    position: static;
+    left: auto;
+    transform: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto;
+    width: auto;
+}
+.dash-detail-nav-entry .dash-map-detail-btn {
+    pointer-events: auto;
+}
+.dash-detail-top {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+.jcms-dash-detail-view {
+    padding-top: calc(0.65rem + 0.35rem);
+}
+.jcms-dash-detail-view .dash-kpi-row {
+    position: static;
+}
+.jcms-dash-map-view .dash-map-week-day-head__holiday {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.4375rem;
+    font-weight: 700;
+    line-height: 1.15;
+    color: #f05a28;
 }
 /* 累計收結／未結結構：內文統一字級（小於區塊標題 10px） */
 .jcms-dash-map-view .dash-top-left-body .dash-stats-pair__cum,
@@ -286,6 +319,7 @@
 .jcms-dash-map-view .dash-map-week-day-head {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 0.2rem;
     min-width: 0;
     border-top: 2px solid rgba(234, 234, 234, 0.85);

@@ -1,6 +1,6 @@
 /** REST API 抽象層 */
 import { util } from '../utils.js';
-import { buildThisWeekSchedule } from '../composables/personal-admin-shared.js';
+import { buildThisWeekSchedule, buildContinuousCalendarSchedule } from '../composables/personal-admin-shared.js';
 import { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl } from '../lib/api-base.js';
 
 export { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl };
@@ -15,6 +15,67 @@ function weekIsoRangeForOffset(weekOffset = 0) {
         timeMin: `${startIso}T00:00:00+08:00`,
         timeMax: `${endIso}T23:59:59+08:00`,
     };
+}
+
+function scrollCalendarIsoRange(monthRadius = 24) {
+    const { weeks } = buildContinuousCalendarSchedule({ monthRadius });
+    if (!weeks?.length) return null;
+    const allDays = weeks.flatMap((w) => w.days || []);
+    if (!allDays.length) return null;
+    const startIso = util.rocDate7ToIso(allDays[0].fullDate);
+    const endIso = util.rocDate7ToIso(allDays[allDays.length - 1].fullDate);
+    if (!startIso || !endIso) return null;
+    return {
+        timeMin: `${startIso}T00:00:00+08:00`,
+        timeMax: `${endIso}T23:59:59+08:00`,
+    };
+}
+
+async function fetchGoogleCalendarEventsInRange(range) {
+    if (!range?.timeMin || !range?.timeMax) return [];
+    const params = new URLSearchParams({
+        timeMin: range.timeMin,
+        timeMax: range.timeMax,
+    });
+    const res = await jcmsFetch(`${getJcmsApiBaseUrl()}/google-calendar/events?${params.toString()}`);
+    if (!res.ok) {
+        console.warn('[JCMS] Google Calendar events HTTP', res.status);
+        return [];
+    }
+    const json = await res.json();
+    if (!json.success || !Array.isArray(json.data)) return [];
+    return json.data;
+}
+
+async function fetchGoogleCalendarEventsForScrollRange(monthRadius = 24) {
+    const range = scrollCalendarIsoRange(monthRadius);
+    if (!range) return [];
+    const startYear = parseInt(String(range.timeMin).slice(0, 4), 10);
+    const endYear = parseInt(String(range.timeMax).slice(0, 4), 10);
+    if (!Number.isFinite(startYear) || !Number.isFinite(endYear)) {
+        return fetchGoogleCalendarEventsInRange(range);
+    }
+    const chunks = [];
+    for (let year = startYear; year <= endYear; year += 1) {
+        chunks.push({
+            timeMin:
+                year === startYear ? range.timeMin : `${year}-01-01T00:00:00+08:00`,
+            timeMax:
+                year === endYear ? range.timeMax : `${year}-12-31T23:59:59+08:00`,
+        });
+    }
+    const results = await Promise.all(chunks.map((chunk) => fetchGoogleCalendarEventsInRange(chunk)));
+    const seen = new Set();
+    const merged = [];
+    for (const batch of results) {
+        for (const ev of batch) {
+            const key = String(ev?.id || '').trim();
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            merged.push(ev);
+        }
+    }
+    return merged;
 }
 
 export function getJcmsApiBaseUrl() {
@@ -550,15 +611,27 @@ export const apiService = {
         try {
             const range = weekIsoRangeForOffset(weekOffset);
             if (!range) return [];
-            const params = new URLSearchParams(range);
-            const res = await jcmsFetch(`${getJcmsApiBaseUrl()}/google-calendar/events?${params.toString()}`);
-            if (!res.ok) return [];
-            const json = await res.json();
-            if (!json.success || !Array.isArray(json.data)) return [];
-            return json.data;
-        } catch {
+            return await fetchGoogleCalendarEventsInRange(range);
+        } catch (err) {
+            console.warn('[JCMS] Google Calendar week fetch failed', err);
             return [];
         }
+    },
+    async fetchGoogleCalendarEventsForScroll(monthRadius = 24) {
+        try {
+            return await fetchGoogleCalendarEventsForScrollRange(monthRadius);
+        } catch (err) {
+            console.warn('[JCMS] Google Calendar scroll fetch failed', err);
+            return [];
+        }
+    },
+    async syncGoogleCalendarNow() {
+        const res = await jcmsFetch(`${getJcmsApiBaseUrl()}/google-calendar/sync`, { method: 'POST' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok || json.success === false) {
+            throw new Error(json.error || `Google 行事曆同步失敗 (${res.status})`);
+        }
+        return json.data || null;
     },
     async disconnectGoogleCalendar() {
         const res = await jcmsFetch(`${getJcmsApiBaseUrl()}/google-calendar/disconnect`, { method: 'DELETE' });

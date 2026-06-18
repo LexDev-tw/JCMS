@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JCMS</title>
+    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260618"></script>
     <link rel="icon" href="ico/law-book.ico" type="image/x-icon">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -40,9 +41,9 @@
         }
     </script>
     
-    <link rel="stylesheet" href="css/jcms.css">
-    <link rel="stylesheet" href="css/jcms-dashboard-map.css">
-    <link rel="stylesheet" href="css/jcms-work-map-edit.css">
+    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260617a">
+    <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=0.1.20260617a">
+    <link rel="stylesheet" href="css/jcms-work-map-edit.css?v=0.1.20260617a">
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
@@ -53,7 +54,7 @@
         
         <header class="h-12 bg-ink-900 border-b border-ink-600/30 flex items-center px-6 shrink-0 relative z-20">
             <div class="flex items-center gap-6 flex-1">
-                <div class="font-bold text-lg tracking-tight text-white">JCMS<span class="text-accent font-bold text-xs ml-2">v0.0.1</span></div>
+                <div class="font-bold text-lg tracking-tight text-white">JCMS<span class="text-accent font-normal text-[10px] ml-1.5 align-middle">v0.1.20260618</span></div>
                 
                 <div class="relative flex items-center gap-3 pl-6 border-l border-ink-600/40 min-w-0">
                     <i class="ph ph-briefcase text-ink-400 text-base shrink-0"></i>
@@ -131,7 +132,7 @@
                 <!-- ==========================================
                      View: 總覽 (地圖總覽)
                 =========================================== -->
-                <div v-if="currentView === 'dashboard'" ref="dashMapRootRef" class="jcms-dash-map-view flex-1 min-h-0 animate-fade-in-up">
+                <div v-if="currentView === 'dashboard' && !isMobileLayout" ref="dashMapRootRef" class="jcms-dash-map-view flex-1 min-h-0 animate-fade-in-up">
                     <div id="dash-map-canvas" role="application" aria-label="北台灣工作地圖底圖"></div>
                     
                         <div class="dash-map-shell">
@@ -300,8 +301,13 @@
                                                             :style="{ gridColumn: dayIdx + 1, gridRow: 1 }"
                                                             @click="openEventModalForDay(day.fullDate)"
                                                         >
-                                                            <span class="dash-map-week-day-head__num font-mono tabular-nums" :class="day.isToday ? 'text-accent' : 'text-ink-900'">{{ day.label }}</span>
+                                                            <span class="dash-map-week-day-head__num font-mono tabular-nums" :class="day.isHoliday || day.isToday ? 'text-accent' : 'text-ink-900'">{{ day.label }}</span>
                                                             <span class="dash-map-week-day-head__dow">{{ day.day }}</span>
+                                                            <span
+                                                                v-if="day.holidayLabel"
+                                                                class="dash-map-week-day-head__holiday truncate"
+                                                                :title="day.holidayLabel"
+                                                            >{{ day.holidayLabel }}</span>
                                                         </div>
                                                         <div
                                                             v-for="(bar, idx) in events.weekSpanBars"
@@ -619,7 +625,7 @@
                 <!-- ==========================================
                      View: 工作地圖編輯
                 =========================================== -->
-                <div v-else-if="currentView === 'workMapEdit'" ref="workMapEditRootRef" class="jcms-work-map-edit flex-1 min-h-0 animate-fade-in-up">
+                <div v-else-if="currentView === 'workMapEdit' && !isMobileLayout" ref="workMapEditRootRef" class="jcms-work-map-edit flex-1 min-h-0 animate-fade-in-up">
                     <div id="work-map-edit-canvas" role="application" aria-label="工作地圖編輯"></div>
 
                     <div class="work-map-edit-save-bar">
@@ -997,13 +1003,15 @@
                 <!-- ==========================================
                      View: 詳細資訊總覽 (Dashboard Detail)
                 =========================================== -->
-                <div v-else-if="currentView === 'dashboardDetail'" ref="dashRootRef" class="p-8 lg:p-10 max-w-[1400px] mx-auto w-full animate-fade-in-up overflow-y-auto h-full flex flex-col gap-6">
+                <div v-else-if="currentView === 'dashboardDetail' || (isMobileLayout && (currentView === 'dashboard' || currentView === 'workMapEdit'))" ref="dashRootRef" class="jcms-dash-detail-view px-8 lg:px-10 pb-8 lg:pb-10 max-w-[1400px] mx-auto w-full animate-fade-in-up overflow-y-auto h-full flex flex-col gap-6">
 
-                    <div v-if="!isMobileLayout" class="dash-detail-nav-entry shrink-0">
-                        <button type="button" class="swiss-btn swiss-btn--secondary dash-map-detail-btn" @click="switchView('dashboard')">返回地圖總覽</button>
-                    </div>
-
-                    <div class="dash-kpi-row shrink-0">
+                    <div class="dash-detail-top shrink-0">
+                        <div v-if="!isMobileLayout" class="dash-detail-nav-row">
+                            <div class="dash-detail-nav-entry">
+                                <button type="button" class="swiss-btn swiss-btn--secondary dash-map-detail-btn" @click="switchView('dashboard')">返回地圖總覽</button>
+                            </div>
+                        </div>
+                        <div class="dash-kpi-row">
                         <button type="button" class="dash-kpi-card dash-kpi-card--action group" @click="gotoDashNewlyReceived" aria-label="前往案件清單並篩選本月新收">
                             <div class="dash-kpi-label-wrap">
                                 <div class="dash-kpi-label flex items-center gap-0.5 min-w-0">
@@ -1013,6 +1021,10 @@
                                 <span class="dash-kpi-label-en">Received</span>
                             </div>
                             <div class="dash-kpi-value font-mono tabular-nums">{{ dashStats.newlyReceived }}</div>
+                            <div class="dash-kpi-sub">
+                                <span class="dash-kpi-sub-label">本月新收標的價額</span>
+                                <span class="dash-kpi-sub-value">{{ util.formatMoney(dashStats.monthNewlyReceivedTarget) }}</span>
+                            </div>
                         </button>
                         <button type="button" class="dash-kpi-card dash-kpi-card--action group" @click="gotoDashClosedThisMonth" aria-label="前往案件清單並篩選本月結案">
                             <div class="dash-kpi-label-wrap">
@@ -1044,6 +1056,10 @@
                                 <span class="dash-kpi-label-en">Unresolved</span>
                             </div>
                             <div class="dash-kpi-value dash-kpi-value--accent font-mono tabular-nums">{{ dashStats.unresolved }}</div>
+                            <div class="dash-kpi-sub">
+                                <span class="dash-kpi-sub-label">未結案件標的價額</span>
+                                <span class="dash-kpi-sub-value">{{ util.formatMoney(dashStats.unresolvedTargetAmount) }}</span>
+                            </div>
                         </button>
                         <button type="button" class="dash-kpi-card dash-kpi-card--action group" @click="gotoDashProceedingThisMonth" aria-label="前往案件清單並篩選本月進行">
                             <div class="dash-kpi-label-wrap">
@@ -1065,18 +1081,20 @@
                             </div>
                             <div class="dash-kpi-value dash-kpi-value--accent font-mono tabular-nums">{{ dashStats.notProceeding }}</div>
                         </button>
+                        </div>
                     </div>
 
-                    <div class="dash-middle-grid shrink-0">
+                    <div class="dash-middle-grid dash-middle-grid--quad shrink-0">
                         <header class="dash-section-head col-span-12 lg:col-span-3">
                             <div class="swiss-section-heading min-w-0">
                                 <h2 class="swiss-section-heading__title">累計收結情形</h2>
                                 <p class="swiss-section-subtitle">CUMULATIVE INTAKE &amp; CLOSURE</p>
+                                <p v-if="dashWorkspaceStartDateRoc7" class="dash-section-head__since font-mono tabular-nums">自 {{ dashWorkspaceStartDateRoc7 }} 起</p>
                             </div>
                         </header>
-                        <header class="dash-section-head col-span-12 lg:col-span-5">
+                        <header class="dash-section-head col-span-12 lg:col-span-3">
                             <div class="swiss-section-heading min-w-0">
-                                <h2 class="swiss-section-heading__title">未結案件結構分析</h2>
+                                <h2 class="swiss-section-heading__title">未結案件</h2>
                                 <p class="swiss-section-subtitle">UNRESOLVED BREAKDOWN</p>
                             </div>
                             <div class="dash-toggle shrink-0" role="group" aria-label="分析維度">
@@ -1084,60 +1102,75 @@
                                 <button type="button" class="dash-toggle__btn" :class="dashBreakdownMode === 'reason' ? 'dash-toggle__btn--active' : ''" @click="dashBreakdownMode = 'reason'">依案由</button>
                             </div>
                         </header>
-                        <header class="dash-section-head col-span-12 lg:col-span-4 pr-2">
+                        <header class="dash-section-head col-span-12 lg:col-span-3">
                             <div class="swiss-section-heading min-w-0">
                                 <h2 class="swiss-section-heading__title">待辦事項</h2>
                                 <p class="swiss-section-subtitle">TO-DO LIST</p>
                             </div>
                             <span class="dash-section-head__extra">{{ personalAdmin.todos.filter(t=>!t.done).length }} PENDING</span>
                         </header>
+                        <header class="dash-section-head col-span-12 lg:col-span-3">
+                            <div class="swiss-section-heading min-w-0">
+                                <h2 class="swiss-section-heading__title">差勤概況</h2>
+                                <p class="swiss-section-subtitle">ATTENDANCE OVERVIEW</p>
+                            </div>
+                        </header>
 
                         <div class="col-span-12 lg:col-span-3 min-w-0">
-                            <div class="dash-cumulative-list" aria-label="累計收案數與累計結案數">
-                                <div class="dash-cumulative-item group">
-                                    <div class="dash-cumulative-item__head">
-                                        <span class="dash-stat-item__label">累計收案數</span>
-                                        <span class="dash-cumulative-item__value dash-cumulative-item__value--accent">{{ dashStats.cumulativeReceived }}</span>
-                                    </div>
-                                    <div class="dash-cumulative-bar">
+                            <div class="dash-breakdown-list dash-detail-stats-list" aria-label="累計收結">
+                                <div class="dash-breakdown-row dash-cum-metric-row group">
+                                    <span class="dash-breakdown-label__title">累計收案數</span>
+                                    <div class="dash-breakdown-bar min-w-0">
                                         <canvas data-dash-cumulative-canvas data-idx="0" role="img" :aria-label="'累計收案數 ' + dashStats.cumulativeReceived + ' 件'"></canvas>
                                     </div>
+                                    <span class="dash-detail-stat-value dash-detail-stat-value--accent font-mono tabular-nums">{{ dashStats.cumulativeReceived }}</span>
                                 </div>
-                                <div class="dash-cumulative-item group">
-                                    <div class="dash-cumulative-item__head">
-                                        <span class="dash-stat-item__label">累計結案數</span>
-                                        <span class="dash-cumulative-item__value text-ink-900">{{ dashStats.cumulativeClosed }}</span>
-                                    </div>
-                                    <div class="dash-cumulative-bar">
+                                <div class="dash-breakdown-row dash-cum-amount-row">
+                                    <span class="dash-breakdown-label__title">累計收案標的</span>
+                                    <span class="dash-cum-amount-row__spacer" aria-hidden="true"></span>
+                                    <span class="dash-detail-stat-value dash-detail-stat-value--amount font-mono tabular-nums">{{ util.formatMoney(dashStats.cumulativeReceivedAmount) }}</span>
+                                </div>
+                                <div class="dash-breakdown-row dash-cum-metric-row group">
+                                    <span class="dash-breakdown-label__title">累計結案數</span>
+                                    <div class="dash-breakdown-bar min-w-0">
                                         <canvas data-dash-cumulative-canvas data-idx="1" role="img" :aria-label="'累計結案數 ' + dashStats.cumulativeClosed + ' 件'"></canvas>
                                     </div>
+                                    <span class="dash-detail-stat-value font-mono tabular-nums">{{ dashStats.cumulativeClosed }}</span>
                                 </div>
-                            </div>
-                            <div class="dash-stat-item">
-                                <span class="dash-stat-item__label">累計標的價額</span>
-                                <span class="dash-stat-item__value text-[1.35rem]">{{ util.formatMoney(dashStats.cumulativeTargetAmount) }}</span>
+                                <div class="dash-breakdown-row dash-cum-amount-row">
+                                    <span class="dash-breakdown-label__title">累計結案標的</span>
+                                    <span class="dash-cum-amount-row__spacer" aria-hidden="true"></span>
+                                    <span class="dash-detail-stat-value dash-detail-stat-value--amount font-mono tabular-nums">{{ util.formatMoney(dashStats.cumulativeClosedAmount) }}</span>
+                                </div>
+                                <div class="dash-breakdown-row dash-breakdown-row--placeholder" aria-hidden="true">
+                                    <span class="dash-breakdown-label__title">&nbsp;</span>
+                                    <span class="dash-cum-amount-row__spacer" aria-hidden="true"></span>
+                                    <span class="dash-detail-stat-value">&nbsp;</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="col-span-12 lg:col-span-5 min-w-0">
+                        <div class="col-span-12 lg:col-span-3 min-w-0">
                             <div class="dash-breakdown-body shrink-0">
-                                <div class="dash-breakdown-list" aria-label="未結案件結構分析前五大">
+                                <div class="dash-breakdown-list dash-detail-stats-list" aria-label="未結案件結構分析前五大">
                                     <div
                                         v-for="(item, i) in dashBreakdownSlots"
                                         :key="dashBreakdownMode + '-' + i"
                                         class="dash-breakdown-row group"
                                         :class="item.empty ? 'dash-breakdown-row--placeholder' : ''"
                                     >
-                                        <div class="dash-breakdown-label flex flex-col gap-0.5 leading-none">
-                                            <span class="dash-breakdown-label__title" :class="dashBreakdownMode === 'word' ? 'font-mono' : 'font-sans'" :title="item.empty ? '' : item.label">{{ item.label }}</span>
+                                        <div class="dash-breakdown-label flex flex-col gap-0.5 leading-none min-w-0">
+                                            <span
+                                                class="dash-breakdown-label__title"
+                                                :class="dashBreakdownMode === 'word' ? 'font-mono' : 'font-sans dash-breakdown-label__title--reason6'"
+                                                :title="item.empty ? '' : item.label"
+                                            >{{ item.empty ? '' : dashBreakdownLabelDisplay(item.label, dashBreakdownMode) }}</span>
                                             <span class="text-[11px] text-ink-400 font-bold tracking-widest uppercase truncate">{{ item.type }}</span>
                                         </div>
                                         <div class="dash-breakdown-bar min-w-0">
                                             <canvas v-if="!item.empty" data-dash-breakdown-canvas :data-idx="i" role="img" :aria-label="item.label + ' ' + item.count + ' 件'"></canvas>
                                         </div>
-                                        <div class="text-right shrink-0">
-                                            <span class="text-[14px] font-bold font-mono tabular-nums text-ink-900">{{ item.empty ? '' : item.count }}</span>
-                                        </div>
+                                        <span class="dash-detail-stat-value font-mono tabular-nums">{{ item.empty ? '' : item.count }}</span>
                                     </div>
                                 </div>
                                 <div v-if="!dashBreakdownHasData" class="dash-breakdown-empty" aria-hidden="false">
@@ -1146,8 +1179,8 @@
                             </div>
                         </div>
 
-                        <div class="col-span-12 lg:col-span-4 flex flex-col max-h-[600px] pr-2 min-w-0">
-                            <form @submit.prevent="addPersonalTodo" class="mb-4 flex shrink-0 border-b border-ink-100 pb-1">
+                        <div class="col-span-12 lg:col-span-3 flex flex-col max-h-[600px] min-w-0">
+                            <form @submit.prevent="addPersonalTodo" class="mb-3 flex shrink-0 border-b border-ink-100 pb-1">
                                 <input type="text" v-model="personalAdmin.todoDraft" placeholder="Type to add..." class="w-full bg-transparent text-[13px] font-mono font-bold text-ink-900 border-b border-transparent focus:border-ink-900 outline-none placeholder:text-ink-400 placeholder:font-normal py-1 transition-colors">
                                 <button type="submit" class="text-ink-400 hover:text-ink-900 transition-colors"><i class="ph ph-plus font-bold text-lg"></i></button>
                             </form>
@@ -1180,168 +1213,364 @@
                                 <div v-if="personalAdmin.todos.length === 0" class="pt-8 text-left text-ink-400 text-[12px] font-mono font-bold uppercase tracking-widest">List is empty.</div>
                             </div>
                         </div>
-                    </div>
 
-                    <section class="flex flex-col shrink-0 pb-8">
-                        <header class="dash-section-head">
-                            <div class="swiss-section-heading">
-                                <h2 class="swiss-section-heading__title">行事曆</h2>
-                                <p class="swiss-section-subtitle">WEEKLY SCHEDULE</p>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-3">
-                                <button type="button" @click.prevent="shiftWeek(-1)" class="text-ink-400 hover:text-accent transition-colors p-1" title="上一週"><i class="ph ph-caret-left text-lg"></i></button>
-                                <span class="text-[13px] font-mono font-bold text-ink-900 tabular-nums tracking-widest min-w-[11rem] text-center">{{ events.weekRange }}</span>
-                                <button type="button" @click.prevent="goToThisWeek" class="px-2 py-1 text-[12px] font-bold text-ink-900 bg-panel border border-ink-100 hover:bg-ink-100 transition-colors rounded-sm" title="回到本週">今日</button>
-                                <button type="button" @click.prevent="shiftWeek(1)" class="text-ink-400 hover:text-accent transition-colors p-1" title="下一週"><i class="ph ph-caret-right text-lg"></i></button>
-                                <button type="button" @click="openEventModalGlobal" class="swiss-btn swiss-btn--primary ml-2"><i class="ph ph-plus" aria-hidden="true"></i>新增行事</button>
-                                <div class="relative shrink-0 self-center">
-                                    <button
-                                        type="button"
-                                        @click="googleCalendarSettingsOpen = !googleCalendarSettingsOpen"
-                                        class="relative p-1 transition-colors"
-                                        :class="googleCalendarSettingsOpen ? 'text-ink-900' : 'text-ink-400 hover:text-accent'"
-                                        :aria-expanded="googleCalendarSettingsOpen"
-                                        title="Google 行事曆設定"
-                                    >
-                                        <i class="ph ph-gear text-lg" aria-hidden="true"></i>
-                                        <span
-                                            v-if="googleCalendarStatus.connected"
-                                            class="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-accent"
-                                            aria-hidden="true"
-                                        ></span>
-                                    </button>
-                                    <div
-                                        v-if="googleCalendarSettingsOpen"
-                                        class="dash-gcal-settings-popover absolute right-0 top-full z-30 mt-1 flex flex-col gap-3 min-w-[18rem] max-w-sm bg-panel rounded-sm px-2 py-2"
-                                        role="region"
-                                        aria-label="Google 行事曆設定"
-                                    >
-                                        <div class="swiss-section-heading">
-                                            <h3 class="swiss-section-heading__title">Google 行事曆</h3>
-                                            <p class="swiss-section-subtitle">CALENDAR SYNC</p>
+                        <div class="col-span-12 lg:col-span-3 min-w-0" aria-label="差勤概況">
+                            <div class="dash-detail-attn-grid dash-detail-attn-grid--module">
+                            <a href="#" @click.prevent="gotoOvertimeAdmin()" class="dash-detail-attn-link" aria-label="前往差勤：今年休假">
+                                <div class="dash-detail-attn-block">
+                                    <div class="dash-detail-attn-head">
+                                        <span class="dash-detail-attn-head__label">今年休假</span>
+                                        <span class="dash-detail-attn-head__meta font-mono tabular-nums">{{ attnDashLeaveUsedLineDisplay }} / {{ attnDashLeaveQuotaLineDisplay }}</span>
+                                    </div>
+                                    <div class="dash-detail-attn-plot">
+                                        <div
+                                            v-if="!dashDetailLeaveBarSpec.inactive"
+                                            class="dash-detail-attn-bar"
+                                            role="img"
+                                            :title="dashDetailLeaveTooltip"
+                                            :aria-label="dashDetailLeaveTooltip"
+                                        >
+                                            <div class="dash-detail-attn-bar__track" aria-hidden="true">
+                                                <div
+                                                    class="dash-detail-attn-bar__fill dash-detail-attn-bar__fill--leave"
+                                                    :style="{ width: dashDetailLeaveBarSpec.usedPct + '%' }"
+                                                ></div>
+                                            </div>
+                                            <div class="dash-detail-attn-bar__legend dash-detail-attn-bar__legend--compact">
+                                                <span class="dash-detail-attn-bar__chip">
+                                                    <span class="dash-detail-attn-bar__swatch dash-detail-attn-bar__swatch--used" aria-hidden="true"></span>
+                                                    已休 {{ attnDashLeaveUsedLineDisplay }}
+                                                </span>
+                                                <span class="dash-detail-attn-bar__chip">
+                                                    <span class="dash-detail-attn-bar__swatch dash-detail-attn-bar__swatch--remain" aria-hidden="true"></span>
+                                                    尚餘 {{ attnDashLeaveRemainingLineDisplay }}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <p v-if="googleCalendarStatus.message" class="text-[11px] text-ink-600" aria-live="polite">{{ googleCalendarStatus.message }}</p>
-                                        <div class="flex flex-col gap-2 border-t border-ink-100 pt-2">
-                                            <p class="settings-section__title">OAuth API</p>
-                                            <p v-if="googleCalendarOAuthDraft.source === 'env'" class="text-[10px] text-ink-400 leading-snug">目前使用 .env；儲存後改為系統內設定</p>
-                                            <p v-else-if="googleCalendarOAuthDraft.source === 'db'" class="text-[10px] text-ink-400 leading-snug">設定來源：系統（app.db）</p>
-                                            <label class="flex flex-col gap-0.5">
-                                                <span class="text-[10px] font-bold uppercase tracking-widest text-ink-900">Client ID</span>
-                                                <input v-model="googleCalendarOAuthDraft.clientId" type="text" class="swiss-input font-mono text-[11px]" autocomplete="off">
-                                            </label>
-                                            <label class="flex flex-col gap-0.5">
-                                                <span class="text-[10px] font-bold uppercase tracking-widest text-ink-900">Client Secret</span>
-                                                <input v-model="googleCalendarOAuthDraft.clientSecret" type="password" class="swiss-input font-mono text-[11px]" :placeholder="googleCalendarOAuthDraft.hasClientSecret ? '已設定，留空則不變更' : ''" autocomplete="new-password">
-                                            </label>
-                                            <label class="flex flex-col gap-0.5">
-                                                <span class="text-[10px] font-bold uppercase tracking-widest text-ink-900">Redirect URI</span>
-                                                <input v-model="googleCalendarOAuthDraft.redirectUri" type="text" class="swiss-input font-mono text-[11px]" autocomplete="off">
-                                            </label>
-                                            <label class="flex flex-col gap-0.5">
-                                                <span class="text-[10px] font-bold uppercase tracking-widest text-ink-900">Token 加密金鑰</span>
-                                                <input v-model="googleCalendarOAuthDraft.tokenEncKey" type="password" class="swiss-input font-mono text-[11px]" :placeholder="googleCalendarOAuthDraft.hasTokenEncKey ? '已設定，留空則不變更' : '選填'" autocomplete="new-password">
-                                            </label>
-                                            <button type="button" @click="saveGoogleCalendarOAuthConfig" :disabled="googleCalendarOAuthDraft.saving" class="swiss-btn swiss-btn--secondary self-start">儲存 OAuth 設定</button>
-                                        </div>
-                                        <div class="flex flex-col gap-2 border-t border-ink-100 pt-2">
-                                            <p class="settings-section__title">帳號連結</p>
-                                            <template v-if="googleCalendarStatus.configured">
-                                                <template v-if="googleCalendarStatus.connected">
-                                                    <p class="text-[11px] text-ink-900 leading-snug">
-                                                        已連結 primary 日曆
-                                                        <span v-if="googleCalendarStatus.email" class="block font-mono text-ink-600 tabular-nums truncate" :title="googleCalendarStatus.email">{{ googleCalendarStatus.email }}</span>
-                                                    </p>
-                                                    <p class="text-[10px] text-ink-400 leading-snug">事件顯示於本週行事曆；可切換週次查看其他日期。</p>
-                                                    <button type="button" @click="disconnectGoogleCalendar" :disabled="googleCalendarStatus.busy" class="swiss-btn swiss-btn--ghost self-start">中斷連結</button>
-                                                </template>
-                                                <template v-else>
-                                                    <p class="text-[11px] text-ink-600 leading-snug">OAuth 已就緒，尚須授權 Google 帳號後才會同步事件。</p>
-                                                    <button type="button" @click="connectGoogleCalendar" class="swiss-btn swiss-btn--primary self-start">連結 Google 行事曆</button>
-                                                </template>
-                                            </template>
-                                            <p v-else class="text-[11px] text-ink-400 leading-snug">請先儲存 OAuth API 設定（含 Client ID 與 Client Secret）</p>
-                                        </div>
+                                        <p v-else class="dash-detail-attn-empty font-mono tabular-nums">未設定年度額度</p>
                                     </div>
                                 </div>
+                            </a>
+                            <a href="#" @click.prevent="gotoOvertimeAdmin()" class="dash-detail-attn-link" aria-label="前往差勤：本月一般加班">
+                                <div class="dash-detail-attn-block">
+                                    <div class="dash-detail-attn-head">
+                                        <span class="dash-detail-attn-head__label">本月一般加班</span>
+                                        <span class="dash-detail-attn-head__meta font-mono tabular-nums">{{ dashMapOtRegularUsedDisplay }} / {{ dashMapOtRegularReportableDisplay }}</span>
+                                    </div>
+                                    <div class="dash-detail-attn-plot">
+                                        <div
+                                            v-if="!dashDetailOtRegularBarSpec.inactive"
+                                            class="dash-detail-attn-bar"
+                                            role="img"
+                                            :title="dashMapOtRegularTooltip"
+                                            :aria-label="dashMapOtRegularTooltip"
+                                        >
+                                            <div class="dash-detail-attn-bar__track" aria-hidden="true">
+                                                <div
+                                                    class="dash-detail-attn-bar__fill dash-detail-attn-bar__fill--regular"
+                                                    :style="{ width: dashDetailOtRegularBarSpec.usedPct + '%' }"
+                                                ></div>
+                                            </div>
+                                            <div class="dash-detail-attn-bar__legend dash-detail-attn-bar__legend--compact">
+                                                <span class="dash-detail-attn-bar__chip">
+                                                    <span class="dash-detail-attn-bar__swatch dash-detail-attn-bar__swatch--used" aria-hidden="true"></span>
+                                                    已用 {{ dashMapOtRegularUsedDisplay }}
+                                                </span>
+                                                <span class="dash-detail-attn-bar__chip">
+                                                    <span class="dash-detail-attn-bar__swatch dash-detail-attn-bar__swatch--remain" aria-hidden="true"></span>
+                                                    尚可報 {{ dashMapOtRegularRemainingDisplay }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p v-else class="dash-detail-attn-empty font-mono tabular-nums">未設定當月上限</p>
+                                    </div>
+                                </div>
+                            </a>
+                            <a href="#" @click.prevent="gotoOvertimeAdmin()" class="dash-detail-attn-link" aria-label="前往差勤：本月專案加班">
+                                <div class="dash-detail-attn-block">
+                                    <div class="dash-detail-attn-head">
+                                        <span class="dash-detail-attn-head__label">本月專案加班</span>
+                                        <span class="dash-detail-attn-head__meta font-mono tabular-nums">{{ dashMapOtProjectUsedDisplay }} / {{ dashMapOtProjectReportableDisplay }}</span>
+                                    </div>
+                                    <div class="dash-detail-attn-plot">
+                                        <div
+                                            v-if="!dashDetailOtProjectBarSpec.inactive"
+                                            class="dash-detail-attn-bar"
+                                            role="img"
+                                            :title="dashMapOtProjectTooltip"
+                                            :aria-label="dashMapOtProjectTooltip"
+                                        >
+                                            <div class="dash-detail-attn-bar__track" aria-hidden="true">
+                                                <div
+                                                    class="dash-detail-attn-bar__fill dash-detail-attn-bar__fill--project"
+                                                    :style="{ width: dashDetailOtProjectBarSpec.usedPct + '%' }"
+                                                ></div>
+                                            </div>
+                                            <div class="dash-detail-attn-bar__legend dash-detail-attn-bar__legend--compact">
+                                                <span class="dash-detail-attn-bar__chip">
+                                                    <span class="dash-detail-attn-bar__swatch dash-detail-attn-bar__swatch--project" aria-hidden="true"></span>
+                                                    已用 {{ dashMapOtProjectUsedDisplay }}
+                                                </span>
+                                                <span class="dash-detail-attn-bar__chip">
+                                                    <span class="dash-detail-attn-bar__swatch dash-detail-attn-bar__swatch--remain" aria-hidden="true"></span>
+                                                    尚可報 {{ dashMapOtProjectRemainingDisplay }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p v-else class="dash-detail-attn-empty font-mono tabular-nums">未設定當月上限</p>
+                                    </div>
+                                </div>
+                            </a>
+                            <a href="#" @click.prevent="gotoOvertimeAdmin()" class="dash-detail-attn-link" aria-label="前往差勤：今年累計一般加班時數">
+                                <div class="dash-detail-attn-block">
+                                    <div class="dash-detail-attn-head">
+                                        <span class="dash-detail-attn-head__label">今年累計一般加班時數</span>
+                                        <span class="dash-detail-attn-head__meta font-mono tabular-nums">{{ dashDetailOtYearRegularDisplay }} h</span>
+                                    </div>
+                                    <div class="dash-detail-attn-plot">
+                                        <div
+                                            v-if="!dashDetailOtYearRegularBarSpec.inactive"
+                                            class="dash-detail-attn-bar"
+                                            role="img"
+                                            :title="'今年累計一般加班 ' + dashDetailOtYearRegularDisplay + ' 小時'"
+                                            :aria-label="'今年累計一般加班 ' + dashDetailOtYearRegularDisplay + ' 小時'"
+                                        >
+                                            <div class="dash-detail-attn-bar__track" aria-hidden="true">
+                                                <div
+                                                    class="dash-detail-attn-bar__fill dash-detail-attn-bar__fill--regular"
+                                                    :style="{ width: dashDetailOtYearRegularBarSpec.usedPct + '%' }"
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <p v-else class="dash-detail-attn-empty font-mono tabular-nums">0 h</p>
+                                    </div>
+                                </div>
+                            </a>
+                            <a href="#" @click.prevent="gotoOvertimeAdmin()" class="dash-detail-attn-link" aria-label="前往差勤：今年累計專案加班時數">
+                                <div class="dash-detail-attn-block">
+                                    <div class="dash-detail-attn-head">
+                                        <span class="dash-detail-attn-head__label">今年累計專案加班時數</span>
+                                        <span class="dash-detail-attn-head__meta font-mono tabular-nums">{{ dashDetailOtYearProjectDisplay }} h</span>
+                                    </div>
+                                    <div class="dash-detail-attn-plot">
+                                        <div
+                                            v-if="!dashDetailOtYearProjectBarSpec.inactive"
+                                            class="dash-detail-attn-bar"
+                                            role="img"
+                                            :title="'今年累計專案加班 ' + dashDetailOtYearProjectDisplay + ' 小時'"
+                                            :aria-label="'今年累計專案加班 ' + dashDetailOtYearProjectDisplay + ' 小時'"
+                                        >
+                                            <div class="dash-detail-attn-bar__track" aria-hidden="true">
+                                                <div
+                                                    class="dash-detail-attn-bar__fill dash-detail-attn-bar__fill--project"
+                                                    :style="{ width: dashDetailOtYearProjectBarSpec.usedPct + '%' }"
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <p v-else class="dash-detail-attn-empty font-mono tabular-nums">0 h</p>
+                                    </div>
+                                </div>
+                            </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <section class="dash-calendar-section flex flex-col shrink-0 pb-8">
+                        <header class="dash-section-head dash-section-head--calendar">
+                            <div class="swiss-section-heading">
+                                <h2 class="swiss-section-heading__title">行事曆</h2>
+                                <p class="swiss-section-subtitle">CALENDAR</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <div class="dash-calendar-nav" role="group" aria-label="月份切換">
+                                    <button
+                                        type="button"
+                                        @click.prevent="goToCalendarToday"
+                                        class="dash-calendar-nav__today px-2 py-1 text-[12px] font-bold text-ink-900 bg-panel border border-ink-100 hover:bg-ink-100 transition-colors rounded-sm"
+                                        title="回到今天（今日列置頂）"
+                                    >今天</button>
+                                    <div class="dash-calendar-nav__month-group">
+                                        <button type="button" @click.prevent="shiftCalendarMonth(-1)" class="dash-calendar-nav__arrow text-ink-900 hover:text-accent transition-colors" title="上一月" aria-label="上一月"><i class="ph ph-caret-left text-lg"></i></button>
+                                        <span class="dash-calendar-nav__month text-[13px] font-mono font-bold text-ink-900 tabular-nums tracking-widest">{{ events.monthRange }}</span>
+                                        <button type="button" @click.prevent="shiftCalendarMonth(1)" class="dash-calendar-nav__arrow text-ink-900 hover:text-accent transition-colors" title="下一月" aria-label="下一月"><i class="ph ph-caret-right text-lg"></i></button>
+                                    </div>
+                                </div>
+                                <button type="button" @click="openEventModalGlobal" class="swiss-btn swiss-btn--primary ml-2"><i class="ph ph-plus" aria-hidden="true"></i>新增行事</button>
+                                <button
+                                    type="button"
+                                    @click="googleCalendarSettingsOpen = !googleCalendarSettingsOpen"
+                                    class="relative shrink-0 self-center p-1 transition-colors"
+                                    :class="googleCalendarSettingsOpen ? 'text-ink-900' : 'text-ink-400 hover:text-accent'"
+                                    :aria-expanded="googleCalendarSettingsOpen"
+                                    title="Google 行事曆設定"
+                                >
+                                    <i class="ph ph-gear text-lg" aria-hidden="true"></i>
+                                    <span
+                                        v-if="googleCalendarStatus.connected"
+                                        class="absolute right-0 top-0 h-1.5 w-1.5 rounded-full bg-accent"
+                                        aria-hidden="true"
+                                    ></span>
+                                </button>
                             </div>
                         </header>
-                        <div class="dash-week-calendar">
-                            <div class="dash-week-grid dash-week-unified-grid">
-                                <div
-                                    v-for="(day, dayIdx) in events.weeklySchedule"
-                                    :key="'head-' + day.fullDate"
-                                    @click="openEventModalForDay(day.fullDate)"
-                                    class="dash-week-day-head transition-colors cursor-pointer group/day min-w-0"
-                                    :class="day.isToday ? 'dash-week-day-head--today' : 'dash-week-day-head--default'"
-                                    :style="{ gridColumn: dayIdx + 1, gridRow: 1 }"
-                                >
-                                    <div class="flex items-start gap-2 min-w-0">
-                                        <div class="flex items-baseline gap-2 min-w-0">
-                                            <span
-                                                class="text-3xl font-light font-mono tabular-nums tracking-tighter shrink-0"
-                                                :class="day.isHoliday ? 'text-accent' : 'text-ink-900'"
-                                            >{{ day.label }}</span>
-                                            <span class="text-[12px] font-bold tracking-widest uppercase text-ink-400 shrink-0">{{ day.day }}</span>
-                                            <span
-                                                v-if="day.holidayLabel"
-                                                class="text-[10px] font-bold text-accent leading-tight truncate min-w-0"
-                                                :title="day.holidayLabel"
-                                            >{{ day.holidayLabel }}</span>
-                                        </div>
-                                        <div v-if="day.allDayEvents.length" class="flex-1 flex flex-col gap-0.5 min-w-0 pt-0.5">
-                                            <div
-                                                v-for="(ev, idx) in day.allDayEvents"
-                                                :key="ev.id || ('allday-' + idx)"
-                                                @click.stop="events.handleClick(ev)"
-                                                class="group/event dash-week-allday-pill relative min-w-0"
-                                                :class="ev.isLinked ? 'cursor-pointer' : 'cursor-default'"
-                                            >
-                                                <span class="text-[10px] font-bold text-ink-900 truncate leading-tight block" :class="ev.isLinked ? 'group-hover/event:underline decoration-ink-400 underline-offset-2' : ''" :title="ev.title">{{ ev.title }}</span>
-                                                <button v-if="!ev.isLinked && !ev.isCase && !ev.isGoogle && ev.id" @click.stop="removeCalendarEventById(ev.id)" class="absolute -right-0.5 -top-0.5 opacity-0 group-hover/event:opacity-100 text-ink-400 hover:text-accent transition-opacity p-0.5" title="刪除行事"><i class="ph ph-x text-[10px]"></i></button>
+                        <div
+                            v-if="googleCalendarSettingsOpen"
+                            class="dash-gcal-settings-expand"
+                            role="region"
+                            aria-label="Google 行事曆設定"
+                        >
+                            <p v-if="googleCalendarStatus.message" class="dash-gcal-settings-expand__msg" aria-live="polite">{{ googleCalendarStatus.message }}</p>
+                            <div class="dash-gcal-settings-expand__grid">
+                                <div class="dash-gcal-settings-expand__col">
+                                    <div class="dash-gcal-settings-expand__head">
+                                        <p class="dash-gcal-settings-expand__label">OAuth API</p>
+                                        <button type="button" @click="saveGoogleCalendarOAuthConfig" :disabled="googleCalendarOAuthDraft.saving" class="swiss-btn swiss-btn--secondary">儲存 OAuth 設定</button>
+                                    </div>
+                                    <p v-if="googleCalendarOAuthDraft.source === 'env'" class="dash-gcal-settings-expand__hint">目前使用 .env；儲存後改為系統內設定</p>
+                                    <div class="dash-gcal-settings-expand__fields">
+                                        <label class="dash-gcal-settings-expand__field">
+                                            <span>Client ID</span>
+                                            <input v-model="googleCalendarOAuthDraft.clientId" type="text" class="swiss-input font-mono text-[11px]" autocomplete="off">
+                                        </label>
+                                        <label class="dash-gcal-settings-expand__field">
+                                            <span>Client Secret</span>
+                                            <input v-model="googleCalendarOAuthDraft.clientSecret" type="password" class="swiss-input font-mono text-[11px]" :placeholder="googleCalendarOAuthDraft.hasClientSecret ? '已設定，留空則不變更' : ''" autocomplete="new-password">
+                                        </label>
+                                        <label class="dash-gcal-settings-expand__field">
+                                            <span>Redirect URI</span>
+                                            <input v-model="googleCalendarOAuthDraft.redirectUri" type="text" class="swiss-input font-mono text-[11px]" autocomplete="off">
+                                        </label>
+                                        <label class="dash-gcal-settings-expand__field">
+                                            <span>Token 加密金鑰</span>
+                                            <input v-model="googleCalendarOAuthDraft.tokenEncKey" type="password" class="swiss-input font-mono text-[11px]" :placeholder="googleCalendarOAuthDraft.hasTokenEncKey ? '已設定，留空則不變更' : '選填'" autocomplete="new-password">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="dash-gcal-settings-expand__col">
+                                    <p class="dash-gcal-settings-expand__label">帳號連結</p>
+                                    <template v-if="googleCalendarStatus.configured">
+                                        <template v-if="googleCalendarStatus.connected">
+                                            <p class="dash-gcal-settings-expand__hint">
+                                                已連結 primary
+                                                <span v-if="googleCalendarStatus.email" class="font-mono truncate" :title="googleCalendarStatus.email">{{ googleCalendarStatus.email }}</span>
+                                            </p>
+                                            <div class="dash-gcal-settings-expand__sync">
+                                                <span>完整 {{ formatGoogleSyncAt(googleCalendarStatus.lastFullSyncAt) }}</span>
+                                                <span>增量 {{ formatGoogleSyncAt(googleCalendarStatus.lastDeltaSyncAt) }}</span>
+                                            </div>
+                                            <p v-if="googleCalendarStatus.lastError" class="dash-gcal-settings-expand__error">同步錯誤：{{ googleCalendarStatus.lastError }}</p>
+                                            <div class="dash-gcal-settings-expand__actions">
+                                                <button type="button" @click="syncGoogleCalendarNow" :disabled="googleCalendarStatus.syncing || googleCalendarStatus.busy" class="swiss-btn swiss-btn--secondary">{{ googleCalendarStatus.syncing ? '同步中…' : '立即同步' }}</button>
+                                                <button type="button" @click="disconnectGoogleCalendar" :disabled="googleCalendarStatus.busy" class="swiss-btn swiss-btn--ghost">中斷連結</button>
+                                            </div>
+                                        </template>
+                                        <template v-else>
+                                            <p class="dash-gcal-settings-expand__hint">OAuth 已就緒，尚須授權 Google 帳號。</p>
+                                            <button type="button" @click="connectGoogleCalendar" class="swiss-btn swiss-btn--primary">連結 Google 行事曆</button>
+                                        </template>
+                                    </template>
+                                    <p v-else class="dash-gcal-settings-expand__hint">請先儲存 OAuth API 設定（含 Client ID 與 Client Secret）</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-scroll-calendar">
+                            <div
+                                ref="dashCalendarScrollRef"
+                                class="dash-scroll-calendar__body"
+                                @scroll="onDashCalendarScroll"
+                            >
+                            <div class="dash-month-dow-row dash-month-dow-row--sticky" aria-hidden="true">
+                                <span v-for="dow in MONTH_DOW_LABELS" :key="'month-dow-' + dow" class="dash-month-dow">{{ dow }}</span>
+                            </div>
+                            <div
+                                v-for="(week, weekIdx) in events.scrollWeeks"
+                                :key="'scroll-week-' + (week.weekStart || weekIdx)"
+                                class="dash-month-week"
+                                :data-week-idx="weekIdx"
+                            >
+                                <div class="dash-month-grid dash-week-unified-grid">
+                                    <div
+                                        v-for="(day, dayIdx) in week.days"
+                                        :key="'scroll-head-' + weekIdx + '-' + day.fullDate"
+                                        @click="openEventModalForDay(day.fullDate)"
+                                        class="dash-week-day-head transition-colors cursor-pointer group/day min-w-0"
+                                        :class="[
+                                            day.isToday ? 'dash-week-day-head--today' : 'dash-week-day-head--default',
+                                            isCalendarPastDay(day) ? 'dash-month-day-head--past' : ''
+                                        ]"
+                                        :style="{ gridColumn: dayIdx + 1, gridRow: 1 }"
+                                    >
+                                        <div class="flex items-start gap-2 min-w-0">
+                                            <div class="flex items-baseline gap-2 min-w-0">
+                                                <span
+                                                    class="text-sm font-light font-mono tabular-nums tracking-tighter shrink-0"
+                                                    :class="day.isHoliday ? 'text-accent' : 'text-ink-900'"
+                                                >{{ day.label }}</span>
+                                                <span
+                                                    v-if="day.holidayLabel"
+                                                    class="text-[10px] font-bold text-accent leading-tight truncate min-w-0"
+                                                    :title="day.holidayLabel"
+                                                >{{ day.holidayLabel }}</span>
+                                            </div>
+                                            <div v-if="day.allDayEvents.length" class="flex-1 flex flex-col gap-0.5 min-w-0 pt-0.5">
+                                                <div
+                                                    v-for="(ev, idx) in day.allDayEvents"
+                                                    :key="ev.id || ('month-allday-' + idx)"
+                                                    @click.stop="events.handleClick(ev)"
+                                                    class="group/event dash-week-allday-pill relative min-w-0"
+                                                    :class="ev.isLinked ? 'cursor-pointer' : 'cursor-default'"
+                                                >
+                                                    <span class="text-[10px] font-bold text-ink-900 truncate leading-tight block" :class="ev.isLinked ? 'group-hover/event:underline decoration-ink-400 underline-offset-2' : ''" :title="ev.title">{{ ev.title }}</span>
+                                                    <button v-if="!ev.isLinked && !ev.isCase && !ev.isGoogle && ev.id" @click.stop="removeCalendarEventById(ev.id)" class="absolute -right-0.5 -top-0.5 opacity-0 group-hover/event:opacity-100 text-ink-400 hover:text-accent transition-opacity p-0.5" title="刪除行事"><i class="ph ph-x text-[10px]"></i></button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div
-                                    v-for="(bar, idx) in events.weekSpanBars"
-                                    :key="bar.id || ('span-' + idx)"
-                                    class="dash-week-span-bar group/bar relative"
-                                    :class="bar.isCase ? 'dash-week-span-bar--case' : (bar.isLinked ? 'dash-week-span-bar--linked' : '')"
-                                    :style="{ gridColumn: bar.startCol + ' / span ' + bar.spanCols, gridRow: bar.row + 1 }"
-                                    @click.stop="events.handleClick(bar)"
-                                >
-                                    <span class="dash-week-span-bar__label truncate pr-3" :class="bar.isLinked ? 'group-hover/bar:underline decoration-ink-400 underline-offset-2' : ''" :title="bar.title">{{ bar.title }}</span>
-                                    <span class="dash-week-span-bar__line" aria-hidden="true"></span>
-                                    <button v-if="!bar.isLinked && !bar.isCase && !bar.isGoogle && bar.id" @click.stop="removeCalendarEventById(bar.id)" class="absolute right-0 top-0 opacity-0 group-hover/bar:opacity-100 text-ink-400 hover:text-accent transition-opacity p-0.5" title="刪除行事"><i class="ph ph-x text-[10px]"></i></button>
-                                    <i v-if="bar.isLinked" class="absolute right-0 top-0.5 ph-fill ph-link text-[9px] text-ink-400 opacity-0 group-hover/bar:opacity-100 transition-opacity" title="點擊可跳轉" aria-hidden="true"></i>
-                                </div>
-                                <div
-                                    v-for="(day, dayIdx) in events.weeklySchedule"
-                                    :key="'body-' + day.fullDate"
-                                    @click="openEventModalForDay(day.fullDate)"
-                                    class="dash-week-day-body transition-colors cursor-pointer group/day min-w-0"
-                                    :class="day.isToday ? 'dash-week-day-body--today' : ''"
-                                    :style="{ gridColumn: dayIdx + 1, gridRow: events.weekBodyGridRow }"
-                                >
-                                    <div class="flex flex-col gap-1.5 min-h-0">
-                                        <div
-                                            v-for="(ev, idx) in day.timedEvents"
-                                            :key="ev.id || idx"
-                                            @click.stop="events.handleClick(ev)"
-                                            class="group/event relative flex items-center gap-1 p-0.5 -mx-0.5 hover:bg-ink-100/50 rounded-sm transition-colors border border-transparent"
-                                            :class="ev.isLinked ? 'cursor-pointer hover:border-ink-100' : 'cursor-default'"
-                                        >
-                                            <span
-                                                class="text-[10px] font-mono font-bold tabular-nums tracking-widest shrink-0"
-                                                :class="ev.isLinked ? 'text-accent' : 'text-ink-600'"
-                                            >{{ ev.time }}</span>
-                                            <span class="text-[11px] font-bold text-ink-900 truncate flex-1 leading-tight" :class="ev.isLinked ? 'group-hover/event:underline decoration-ink-400 underline-offset-2' : ''" :title="ev.title">{{ ev.title }}</span>
-                                            <button v-if="!ev.isLinked && !ev.isCase && !ev.isGoogle && ev.id" @click.stop="removeCalendarEventById(ev.id)" class="absolute right-0 top-0 opacity-0 group-hover/event:opacity-100 text-ink-400 hover:text-accent transition-opacity p-0.5" title="刪除行事"><i class="ph ph-x text-[10px]"></i></button>
-                                            <i v-if="ev.isLinked" class="absolute right-0.5 top-0.5 ph-fill ph-link text-ink-100 opacity-0 group-hover/event:opacity-100 text-[10px] transition-opacity" title="點擊可跳轉"></i>
+                                    <div
+                                        v-for="(bar, idx) in week.spanBars"
+                                        :key="bar.id || ('month-span-' + weekIdx + '-' + idx)"
+                                        class="dash-week-span-bar group/bar relative"
+                                        :class="bar.isCase ? 'dash-week-span-bar--case' : (bar.isLinked ? 'dash-week-span-bar--linked' : '')"
+                                        :style="{ gridColumn: bar.startCol + ' / span ' + bar.spanCols, gridRow: bar.row + 1 }"
+                                        @click.stop="events.handleClick(bar)"
+                                    >
+                                        <span class="dash-week-span-bar__label truncate pr-3" :class="bar.isLinked ? 'group-hover/bar:underline decoration-ink-400 underline-offset-2' : ''" :title="bar.title">{{ bar.title }}</span>
+                                        <span class="dash-week-span-bar__line" aria-hidden="true"></span>
+                                        <button v-if="!bar.isLinked && !bar.isCase && !bar.isGoogle && bar.id" @click.stop="removeCalendarEventById(bar.id)" class="absolute right-0 top-0 opacity-0 group-hover/bar:opacity-100 text-ink-400 hover:text-accent transition-opacity p-0.5" title="刪除行事"><i class="ph ph-x text-[10px]"></i></button>
+                                        <i v-if="bar.isLinked" class="absolute right-0 top-0.5 ph-fill ph-link text-[9px] text-ink-400 opacity-0 group-hover/bar:opacity-100 transition-opacity" title="點擊可跳轉" aria-hidden="true"></i>
+                                    </div>
+                                    <div
+                                        v-for="(day, dayIdx) in week.days"
+                                        :key="'month-body-' + weekIdx + '-' + day.fullDate"
+                                        @click="openEventModalForDay(day.fullDate)"
+                                        class="dash-week-day-body dash-month-day-body transition-colors cursor-pointer group/day min-w-0"
+                                        :class="[
+                                            day.isToday ? 'dash-week-day-body--today' : '',
+                                            isCalendarPastDay(day) ? 'dash-month-day-body--past' : ''
+                                        ]"
+                                        :style="{ gridColumn: dayIdx + 1, gridRow: week.bodyGridRow }"
+                                    >
+                                        <div class="flex flex-col gap-1 min-h-0">
+                                            <div
+                                                v-for="(ev, idx) in day.timedEvents"
+                                                :key="ev.id || ('month-timed-' + idx)"
+                                                @click.stop="events.handleClick(ev)"
+                                                class="group/event relative flex items-center gap-1 p-0.5 -mx-0.5 hover:bg-ink-100/50 rounded-sm transition-colors border border-transparent"
+                                                :class="ev.isLinked ? 'cursor-pointer hover:border-ink-100' : 'cursor-default'"
+                                            >
+                                                <span
+                                                    class="text-[10px] font-mono font-bold tabular-nums tracking-widest shrink-0"
+                                                    :class="ev.isLinked ? 'text-accent' : 'text-ink-600'"
+                                                >{{ ev.time }}</span>
+                                                <span class="text-[11px] font-bold text-ink-900 truncate flex-1 leading-tight" :class="ev.isLinked ? 'group-hover/event:underline decoration-ink-400 underline-offset-2' : ''" :title="ev.title">{{ ev.title }}</span>
+                                                <button v-if="!ev.isLinked && !ev.isCase && !ev.isGoogle && ev.id" @click.stop="removeCalendarEventById(ev.id)" class="absolute right-0 top-0 opacity-0 group-hover/event:opacity-100 text-ink-400 hover:text-accent transition-opacity p-0.5" title="刪除行事"><i class="ph ph-x text-[10px]"></i></button>
+                                                <i v-if="ev.isLinked" class="absolute right-0.5 top-0.5 ph-fill ph-link text-ink-100 opacity-0 group-hover/event:opacity-100 text-[10px] transition-opacity" title="點擊可跳轉"></i>
+                                            </div>
+                                            <div v-if="day.allDayEvents.length === 0 && day.timedEvents.length === 0 && !day.spanCovered" class="text-[11px] font-mono text-ink-400 uppercase tracking-widest pt-0.5 group-hover/day:text-ink-900 transition-colors opacity-0 group-hover/day:opacity-100"><i class="ph ph-plus mr-1"></i>Add</div>
                                         </div>
-                                        <div v-if="day.allDayEvents.length === 0 && day.timedEvents.length === 0 && !day.spanCovered" class="text-[12px] font-mono text-ink-400 uppercase tracking-widest pt-1 group-hover/day:text-ink-900 transition-colors"><i class="ph ph-plus mr-1"></i>Add</div>
                                     </div>
                                 </div>
+                            </div>
                             </div>
                         </div>
                     </section>
@@ -4872,28 +5101,28 @@
     </div>
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
-    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260617"></script>
-    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260617"></script>
-    <script type="module" src="js/jcms/main.js?v=0.1.20260617"></script>
-    <script src="vendor/pdfjs.min.js?v=0.1.20260617"></script>
-    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260617"></script>
-    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260617"></script>
-    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260617"></script>
-    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260617"></script>
-    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260617"></script>
-    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260617"></script>
-    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260617"></script>
-    <script src="lib/genealogyLayout.js?v=0.1.20260617"></script>
-    <script src="lib/inheritanceCompute.js?v=0.1.20260617"></script>
-    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260617"></script>
-    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260617"></script>
+    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260618"></script>
+    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260618"></script>
+    <script type="module" src="js/jcms/main.js?v=0.1.20260618"></script>
+    <script src="vendor/pdfjs.min.js?v=0.1.20260618"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260618"></script>
+    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260618"></script>
+    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260618"></script>
+    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260618"></script>
+    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260618"></script>
+    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260618"></script>
+    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260618"></script>
+    <script src="lib/genealogyLayout.js?v=0.1.20260618"></script>
+    <script src="lib/inheritanceCompute.js?v=0.1.20260618"></script>
+    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260618"></script>
+    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260618"></script>
 </body>
 </html>

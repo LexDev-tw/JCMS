@@ -54,6 +54,11 @@ app.get('/', (req, res) => {
     res.redirect(302, '/JCMS.html');
 });
 
+app.get('/JCMS.html', (req, res) => {
+    res.set('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.join(publicDir, 'JCMS.html'));
+});
+
 app.use((req, res, next) => {
     if (dbReady || req.method === 'OPTIONS' || !req.path.startsWith('/api')) {
         return next();
