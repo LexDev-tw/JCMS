@@ -2517,12 +2517,6 @@ export function mountJcmsApp() {
                   dashMapOtMonthLimits.value.project
               )
           );
-          const dashDetailLeaveBarSpec = computed(() =>
-              buildAttnDashBarSpec(
-                  attendanceThisYearLeaveUsedDaysEq.value,
-                  attendanceDashLeaveQuotaNum.value
-              )
-          );
 
           function buildAttnDashYearBarSpec(hoursRaw, scaleRaw) {
               const used = Math.max(0, Number(hoursRaw) || 0);
@@ -2790,6 +2784,13 @@ export function mountJcmsApp() {
           );
           const attnDashLeaveRemainingLineDisplay = computed(() =>
               formatLeaveDaysZh(attendanceDashLeaveRemainingDays.value)
+          );
+
+          const dashDetailLeaveBarSpec = computed(() =>
+              buildAttnDashBarSpec(
+                  attendanceThisYearLeaveUsedDaysEq.value,
+                  attendanceDashLeaveQuotaNum.value
+              )
           );
 
           const dashDetailLeaveTooltip = computed(() =>

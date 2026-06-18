@@ -84,6 +84,13 @@ app.use('/api/population', populationRoutes);
 app.use('/api/air-quality', airQualityRoutes);
 app.use('/api', routes);
 
+app.use((req, res, next) => {
+    if (/\.(js|mjs|css)(\?|$)/i.test(req.path)) {
+        res.set('Cache-Control', 'no-cache, must-revalidate');
+    }
+    next();
+});
+
 app.use(
     '/uploads',
     express.static(uploadsDir, {

@@ -1,7 +1,20 @@
-/** JCMS SPA 入口 */
-import { mountJcmsApp } from './app/create-app.js';
+/** JCMS SPA 入口 — create-app 帶與 main 相同 ?v=，避免手機瀏覽器快取舊模組 */
+function readMainModuleVersion() {
+  try {
+    const el = document.querySelector('script[type="module"][src*="jcms/main.js"]');
+    const src = (el && (el.src || el.getAttribute('src'))) || '';
+    const m = String(src).match(/[?&]v=([^&]+)/);
+    return m ? m[1] : '';
+  } catch {
+    return '';
+  }
+}
+
+const assetV = readMainModuleVersion();
+const createAppUrl = assetV ? `./app/create-app.js?v=${assetV}` : './app/create-app.js';
 
 try {
+  const { mountJcmsApp } = await import(createAppUrl);
   mountJcmsApp();
 } catch (err) {
   console.error('[JCMS] mount failed:', err);
