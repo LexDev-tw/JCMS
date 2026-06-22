@@ -1,6 +1,6 @@
 {
   "name": "jcms",
-  "version": "0.1.20260618b",
+  "version": "0.1.20260622",
   "description": "JCMS — Judicial Case Management System (Docker / VPS deployment)",
   "main": "server.js",
   "scripts": {
@@ -13,6 +13,9 @@
     "test:inheritance": "node scripts/test-inheritance-fixtures.mjs",
     "gen:police-geojson": "node scripts/fetch-police-address-data.js && node scripts/convert-police-geojson.js",
     "gen:judicial-geojson": "node scripts/fetch-moj-agency-addresses.js && node scripts/convert-judicial-geojson.js",
+    "gen:taipei-urban-plan-geojson": "node scripts/convert-taipei-urban-plan-geojson.js",
+    "gen:ntpc-urban-plan-geojson": "node scripts/convert-ntpc-urban-plan-geojson.js",
+    "gen:urban-plan-geojson": "node scripts/convert-taipei-urban-plan-geojson.js && node scripts/convert-ntpc-urban-plan-geojson.js",
     "gen:taipei-police-geojson": "npm run gen:police-geojson"
   },
   "engines": {
@@ -31,5 +34,11 @@
     "pngjs": "^7.0.0",
     "sqlite3": "^5.1.7",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@turf/helpers": "^7.2.0",
+    "@turf/simplify": "^7.2.0",
+    "proj4": "^2.15.0",
+    "shapefile": "^0.6.6"
   }
 }

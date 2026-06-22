@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JCMS</title>
-    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260618b"></script>
-    <link rel="icon" href="ico/law-book.ico" type="image/x-icon">
+    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260622"></script>
+    <link rel="icon" href="ico/jcms-icon.png" type="image/png">
+    <link rel="apple-touch-icon" href="ico/jcms-icon.png">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -538,86 +539,92 @@
                                     <p id="map-weather-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-air-quality-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-nlsc-layer-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
+                                    <p id="map-urban-plan-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" hidden aria-live="polite"></p>
                                     <p id="map-layer-health-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta dash-map-toolbar__status--layer-health" hidden aria-live="polite"></p>
                                 </div>
                             </div>
-                            <label class="map-layer-switch" for="map-toggle-nlsc-orthophoto">
-                                <span class="map-layer-switch__label">正射影像</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-nlsc-orthophoto" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-admin-labels">
-                                <span class="map-layer-switch__label">行政區</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-admin-labels" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-major-transport">
-                                <span class="map-layer-switch__label">交通</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-major-transport" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-population-labels">
-                                <span class="map-layer-switch__label">人口</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-population-labels" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-judicial-agencies">
-                                <span class="map-layer-switch__label">司法</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-judicial-agencies" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-police-agencies">
-                                <span class="map-layer-switch__label">警察</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-police-agencies" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-nlsc-landsect">
-                                <span class="map-layer-switch__label">地段</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-nlsc-landsect" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-radar-echo">
-                                <span class="map-layer-switch__label">雷達</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-radar-echo" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-satellite-cloud">
-                                <span class="map-layer-switch__label">衛星</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-satellite-cloud" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-rain-advisory">
-                                <span class="map-layer-switch__label">降雨</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-rain-advisory" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
-                            <label class="map-layer-switch" for="map-toggle-air-quality">
-                                <span class="map-layer-switch__label">空品</span>
-                                <input type="checkbox" class="map-layer-switch__input" id="map-toggle-air-quality" role="switch" autocomplete="off" />
-                                <span class="map-layer-switch__track" aria-hidden="true">
-                                    <span class="map-layer-switch__thumb"></span>
-                                </span>
-                            </label>
+                            <div class="dash-map-toolbar__controls">
+                            <div class="dash-map-layer-grid" role="group" aria-label="地圖圖層">
+                                <label class="map-layer-switch" for="map-toggle-rain-advisory">
+                                    <span class="map-layer-switch__label">降雨</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-rain-advisory" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-nlsc-landsect">
+                                    <span class="map-layer-switch__label">地段</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-nlsc-landsect" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-judicial-agencies">
+                                    <span class="map-layer-switch__label">司法</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-judicial-agencies" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-nlsc-orthophoto">
+                                    <span class="map-layer-switch__label">正射影像</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-nlsc-orthophoto" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-radar-echo">
+                                    <span class="map-layer-switch__label">雷達</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-radar-echo" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-urban-plan">
+                                    <span class="map-layer-switch__label">使用分區</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-urban-plan" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-police-agencies">
+                                    <span class="map-layer-switch__label">警察</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-police-agencies" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-admin-labels">
+                                    <span class="map-layer-switch__label">行政區</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-admin-labels" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-air-quality">
+                                    <span class="map-layer-switch__label">空品</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-air-quality" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <span class="dash-map-layer-grid__spacer" aria-hidden="true"></span>
+                                <label class="map-layer-switch" for="map-toggle-population-labels">
+                                    <span class="map-layer-switch__label">人口</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-population-labels" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-major-transport">
+                                    <span class="map-layer-switch__label">交通</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-major-transport" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="dash-map-toolbar__actions">
                             <button type="button" id="map-restore-default-view" class="swiss-btn swiss-btn--secondary dash-map-detail-btn dash-map-toolbar__action">
                                 回到預設視圖
                             </button>
@@ -627,6 +634,8 @@
                             <button type="button" @click="openWorkMapEdit" class="swiss-btn swiss-btn--secondary dash-map-detail-btn dash-map-toolbar__action">
                                 開啟工作地圖
                             </button>
+                            </div>
+                            </div>
                         </aside>
                 </div>
 
@@ -5136,28 +5145,29 @@
     </div>
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
-    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260618b"></script>
-    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260618b"></script>
-    <script type="module" src="js/jcms/main.js?v=0.1.20260618b"></script>
-    <script src="vendor/pdfjs.min.js?v=0.1.20260618b"></script>
-    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260618b"></script>
-    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260618b"></script>
-    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260618b"></script>
-    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260618b"></script>
-    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260618b"></script>
-    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260618b"></script>
-    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260618b"></script>
-    <script src="lib/genealogyLayout.js?v=0.1.20260618b"></script>
-    <script src="lib/inheritanceCompute.js?v=0.1.20260618b"></script>
-    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260618b"></script>
-    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260618b"></script>
+    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-urban-plan.js?v=0.1.20260622"></script>
+    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260622"></script>
+    <script type="module" src="js/jcms/main.js?v=0.1.20260622"></script>
+    <script src="vendor/pdfjs.min.js?v=0.1.20260622"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260622"></script>
+    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260622"></script>
+    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260622"></script>
+    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260622"></script>
+    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260622"></script>
+    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260622"></script>
+    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260622"></script>
+    <script src="lib/genealogyLayout.js?v=0.1.20260622"></script>
+    <script src="lib/inheritanceCompute.js?v=0.1.20260622"></script>
+    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260622"></script>
+    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260622"></script>
 </body>
 </html>

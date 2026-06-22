@@ -106,6 +106,22 @@ docker compose exec jcms node scripts/repair-dynamics-fts.js
 
 ## 開發日誌
 
+### 2026-06-22
+
+**版號**
+
+- 版號升至 `0.1.20260622`。
+
+**儀表板地圖：雙北都市計畫使用分區**
+
+- 新增都市計畫圖層（`dashboard-map-urban-plan.js`）：疊加臺北市、新北市使用分區 GeoJSON，支援圖層開關與懸停 popup。
+- 圖層堆疊與 `use-dashboard-map-view.js` 整合；工具列顯示載入狀態。
+- 新增 `gen:urban-plan-geojson` 腳本（shapefile → GeoJSON，devDependencies）；產出 `public/data/taipei-urban-plan.geojson`、`ntpc-urban-plan.geojson`。
+
+**網站圖示**
+
+- favicon 改為 `public/ico/jcms-icon.png`（移除根目錄 `ico/law-book.*`）。
+
 ### 2026-06-18
 
 **版號與 UI**

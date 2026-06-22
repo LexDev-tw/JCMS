@@ -209,6 +209,7 @@ export function useDashboardMapView({
     let currentLocationApi = null;
     let populationApi = null;
     let nlscApi = null;
+    let urbanPlanApi = null;
     let layerHealthApi = null;
     const caseStatsCharts = [];
     let resizeHandler = null;
@@ -290,6 +291,7 @@ export function useDashboardMapView({
             judicialAgencies: false,
             nlscOrthophoto: false,
             nlscLandsect: false,
+            urbanPlan: false,
             defaultView: null,
         };
     }
@@ -316,6 +318,7 @@ export function useDashboardMapView({
         mapLayerState.judicialAgencies = defaults.judicialAgencies;
         mapLayerState.nlscOrthophoto = defaults.nlscOrthophoto;
         mapLayerState.nlscLandsect = defaults.nlscLandsect;
+        mapLayerState.urbanPlan = defaults.urbanPlan;
     }
 
     function hydrateDefaultViewFromStorage() {
@@ -423,6 +426,10 @@ export function useDashboardMapView({
         if (judicialApi) {
             judicialApi.teardownJudicialLayers();
             judicialApi = null;
+        }
+        if (urbanPlanApi) {
+            urbanPlanApi.teardownUrbanPlanLayers();
+            urbanPlanApi = null;
         }
         if (currentLocationApi?.stopBlink) {
             currentLocationApi.stopBlink();
@@ -726,6 +733,14 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             }
         }
 
+        function setUrbanPlanMeta(message) {
+            const el = q(root, 'map-urban-plan-meta');
+            if (!el) return;
+            const text = String(message || '').trim();
+            el.textContent = text;
+            el.hidden = !text;
+        }
+
         function updatePopulationSourceMeta(state) {
             const el = q(root, 'map-population-source-meta');
             if (!el) return;
@@ -845,6 +860,17 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 getGeoJsonUrl: () => 'data/judicial-agencies.geojson',
                 getTwTownsGeoJson: () => twTownsGeoJson,
                 getResolvedGeoJson: () => resolveAgencyGeoJson(AGENCY_LAYER_KINDS.judicial),
+            });
+        }
+
+        if (typeof globalThis.DashboardMapUrbanPlan !== 'undefined') {
+            urbanPlanApi = globalThis.DashboardMapUrbanPlan.createUrbanPlanLayersApi({
+                getMapLayerState: () => mapLayerState,
+                getGeoJsonUrls: () => [
+                    'data/taipei-urban-plan.geojson',
+                    'data/ntpc-urban-plan.geojson',
+                ],
+                setUrbanPlanMeta,
             });
         }
 
@@ -1243,6 +1269,16 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             }
         }
 
+        async function applyUrbanPlanLayerVisibility() {
+            if (!mapInstance || !urbanPlanApi) return;
+            try {
+                await urbanPlanApi.refreshUrbanPlanLayers(mapInstance);
+                reconcileLayerStack(mapInstance);
+            } catch (err) {
+                console.warn('[dashboard-map] 都市計畫圖層載入失敗', err);
+            }
+        }
+
         async function applyAllMapLayerState() {
             if (!mapInstance || disposed) return;
             syncMapLayerToggleUi();
@@ -1255,6 +1291,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             await applyPoliceLayerVisibility();
             if (!mapInstance || disposed) return;
             await applyJudicialLayerVisibility();
+            if (!mapInstance || disposed) return;
+            await applyUrbanPlanLayerVisibility();
             if (!mapInstance || disposed) return;
             reconcileLayerStack(mapInstance);
         }
@@ -1321,12 +1359,12 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             const majorTransportInput = q(root, 'map-toggle-major-transport');
             const rainInput = q(root, 'map-toggle-rain-advisory');
             const radarInput = q(root, 'map-toggle-radar-echo');
-            const satelliteInput = q(root, 'map-toggle-satellite-cloud');
             const airQualityInput = q(root, 'map-toggle-air-quality');
             const policeInput = q(root, 'map-toggle-police-agencies');
             const judicialInput = q(root, 'map-toggle-judicial-agencies');
             const nlscOrthophotoInput = q(root, 'map-toggle-nlsc-orthophoto');
             const nlscLandsectInput = q(root, 'map-toggle-nlsc-landsect');
+            const urbanPlanInput = q(root, 'map-toggle-urban-plan');
             if (!adminInput || !majorTransportInput) return;
 
             adminInput.checked = mapLayerState.adminLabels;
@@ -1334,23 +1372,23 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             majorTransportInput.checked = mapLayerState.majorTransport;
             if (rainInput) rainInput.checked = mapLayerState.rainAdvisory;
             if (radarInput) radarInput.checked = mapLayerState.radarEcho;
-            if (satelliteInput) satelliteInput.checked = mapLayerState.satelliteCloud;
             if (airQualityInput) airQualityInput.checked = mapLayerState.airQuality;
             if (policeInput) policeInput.checked = mapLayerState.policeAgencies;
             if (judicialInput) judicialInput.checked = mapLayerState.judicialAgencies;
             if (nlscOrthophotoInput) nlscOrthophotoInput.checked = mapLayerState.nlscOrthophoto;
             if (nlscLandsectInput) nlscLandsectInput.checked = mapLayerState.nlscLandsect;
+            if (urbanPlanInput) urbanPlanInput.checked = mapLayerState.urbanPlan;
             syncMapLayerSwitch(adminInput);
             if (populationInput) syncMapLayerSwitch(populationInput);
             syncMapLayerSwitch(majorTransportInput);
             if (rainInput) syncMapLayerSwitch(rainInput);
             if (radarInput) syncMapLayerSwitch(radarInput);
-            if (satelliteInput) syncMapLayerSwitch(satelliteInput);
             if (airQualityInput) syncMapLayerSwitch(airQualityInput);
             if (policeInput) syncMapLayerSwitch(policeInput);
             if (judicialInput) syncMapLayerSwitch(judicialInput);
             if (nlscOrthophotoInput) syncMapLayerSwitch(nlscOrthophotoInput);
             if (nlscLandsectInput) syncMapLayerSwitch(nlscLandsectInput);
+            if (urbanPlanInput) syncMapLayerSwitch(urbanPlanInput);
         }
 
         function bindMapLayerToggles() {
@@ -1370,12 +1408,12 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             const majorTransportInput = q(root, 'map-toggle-major-transport');
             const rainInput = q(root, 'map-toggle-rain-advisory');
             const radarInput = q(root, 'map-toggle-radar-echo');
-            const satelliteInput = q(root, 'map-toggle-satellite-cloud');
             const airQualityInput = q(root, 'map-toggle-air-quality');
             const policeInput = q(root, 'map-toggle-police-agencies');
             const judicialInput = q(root, 'map-toggle-judicial-agencies');
             const nlscOrthophotoInput = q(root, 'map-toggle-nlsc-orthophoto');
             const nlscLandsectInput = q(root, 'map-toggle-nlsc-landsect');
+            const urbanPlanInput = q(root, 'map-toggle-urban-plan');
             if (!adminInput || !majorTransportInput) return;
 
             adminInput.addEventListener('change', () => {
@@ -1416,13 +1454,6 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                     void applyWeatherLayerVisibility();
                 }, { signal });
             }
-            if (satelliteInput) {
-                satelliteInput.addEventListener('change', () => {
-                    mapLayerState.satelliteCloud = satelliteInput.checked;
-                    syncMapLayerSwitch(satelliteInput);
-                    void applyWeatherLayerVisibility();
-                }, { signal });
-            }
             if (airQualityInput) {
                 airQualityInput.addEventListener('change', () => {
                     mapLayerState.airQuality = airQualityInput.checked;
@@ -1457,6 +1488,14 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                     mapLayerState.nlscLandsect = nlscLandsectInput.checked;
                     syncMapLayerSwitch(nlscLandsectInput);
                     void applyMapLayerVisibility();
+                }, { signal });
+            }
+            if (urbanPlanInput) {
+                urbanPlanInput.addEventListener('change', () => {
+                    mapLayerState.urbanPlan = urbanPlanInput.checked;
+                    syncMapLayerSwitch(urbanPlanInput);
+                    if (!urbanPlanInput.checked) setUrbanPlanMeta('');
+                    void applyUrbanPlanLayerVisibility();
                 }, { signal });
             }
         }

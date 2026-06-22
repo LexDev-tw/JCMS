@@ -64,6 +64,8 @@
 
         const raiseBottomToTop = [
             NLSC_LANDSECT,
+            'taipei-urban-plan-fill',
+            'taipei-urban-plan-line',
             'transp-major-roads',
             'transp-rail',
             'transp-transit',
