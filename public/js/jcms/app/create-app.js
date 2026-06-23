@@ -62,6 +62,14 @@ import {
     applyCoordToFeature,
     moveFeatureByDelta,
 } from '../lib/work-map-interaction.js';
+import {
+    loadBasemapLayerPrefs,
+    persistBasemapLayerPrefs,
+    persistMapSettingsPatch,
+    loadCurrentLocationFromStorage,
+    persistCurrentLocation,
+} from '../lib/work-map-basemap-layers.js';
+import { featureMapCenter } from '../lib/work-map-geo.js';
 import { ensureTaiwanHolidaysForYears } from '../composables/use-taiwan-holidays.js';
 import {
   ensureSalaryYear,
@@ -350,6 +358,8 @@ export function mountJcmsApp() {
           });
           let salaryYearCollapseInited = false;
           const todoDraggingId = ref(null);
+          const workMapLayerDraggingId = ref(null);
+          const workMapLayerDragOverId = ref(null);
           const todoDragOverId = ref(null);
 
           function salaryCurrentRocYear3() {
@@ -1076,6 +1086,12 @@ export function mountJcmsApp() {
               editingLayerNameId: null,
               editingLayerNameDraft: '',
               notice: '',
+              agencyVisible: {
+                  judicial: true,
+                  police: true,
+              },
+              basemap: loadBasemapLayerPrefs(),
+              onlyCurrentLocationMode: false,
           });
           const agencyLayerDoc = reactive(createEmptyAgencyLayerDoc());
           const agencyLayerHistory = createWorkMapHistory();
@@ -1085,6 +1101,10 @@ export function mountJcmsApp() {
               title: '現在位置',
               description: '',
           });
+          const storedMapCurrentLocation = loadCurrentLocationFromStorage();
+          if (storedMapCurrentLocation) {
+              Object.assign(mapCurrentLocation, storedMapCurrentLocation);
+          }
           const agencyFeatureEditor = reactive({
               featureId: null,
               name: '',
@@ -1137,6 +1157,9 @@ export function mountJcmsApp() {
               }
               return agencyLayerDoc[kind]?.features || [];
           });
+
+          const judicialFeatureList = computed(() => agencyLayerDoc.judicial?.features || []);
+          const policeFeatureList = computed(() => agencyLayerDoc.police?.features || []);
 
           const hasMapCurrentLocation = computed(() =>
               Number.isFinite(mapCurrentLocation.lng) && Number.isFinite(mapCurrentLocation.lat)
@@ -1280,6 +1303,109 @@ export function mountJcmsApp() {
               agencyFeatureEditor.zip = feat.zip || '';
           }
 
+          function exitOnlyCurrentLocationMode() {
+              if (!workMapUi.onlyCurrentLocationMode) return;
+              workMapUi.onlyCurrentLocationMode = false;
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function jumpWorkMapEditToCoords(center, { minZoom = 13 } = {}) {
+              if (!center || !Number.isFinite(center[0]) || !Number.isFinite(center[1])) return;
+              const view = workMapEditLayout.getView?.();
+              const zoom = Math.max(view?.zoom ?? minZoom, minZoom);
+              workMapEditLayout.jumpToView?.({ center, zoom }, { animate: true });
+          }
+
+          function jumpWorkMapEditToFeature(feat) {
+              jumpWorkMapEditToCoords(featureMapCenter(feat));
+          }
+
+          async function selectAgencyLayerForEdit(kind) {
+              if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) {
+                  return;
+              }
+              if (workMapUi.editTarget === kind) return;
+              exitOnlyCurrentLocationMode();
+              commitWorkMapFeatureDrafts();
+              await ensureAgencyLayerReady(kind);
+              workMapUi.editTarget = kind;
+              workMapUi.activeListId = null;
+              workMapUi.selectedFeatureId = null;
+              workMapUi.draftCoords = [];
+              workMapUi.draftCursor = null;
+              resetWorkMapFeatureEditor();
+              resetAgencyFeatureEditor();
+              workMapUi.toolMode = WORK_MAP_TOOL_MODES.select;
+              workMapEditLayout.clearDraftOnMap?.();
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function toggleAgencyLayerVisible(kind, visible) {
+              if (kind !== AGENCY_LAYER_KINDS.judicial && kind !== AGENCY_LAYER_KINDS.police) {
+                  return;
+              }
+              if (visible) exitOnlyCurrentLocationMode();
+              workMapUi.agencyVisible[kind] = visible;
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function toggleWorkMapBasemapLayer(key, visible) {
+              if (key !== 'majorTransport' && key !== 'nlscOrthophoto' && key !== 'adminLabels') return;
+              workMapUi.basemap[key] = visible;
+              persistBasemapLayerPrefs(workMapUi.basemap);
+              workMapEditLayout.syncOverlayLayers?.();
+          }
+
+          function moveWorkMapList(dragId, targetId) {
+              if (!dragId || !targetId || dragId === targetId) return;
+              const fromIdx = workMapDoc.lists.findIndex((l) => l.id === dragId);
+              const toIdx = workMapDoc.lists.findIndex((l) => l.id === targetId);
+              if (fromIdx < 0 || toIdx < 0) return;
+              commitWorkMapChange(() => {
+                  const [moved] = workMapDoc.lists.splice(fromIdx, 1);
+                  workMapDoc.lists.splice(toIdx, 0, moved);
+              });
+          }
+
+          function onWorkMapLayerDragStart(listId, ev) {
+              workMapLayerDraggingId.value = listId;
+              workMapLayerDragOverId.value = listId;
+              if (ev?.dataTransfer) {
+                  ev.dataTransfer.effectAllowed = 'move';
+                  ev.dataTransfer.setData('text/plain', String(listId));
+              }
+          }
+
+          function onWorkMapLayerDragOver(listId, ev) {
+              if (workMapLayerDraggingId.value == null || workMapLayerDraggingId.value === listId) return;
+              ev?.preventDefault();
+              workMapLayerDragOverId.value = listId;
+              if (ev?.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+          }
+
+          function onWorkMapLayerDrop(listId, ev) {
+              ev?.preventDefault();
+              moveWorkMapList(workMapLayerDraggingId.value, listId);
+              workMapLayerDragOverId.value = null;
+          }
+
+          function onWorkMapLayerDragEnd() {
+              workMapLayerDraggingId.value = null;
+              workMapLayerDragOverId.value = null;
+          }
+
+          function collapseActiveWorkMapLayer() {
+              if (workMapUi.editingLayerNameId) {
+                  finishRenameWorkMapLayer(workMapUi.editingLayerNameId);
+              }
+              commitWorkMapFeatureDrafts();
+              workMapUi.activeListId = null;
+              workMapUi.selectedFeatureId = null;
+              workMapUi.toolMode = null;
+              resetWorkMapFeatureEditor();
+              workMapEditLayout.clearDraftOnMap?.();
+          }
+
           async function activateWorkMapEditTarget(target) {
               commitWorkMapFeatureDrafts();
               if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
@@ -1303,6 +1429,8 @@ export function mountJcmsApp() {
               const list = workMapDoc.lists.find((l) => l.id === listId);
               if (!list) return;
               if (workMapUi.activeListId === listId && workMapUi.editTarget === 'custom') return;
+              exitOnlyCurrentLocationMode();
+              commitWorkMapFeatureDrafts();
               activateWorkMapLayer(listId);
               workMapUi.editTarget = 'custom';
           }
@@ -1337,6 +1465,7 @@ export function mountJcmsApp() {
           }
 
           function addWorkMapList() {
+              exitOnlyCurrentLocationMode();
               let newId = null;
               commitWorkMapChange(() => {
                   newId = createWorkMapId('list');
@@ -1401,6 +1530,7 @@ export function mountJcmsApp() {
           function toggleWorkMapLayerVisible(listId, visible) {
               const list = workMapDoc.lists.find((l) => l.id === listId);
               if (!list) return;
+              if (visible) exitOnlyCurrentLocationMode();
               list.visible = visible;
               if (visible && !workMapUi.activeListId) {
                   workMapUi.activeListId = listId;
@@ -1503,6 +1633,10 @@ export function mountJcmsApp() {
               workMapUi.draftCoords = [];
               workMapUi.draftCursor = null;
               loadAgencyFeatureEditor(featureId);
+              const kind = workMapUi.editTarget;
+              const features = agencyLayerDoc[kind]?.features || [];
+              const feat = features.find((f) => f.id === featureId);
+              if (feat) jumpWorkMapEditToFeature(feat);
               workMapEditLayout.syncOverlayLayers?.();
           }
 
@@ -1512,10 +1646,16 @@ export function mountJcmsApp() {
                   return false;
               }
               const featureId = agencyFeatureEditor.featureId || workMapUi.selectedFeatureId;
-              if (!featureId) return false;
+              if (!featureId) {
+                  setWorkMapNotice('請先選擇地點');
+                  return false;
+              }
               const features = agencyLayerDoc[kind]?.features || [];
               const feat = features.find((f) => f.id === featureId);
-              if (!feat) return false;
+              if (!feat) {
+                  setWorkMapNotice('找不到地點');
+                  return false;
+              }
 
               const name = String(agencyFeatureEditor.name || '').trim();
               if (!name) {
@@ -1535,6 +1675,7 @@ export function mountJcmsApp() {
                       feat.zip = String(agencyFeatureEditor.zip || '').trim();
                   }
               });
+              saveAgencyLayerDoc(currentWorkspace.value, agencyLayerDoc);
               setWorkMapNotice('屬性已儲存');
               workMapEditLayout.syncOverlayLayers?.();
               return true;
@@ -1544,6 +1685,17 @@ export function mountJcmsApp() {
               const title = String(mapCurrentLocation.title || '').trim() || '現在位置';
               mapCurrentLocation.title = title;
               mapCurrentLocation.description = String(mapCurrentLocation.description || '').trim();
+              persistCurrentLocation(mapCurrentLocation);
+              persistMapSettingsPatch({
+                  currentLocation: {
+                      lng: mapCurrentLocation.lng,
+                      lat: mapCurrentLocation.lat,
+                      title: mapCurrentLocation.title,
+                      description: mapCurrentLocation.description,
+                  },
+              });
+              workMapEditLayout.syncOverlayLayers?.();
+              dashMapLayout.syncCurrentLocation?.();
               setWorkMapNotice('現在位置已儲存');
               return true;
           }
@@ -1551,14 +1703,18 @@ export function mountJcmsApp() {
           function setCurrentLocationFromMap(lngLat) {
               mapCurrentLocation.lng = lngLat[0];
               mapCurrentLocation.lat = lngLat[1];
+              persistCurrentLocation(mapCurrentLocation);
               workMapEditLayout.syncOverlayLayers?.();
+              dashMapLayout.syncCurrentLocation?.();
               setWorkMapNotice('已設定現在位置');
           }
 
           function clearCurrentLocation() {
               mapCurrentLocation.lng = null;
               mapCurrentLocation.lat = null;
+              persistMapSettingsPatch({ currentLocation: null });
               workMapEditLayout.syncOverlayLayers?.();
+              dashMapLayout.syncCurrentLocation?.();
               setWorkMapNotice('已清除現在位置');
           }
 
@@ -1578,10 +1734,16 @@ export function mountJcmsApp() {
 
           function saveWorkMapSelectedFeatureProperties() {
               const featureId = workMapFeatureEditor.featureId || workMapUi.selectedFeatureId;
-              if (!featureId) return false;
+              if (!featureId) {
+                  setWorkMapNotice('請先選擇地點');
+                  return false;
+              }
 
               const found = findWorkMapFeature(featureId);
-              if (!found) return false;
+              if (!found) {
+                  setWorkMapNotice('找不到地點');
+                  return false;
+              }
 
               const { feat } = found;
               const title = String(workMapFeatureEditor.title || '').trim();
@@ -1597,20 +1759,22 @@ export function mountJcmsApp() {
                   title === feat.title &&
                   description === (feat.description || '') &&
                   color === normalizeColor(feat.color);
-              if (unchanged) {
-                  setWorkMapNotice('屬性已儲存');
-                  return true;
+
+              if (!unchanged) {
+                  commitWorkMapChange(() => {
+                      feat.title = title;
+                      feat.description = description;
+                      feat.color = color;
+                  });
               }
 
-              commitWorkMapChange(() => {
-                  feat.title = title;
-                  feat.description = description;
-                  feat.color = color;
-              });
+              workMapFeatureEditor.featureId = featureId;
               workMapFeatureEditor.title = title;
               workMapFeatureEditor.description = description;
               workMapFeatureEditor.color = color;
+              saveWorkMapDoc(currentWorkspace.value, workMapDoc);
               workMapEditLayout.syncSelectionOnMap?.();
+              workMapEditLayout.syncOverlayLayers?.();
               setWorkMapNotice('屬性已儲存');
               return true;
           }
@@ -1636,6 +1800,8 @@ export function mountJcmsApp() {
               workMapUi.draftCoords = [];
               workMapUi.draftCursor = null;
               loadWorkMapFeatureEditor(featureId);
+              const found = findWorkMapFeature(featureId);
+              if (found) jumpWorkMapEditToFeature(found.feat);
           }
 
           function getWorkMapActiveList() {
@@ -1766,6 +1932,8 @@ export function mountJcmsApp() {
               if (workMapUi.toolMode === WORK_MAP_TOOL_MODES.select) {
                   if (meta.hit?.id) {
                       selectWorkMapFeature(meta.hit.id);
+                  } else if (workMapUi.activeListId) {
+                      collapseActiveWorkMapLayer();
                   } else {
                       clearWorkMapSelection();
                   }
@@ -1813,6 +1981,27 @@ export function mountJcmsApp() {
 
           function handleWorkMapMouseDown(lngLat, meta = {}) {
               if (workMapUi.toolMode !== WORK_MAP_TOOL_MODES.select) return;
+
+              const agencyKind = workMapUi.editTarget;
+              if (
+                  agencyKind === AGENCY_LAYER_KINDS.judicial
+                  || agencyKind === AGENCY_LAYER_KINDS.police
+              ) {
+                  if (meta.hit?.id) {
+                      if (workMapUi.selectedFeatureId !== meta.hit.id) {
+                          selectAgencyFeature(meta.hit.id);
+                      }
+                      agencyLayerHistory.push(snapshotAgencyLayerDoc());
+                      workMapDragState = {
+                          kind: 'agency-feature',
+                          agencyKind,
+                          featureId: meta.hit.id,
+                          lastLngLat: lngLat,
+                      };
+                      workMapEditLayout.setDragPanEnabled?.(false);
+                  }
+                  return;
+              }
 
               const map = workMapEditLayout.getMap?.();
               const selected = workMapSelectedFeature.value;
@@ -1872,6 +2061,15 @@ export function mountJcmsApp() {
 
           function handleWorkMapEditMouseMove(lngLat) {
               if (workMapDragState) {
+                  if (workMapDragState.kind === 'agency-feature') {
+                      const features = agencyLayerDoc[workMapDragState.agencyKind]?.features || [];
+                      const feat = features.find((f) => f.id === workMapDragState.featureId);
+                      if (feat) {
+                          feat.coordinates = [lngLat[0], lngLat[1]];
+                      }
+                      workMapEditLayout.syncOverlayLayers?.();
+                      return;
+                  }
                   const found = findWorkMapFeature(workMapDragState.featureId);
                   if (!found) return;
                   const { feat } = found;
@@ -1998,13 +2196,22 @@ export function mountJcmsApp() {
           function openWorkMapEdit() {
               workMapSession.entryView = dashMapLayout.getView?.() ?? null;
               workMapSession.pendingView = null;
-              if (!workMapUi.activeListId && workMapDoc.lists.length) {
-                  const first = workMapDoc.lists.find((l) => l.visible) ?? workMapDoc.lists[0];
-                  if (first) activateWorkMapLayer(first.id);
-              }
+              workMapUi.onlyCurrentLocationMode = true;
+              workMapUi.agencyVisible.judicial = false;
+              workMapUi.agencyVisible.police = false;
+              workMapUi.activeListId = null;
+              workMapUi.selectedFeatureId = null;
+              workMapUi.editTarget = null;
+              workMapUi.toolMode = null;
+              workMapUi.basemap.adminLabels = false;
               workMapUi.draftCoords = [];
               workMapUi.draftCursor = null;
+              resetWorkMapFeatureEditor();
+              resetAgencyFeatureEditor();
               switchView('workMapEdit');
+              nextTick(() => {
+                  workMapEditLayout.syncOverlayLayers?.();
+              });
           }
 
           function saveWorkMapAndReturnDashboard() {
@@ -2014,6 +2221,7 @@ export function mountJcmsApp() {
               commitWorkMapFeatureDrafts();
               saveWorkMapDoc(currentWorkspace.value, workMapDoc);
               saveAgencyLayerDoc(currentWorkspace.value, agencyLayerDoc);
+              persistBasemapLayerPrefs(workMapUi.basemap);
               workMapSession.pendingView = workMapEditLayout.getView?.() ?? null;
               workMapSession.entryView = null;
               workMapUi.draftCoords = [];
@@ -2056,6 +2264,11 @@ export function mountJcmsApp() {
               workMapDocRef: workMapDoc,
               workMapUiRef: workMapUi,
               getInitialView: () => workMapSession.entryView,
+              getMapDisplayDoc: () => (
+                  workMapUi.onlyCurrentLocationMode
+                      ? { version: 1, lists: [] }
+                      : workMapDoc
+              ),
               getEditTarget: () => workMapUi.editTarget,
               getAgencyFeatures: () => {
                   const kind = workMapUi.editTarget;
@@ -2065,11 +2278,24 @@ export function mountJcmsApp() {
                   return agencyLayerDoc[kind]?.features || [];
               },
               getAgencySelectedId: () => workMapUi.selectedFeatureId,
-              getCurrentLocation: () => (
-                  Number.isFinite(mapCurrentLocation.lng) && Number.isFinite(mapCurrentLocation.lat)
-                      ? mapCurrentLocation
-                      : null
-              ),
+              getAgencyLayerVisible: (kind) => Boolean(workMapUi.agencyVisible[kind]),
+              getAgencyLayersSnapshot: () => ({
+                  judicialFeatures: agencyLayerDoc.judicial?.features || [],
+                  policeFeatures: agencyLayerDoc.police?.features || [],
+                  judicialVisible: workMapUi.onlyCurrentLocationMode
+                      ? false
+                      : Boolean(workMapUi.agencyVisible.judicial),
+                  policeVisible: workMapUi.onlyCurrentLocationMode
+                      ? false
+                      : Boolean(workMapUi.agencyVisible.police),
+                  activeKind: (
+                      workMapUi.editTarget === AGENCY_LAYER_KINDS.judicial
+                      || workMapUi.editTarget === AGENCY_LAYER_KINDS.police
+                  ) ? workMapUi.editTarget : null,
+                  selectedId: workMapUi.selectedFeatureId,
+              }),
+              getBasemapLayerPrefs: () => workMapUi.basemap,
+              getCurrentLocation: () => mapCurrentLocation,
               onMapClick: handleWorkMapEditClick,
               onMapDblClick: handleWorkMapEditDblClick,
               onMapMouseMove: handleWorkMapEditMouseMove,
@@ -2088,6 +2314,30 @@ export function mountJcmsApp() {
                   workMapEditLayout.setDragPanEnabled?.(true);
               }
           }, { immediate: true });
+
+          watch(
+              mapCurrentLocation,
+              () => {
+                  if (
+                      Number.isFinite(mapCurrentLocation.lng)
+                      && Number.isFinite(mapCurrentLocation.lat)
+                  ) {
+                      persistCurrentLocation(mapCurrentLocation);
+                  }
+                  dashMapLayout.syncCurrentLocation?.();
+              },
+              { deep: true }
+          );
+
+          watch(dashMapViewActive, (active) => {
+              if (!active) return;
+              const sync = () => dashMapLayout.syncCurrentLocation?.();
+              nextTick(sync);
+              window.requestAnimationFrame(() => {
+                  sync();
+                  window.setTimeout(sync, 500);
+              });
+          });
 
           watch(
               () => ({ ws: currentWorkspace.value, lists: workMapDoc.lists }),
@@ -5485,16 +5735,21 @@ export function mountJcmsApp() {
               dashRootRef, dashMapRootRef, dashCalendarScrollRef, workMapEditRootRef, dashMapTodoPendingCount,
               workMapDoc, workMapUi, workMapFeatureEditor,
               agencyLayerDoc, agencyFeatureEditor, mapCurrentLocation,
-              agencySelectedFeature, agencyFeatureList, hasMapCurrentLocation,
+              agencySelectedFeature, agencyFeatureList, judicialFeatureList, policeFeatureList,
+              hasMapCurrentLocation,
               workMapCanUndo, workMapCanRedo, workMapColorPresets,
               workMapSelectedFeature, workMapSelectedFeatureMeasure, workMapDraftMeasureLabel,
               openWorkMapEdit, saveWorkMapAndReturnDashboard,
-              activateWorkMapEditTarget, selectAgencyFeature,
+              activateWorkMapEditTarget, selectAgencyLayerForEdit, selectAgencyFeature,
+              toggleAgencyLayerVisible, toggleWorkMapBasemapLayer,
               saveAgencySelectedFeatureProperties, saveCurrentLocationProperties, clearCurrentLocation,
               addWorkMapList, startRenameWorkMapLayer, renameWorkMapList, finishRenameWorkMapLayer,
               cancelRenameWorkMapLayer, onWorkMapLayerNameClick,
               selectWorkMapLayerForEdit, toggleWorkMapLayerVisible, toggleWorkMapLayerCheck,
-              removeWorkMapList, setWorkMapToolMode, undoWorkMap, redoWorkMap,
+              removeWorkMapList, moveWorkMapList,
+              onWorkMapLayerDragStart, onWorkMapLayerDragOver, onWorkMapLayerDrop, onWorkMapLayerDragEnd,
+              workMapLayerDraggingId, workMapLayerDragOverId,
+              setWorkMapToolMode, undoWorkMap, redoWorkMap,
               clearWorkMapSelection, saveWorkMapSelectedFeatureProperties,
               updateWorkMapFeatureColorDraft, selectWorkMapFeatureFromList,
               removeWorkMapSelectedFeature,

@@ -1,6 +1,13 @@
 /** 工作地圖：清單／圖層／地點資料模型與 localStorage 持久化 */
 
-import { ringAreaSqMeters, ringCentroid, formatAreaLabel } from './work-map-geo.js';
+import {
+    ringAreaSqMeters,
+    ringCentroid,
+    formatAreaLabel,
+    lineLengthMeters,
+    formatLengthLabel,
+    lineMidpoint,
+} from './work-map-geo.js';
 
 export const WORK_MAP_FEATURE_TYPES = Object.freeze({
     point: 'point',
@@ -193,11 +200,25 @@ export function listToGeoJsonByKind(list) {
             return;
         }
         if (f.type === WORK_MAP_FEATURE_TYPES.line) {
+            const props = featureProps(f);
             lines.push({
                 type: 'Feature',
-                properties: featureProps(f),
+                properties: props,
                 geometry: { type: 'LineString', coordinates: f.coordinates },
             });
+            const lengthLabel = formatLengthLabel(lineLengthMeters(f.coordinates));
+            const mid = lineMidpoint(f.coordinates);
+            if (lengthLabel && mid) {
+                labels.push({
+                    type: 'Feature',
+                    properties: {
+                        id: `${f.id}-length`,
+                        featureId: f.id,
+                        lengthLabel,
+                    },
+                    geometry: { type: 'Point', coordinates: mid },
+                });
+            }
             return;
         }
         if (f.type === WORK_MAP_FEATURE_TYPES.polygon) {

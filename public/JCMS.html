@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JCMS</title>
-    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260623a"></script>
+    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260623f"></script>
     <link rel="icon" href="ico/jcms-icon.png" type="image/png">
     <link rel="apple-touch-icon" href="ico/jcms-icon.png">
 
@@ -42,9 +42,9 @@
         }
     </script>
     
-    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260623a">
-    <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=0.1.20260623a">
-    <link rel="stylesheet" href="css/jcms-work-map-edit.css?v=0.1.20260623a">
+    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260623f">
+    <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=0.1.20260623f">
+    <link rel="stylesheet" href="css/jcms-work-map-edit.css?v=0.1.20260623f">
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
@@ -56,7 +56,7 @@
         <header class="jcms-app-header flex items-center h-12 px-3 md:px-6 bg-ink-900 border-b border-ink-600/30 shrink-0 relative z-20">
             <div class="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
                 <div class="inline-flex items-end gap-1.5 font-bold text-lg tracking-tight text-white leading-none shrink-0">
-                    <span>JCMS</span><span class="text-accent font-normal text-[10px] leading-none hidden md:inline">0.1.20260623a</span>
+                    <span>JCMS</span><span class="text-accent font-normal text-[10px] leading-none hidden md:inline">0.1.20260623f</span>
                 </div>
                 
                 <div class="relative flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-ink-600/40 min-w-0 flex-1">
@@ -721,32 +721,87 @@
                             </button>
                         </header>
                         <div class="work-map-layer-panel__body">
-                            <div class="work-map-system-layers" aria-label="系統圖層">
-                                <button
-                                    type="button"
+                            <div class="work-map-layer-group">
+                                <div
                                     class="work-map-layer-row"
                                     :class="workMapUi.editTarget === 'currentLocation' ? 'work-map-layer-row--active' : ''"
                                     @click="activateWorkMapEditTarget('currentLocation')"
                                 >
+                                    <span class="work-map-layer-row__drag-spacer" aria-hidden="true"></span>
+                                    <span class="work-map-layer-row__check-spacer" aria-hidden="true"></span>
                                     <span class="work-map-layer-row__name">現在位置</span>
                                     <span v-if="hasMapCurrentLocation" class="work-map-layer-row__meta font-mono tabular-nums">已設定</span>
-                                </button>
-                                <button
-                                    type="button"
+                                </div>
+                            </div>
+                            <div class="work-map-layer-group">
+                                <div
                                     class="work-map-layer-row"
                                     :class="workMapUi.editTarget === 'judicial' ? 'work-map-layer-row--active' : ''"
-                                    @click="activateWorkMapEditTarget('judicial')"
+                                    @click="selectAgencyLayerForEdit('judicial')"
                                 >
-                                    <span class="work-map-layer-row__name">司法</span>
-                                </button>
-                                <button
-                                    type="button"
+                                    <span class="work-map-layer-row__drag-spacer" aria-hidden="true"></span>
+                                    <input
+                                        type="checkbox"
+                                        class="work-map-layer-row__check"
+                                        id="work-map-layer-judicial"
+                                        :checked="workMapUi.agencyVisible.judicial"
+                                        aria-label="顯示圖層 司法"
+                                        @click.stop
+                                        @change="toggleAgencyLayerVisible('judicial', $event.target.checked)"
+                                    />
+                                    <span class="work-map-layer-row__name" title="司法">司法</span>
+                                </div>
+                                <ul
+                                    v-if="workMapUi.editTarget === 'judicial' && judicialFeatureList.length"
+                                    class="work-map-layer-feature-list"
+                                    aria-label="司法地點清單"
+                                >
+                                    <li
+                                        v-for="feat in judicialFeatureList"
+                                        :key="feat.id"
+                                        class="work-map-layer-feature-item"
+                                        :class="workMapUi.selectedFeatureId === feat.id ? 'work-map-layer-feature-item--active' : ''"
+                                    >
+                                        <button type="button" class="work-map-layer-feature-item__btn" @click.stop="selectAgencyFeature(feat.id)">
+                                            <span class="work-map-layer-feature-item__title" :title="feat.name">{{ feat.name }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="work-map-layer-group">
+                                <div
                                     class="work-map-layer-row"
                                     :class="workMapUi.editTarget === 'police' ? 'work-map-layer-row--active' : ''"
-                                    @click="activateWorkMapEditTarget('police')"
+                                    @click="selectAgencyLayerForEdit('police')"
                                 >
-                                    <span class="work-map-layer-row__name">警察</span>
-                                </button>
+                                    <span class="work-map-layer-row__drag-spacer" aria-hidden="true"></span>
+                                    <input
+                                        type="checkbox"
+                                        class="work-map-layer-row__check"
+                                        id="work-map-layer-police"
+                                        :checked="workMapUi.agencyVisible.police"
+                                        aria-label="顯示圖層 警察"
+                                        @click.stop
+                                        @change="toggleAgencyLayerVisible('police', $event.target.checked)"
+                                    />
+                                    <span class="work-map-layer-row__name" title="警察">警察</span>
+                                </div>
+                                <ul
+                                    v-if="workMapUi.editTarget === 'police' && policeFeatureList.length"
+                                    class="work-map-layer-feature-list"
+                                    aria-label="警察地點清單"
+                                >
+                                    <li
+                                        v-for="feat in policeFeatureList"
+                                        :key="feat.id"
+                                        class="work-map-layer-feature-item"
+                                        :class="workMapUi.selectedFeatureId === feat.id ? 'work-map-layer-feature-item--active' : ''"
+                                    >
+                                        <button type="button" class="work-map-layer-feature-item__btn" @click.stop="selectAgencyFeature(feat.id)">
+                                            <span class="work-map-layer-feature-item__title" :title="feat.name">{{ feat.name }}</span>
+                                        </button>
+                                    </li>
+                                </ul>
                             </div>
                             <p v-if="workMapDoc.lists.length === 0" class="work-map-layer-panel__empty">尚無自訂圖層，可點上方新增。</p>
                             <div
@@ -756,9 +811,27 @@
                             >
                                 <div
                                     class="work-map-layer-row"
-                                    :class="workMapUi.activeListId === list.id ? 'work-map-layer-row--active' : ''"
+                                    :class="{
+                                        'work-map-layer-row--active': workMapUi.activeListId === list.id,
+                                        'work-map-layer-row--drag-over': workMapLayerDragOverId === list.id && workMapLayerDraggingId !== list.id,
+                                        'work-map-layer-row--dragging': workMapLayerDraggingId === list.id,
+                                    }"
                                     @click="selectWorkMapLayerForEdit(list.id)"
+                                    @dragover="onWorkMapLayerDragOver(list.id, $event)"
+                                    @drop="onWorkMapLayerDrop(list.id, $event)"
                                 >
+                                    <button
+                                        type="button"
+                                        class="work-map-layer-row__drag"
+                                        draggable="true"
+                                        title="拖曳排序"
+                                        aria-label="拖曳排序"
+                                        @click.stop
+                                        @dragstart="onWorkMapLayerDragStart(list.id, $event)"
+                                        @dragend="onWorkMapLayerDragEnd"
+                                    >
+                                        <i class="ph ph-dots-six-vertical" aria-hidden="true"></i>
+                                    </button>
                                     <input
                                         type="checkbox"
                                         class="work-map-layer-row__check"
@@ -784,6 +857,7 @@
                                         :title="list.name"
                                         @click.stop="onWorkMapLayerNameClick(list.id)"
                                     >{{ list.name }}</span>
+                                    <span class="work-map-layer-row__meta font-mono tabular-nums">{{ list.features.length }}</span>
                                     <button
                                         type="button"
                                         class="work-map-layer-row__remove"
@@ -820,38 +894,6 @@
                                     </li>
                                 </ul>
                             </div>
-                            <ul
-                                v-if="workMapUi.editTarget === 'judicial' && agencyFeatureList.length"
-                                class="work-map-layer-feature-list"
-                                aria-label="司法地點清單"
-                            >
-                                <li
-                                    v-for="feat in agencyFeatureList"
-                                    :key="feat.id"
-                                    class="work-map-layer-feature-item"
-                                    :class="workMapUi.selectedFeatureId === feat.id ? 'work-map-layer-feature-item--active' : ''"
-                                >
-                                    <button type="button" class="work-map-layer-feature-item__btn" @click.stop="selectAgencyFeature(feat.id)">
-                                        <span class="work-map-layer-feature-item__title" :title="feat.name">{{ feat.name }}</span>
-                                    </button>
-                                </li>
-                            </ul>
-                            <ul
-                                v-if="workMapUi.editTarget === 'police' && agencyFeatureList.length"
-                                class="work-map-layer-feature-list"
-                                aria-label="警察地點清單"
-                            >
-                                <li
-                                    v-for="feat in agencyFeatureList"
-                                    :key="feat.id"
-                                    class="work-map-layer-feature-item"
-                                    :class="workMapUi.selectedFeatureId === feat.id ? 'work-map-layer-feature-item--active' : ''"
-                                >
-                                    <button type="button" class="work-map-layer-feature-item__btn" @click.stop="selectAgencyFeature(feat.id)">
-                                        <span class="work-map-layer-feature-item__title" :title="feat.name">{{ feat.name }}</span>
-                                    </button>
-                                </li>
-                            </ul>
                         </div>
                     </aside>
 
@@ -1015,6 +1057,53 @@
                     </aside>
 
                     <p class="work-map-edit-notice" aria-live="polite">{{ workMapUi.notice }}</p>
+
+                    <aside class="work-map-basemap-toolbar" aria-label="底圖圖層">
+                        <div class="work-map-basemap-toolbar__grid" role="group" aria-label="底圖圖層開關">
+                            <label class="map-layer-switch" for="work-map-toggle-admin-labels">
+                                <span class="map-layer-switch__label">行政區</span>
+                                <input
+                                    id="work-map-toggle-admin-labels"
+                                    type="checkbox"
+                                    class="map-layer-switch__input"
+                                    role="switch"
+                                    :checked="workMapUi.basemap.adminLabels"
+                                    @change="toggleWorkMapBasemapLayer('adminLabels', $event.target.checked)"
+                                />
+                                <span class="map-layer-switch__track" aria-hidden="true">
+                                    <span class="map-layer-switch__thumb"></span>
+                                </span>
+                            </label>
+                            <label class="map-layer-switch" for="work-map-toggle-nlsc-orthophoto">
+                                <span class="map-layer-switch__label">正射影像</span>
+                                <input
+                                    id="work-map-toggle-nlsc-orthophoto"
+                                    type="checkbox"
+                                    class="map-layer-switch__input"
+                                    role="switch"
+                                    :checked="workMapUi.basemap.nlscOrthophoto"
+                                    @change="toggleWorkMapBasemapLayer('nlscOrthophoto', $event.target.checked)"
+                                />
+                                <span class="map-layer-switch__track" aria-hidden="true">
+                                    <span class="map-layer-switch__thumb"></span>
+                                </span>
+                            </label>
+                            <label class="map-layer-switch" for="work-map-toggle-major-transport">
+                                <span class="map-layer-switch__label">交通</span>
+                                <input
+                                    id="work-map-toggle-major-transport"
+                                    type="checkbox"
+                                    class="map-layer-switch__input"
+                                    role="switch"
+                                    :checked="workMapUi.basemap.majorTransport"
+                                    @change="toggleWorkMapBasemapLayer('majorTransport', $event.target.checked)"
+                                />
+                                <span class="map-layer-switch__track" aria-hidden="true">
+                                    <span class="map-layer-switch__thumb"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </aside>
                 </div>
 
                 <!-- ==========================================
@@ -5146,29 +5235,29 @@
     </div>
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
-    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-urban-plan.js?v=0.1.20260623a"></script>
-    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260623a"></script>
-    <script type="module" src="js/jcms/main.js?v=0.1.20260623a"></script>
-    <script src="vendor/pdfjs.min.js?v=0.1.20260623a"></script>
-    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260623a"></script>
-    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260623a"></script>
-    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260623a"></script>
-    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260623a"></script>
-    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260623a"></script>
-    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260623a"></script>
-    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260623a"></script>
-    <script src="lib/genealogyLayout.js?v=0.1.20260623a"></script>
-    <script src="lib/inheritanceCompute.js?v=0.1.20260623a"></script>
-    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260623a"></script>
-    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260623a"></script>
+    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-urban-plan.js?v=0.1.20260623f"></script>
+    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260623f"></script>
+    <script type="module" src="js/jcms/main.js?v=0.1.20260623f"></script>
+    <script src="vendor/pdfjs.min.js?v=0.1.20260623f"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260623f"></script>
+    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260623f"></script>
+    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260623f"></script>
+    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260623f"></script>
+    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260623f"></script>
+    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260623f"></script>
+    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260623f"></script>
+    <script src="lib/genealogyLayout.js?v=0.1.20260623f"></script>
+    <script src="lib/inheritanceCompute.js?v=0.1.20260623f"></script>
+    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260623f"></script>
+    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260623f"></script>
 </body>
 </html>

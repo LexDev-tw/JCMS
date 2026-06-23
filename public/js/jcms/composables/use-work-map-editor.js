@@ -16,11 +16,15 @@ import {
     queryWorkMapFeatureAt,
 } from '../lib/work-map-maplibre.js';
 import {
-    syncAgencyEditLayer,
+    syncAgencyEditLayers,
     clearAgencyEditLayer,
     queryAgencyFeatureAt,
 } from '../lib/agency-layer-maplibre.js';
 import { AGENCY_LAYER_KINDS } from '../lib/agency-layer-model.js';
+import {
+    applyWorkMapBasemapLayers,
+    loadBasemapLayerPrefs,
+} from '../lib/work-map-basemap-layers.js';
 
 export function useWorkMapEditor({
     rootRef,
@@ -29,8 +33,12 @@ export function useWorkMapEditor({
     workMapUiRef,
     getInitialView,
     getEditTarget,
+    getMapDisplayDoc,
     getAgencyFeatures,
     getAgencySelectedId,
+    getAgencyLayerVisible,
+    getAgencyLayersSnapshot,
+    getBasemapLayerPrefs,
     getCurrentLocation,
     onMapClick,
     onMapDblClick,
@@ -50,6 +58,7 @@ export function useWorkMapEditor({
     let stopWatchVertices = null;
     let stopWatchToolMode = null;
     let stopWatchAgency = null;
+    let stopWatchBasemap = null;
 
     function getRoot() {
         return rootRef.value;
@@ -85,11 +94,18 @@ export function useWorkMapEditor({
             stopWatchAgency();
             stopWatchAgency = null;
         }
+        if (stopWatchBasemap) {
+            stopWatchBasemap();
+            stopWatchBasemap = null;
+        }
         if (resizeHandler) {
             window.removeEventListener('resize', resizeHandler);
             resizeHandler = null;
         }
         if (mapInstance) {
+            if (typeof globalThis.DashboardMapCurrentLocation?.clearCurrentLocationMarker === 'function') {
+                globalThis.DashboardMapCurrentLocation.clearCurrentLocationMarker(mapInstance);
+            }
             mapInstance.remove();
             mapInstance = null;
         }
@@ -135,6 +151,9 @@ export function useWorkMapEditor({
     }
 
     function getWorkMapDoc() {
+        if (typeof getMapDisplayDoc === 'function') {
+            return getMapDisplayDoc();
+        }
         const raw = workMapDocRef;
         return raw?.value ?? raw ?? null;
     }
@@ -143,31 +162,40 @@ export function useWorkMapEditor({
         return typeof getEditTarget === 'function' ? getEditTarget() : 'custom';
     }
 
+    function syncBasemapLayers() {
+        if (!mapInstance) return;
+        const prefs = typeof getBasemapLayerPrefs === 'function'
+            ? getBasemapLayerPrefs()
+            : loadBasemapLayerPrefs();
+        applyWorkMapBasemapLayers(mapInstance, prefs);
+    }
+
     function syncAgencyLayers() {
         if (!mapInstance) return;
+        const snapshot = typeof getAgencyLayersSnapshot === 'function'
+            ? getAgencyLayersSnapshot()
+            : null;
+        if (!snapshot) {
+            clearAgencyEditLayer(mapInstance);
+            return;
+        }
+        syncAgencyEditLayers(mapInstance, snapshot);
         const target = getTarget();
         if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
-            const features = typeof getAgencyFeatures === 'function' ? getAgencyFeatures() : [];
-            const selectedId = typeof getAgencySelectedId === 'function' ? getAgencySelectedId() : null;
-            syncAgencyEditLayer(mapInstance, target, features, selectedId);
             clearWorkMapDraftLayer(mapInstance);
             syncWorkMapSelectionLayer(mapInstance, null);
             syncWorkMapVertexLayer(mapInstance, null, null);
-            return;
         }
-        clearAgencyEditLayer(mapInstance);
     }
 
     function syncCurrentLocationMarker() {
         if (!mapInstance || typeof globalThis.DashboardMapCurrentLocation === 'undefined') return;
-        const loc = typeof getCurrentLocation === 'function' ? getCurrentLocation() : null;
-        const api = globalThis.DashboardMapCurrentLocation.createCurrentLocationApi({
-            mapColors: { surface: '#FFFFFF', ink900: '#111111' },
-        });
-        api.syncCurrentLocation(mapInstance, loc);
+        const raw = typeof getCurrentLocation === 'function' ? getCurrentLocation() : null;
+        globalThis.DashboardMapCurrentLocation.syncCurrentLocation(mapInstance, raw);
     }
 
     function syncOverlayLayers() {
+        syncBasemapLayers();
         syncAgencyLayers();
         syncCurrentLocationMarker();
     }
@@ -175,14 +203,17 @@ export function useWorkMapEditor({
     function syncDocLayers() {
         if (!mapInstance) return;
         const target = getTarget();
-        if (target !== 'custom') {
-            syncWorkMapDocLayers(mapInstance, { version: 1, lists: [] });
-            syncOverlayLayers();
-            return;
-        }
         const doc = getWorkMapDoc();
-        if (!doc) return;
-        syncWorkMapDocLayers(mapInstance, doc);
+        if (doc) {
+            syncWorkMapDocLayers(mapInstance, doc);
+        } else {
+            syncWorkMapDocLayers(mapInstance, { version: 1, lists: [] });
+        }
+        if (target !== 'custom') {
+            clearWorkMapDraftLayer(mapInstance);
+            syncWorkMapSelectionLayer(mapInstance, null);
+            syncWorkMapVertexLayer(mapInstance, null, null);
+        }
         syncOverlayLayers();
     }
 
@@ -231,23 +262,13 @@ export function useWorkMapEditor({
                 console.warn('[work-map-edit] 鄉鎮市區界載入失敗', err);
             }
             ensureAdminLabelLayer(mapInstance);
-            if (typeof globalThis.DashboardMapNlsc !== 'undefined') {
-                try {
-                    const raw = localStorage.getItem('jcms.dashboard-map.settings');
-                    const persisted = raw ? JSON.parse(raw) : null;
-                    globalThis.DashboardMapNlsc.applyNlscLayerVisibility(mapInstance, {
-                        nlscOrthophoto: Boolean(persisted?.nlscOrthophoto),
-                        nlscLandsect: Boolean(persisted?.nlscLandsect),
-                    });
-                } catch (err) {
-                    console.warn('[work-map-edit] 國測圖層設定載入失敗', err);
-                }
-            }
+            syncBasemapLayers();
             syncDocLayers();
             syncDraft();
             syncSelection();
             syncVertices();
             applyMapCursor();
+            syncCurrentLocationMarker();
             mapInstance.resize();
         });
 
@@ -257,7 +278,7 @@ export function useWorkMapEditor({
             const target = getTarget();
             let hit = null;
             if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
-                hit = queryAgencyFeatureAt(mapInstance, e.point);
+                hit = queryAgencyFeatureAt(mapInstance, e.point, target);
             } else {
                 hit = queryWorkMapFeatureAt(
                     mapInstance,
@@ -283,7 +304,7 @@ export function useWorkMapEditor({
             const target = getTarget();
             let hit = null;
             if (target === AGENCY_LAYER_KINDS.judicial || target === AGENCY_LAYER_KINDS.police) {
-                hit = queryAgencyFeatureAt(mapInstance, e.point);
+                hit = queryAgencyFeatureAt(mapInstance, e.point, target);
             } else {
                 hit = queryWorkMapFeatureAt(
                     mapInstance,
@@ -355,13 +376,13 @@ export function useWorkMapEditor({
             () => applyMapCursor()
         );
         stopWatchAgency = watch(
-            () => [
-                getTarget(),
-                typeof getAgencyFeatures === 'function' ? getAgencyFeatures() : null,
-                typeof getAgencySelectedId === 'function' ? getAgencySelectedId() : null,
-                typeof getCurrentLocation === 'function' ? getCurrentLocation() : null,
-            ],
+            () => (typeof getAgencyLayersSnapshot === 'function' ? getAgencyLayersSnapshot() : null),
             () => syncOverlayLayers(),
+            { deep: true }
+        );
+        stopWatchBasemap = watch(
+            () => (typeof getBasemapLayerPrefs === 'function' ? getBasemapLayerPrefs() : null),
+            () => syncBasemapLayers(),
             { deep: true }
         );
     }

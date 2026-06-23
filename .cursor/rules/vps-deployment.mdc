@@ -45,5 +45,7 @@ alwaysApply: true
 
 ## 版號
 
-- 格式：`大.小.YYYYMMDD[a-z]`（例 `0.1.20260618b`）；`package.json` 為單一來源，執行 `npm run sync:html-version` 同步 `JCMS.html` script `?v=`。
+- **僅在 commit & push 時**才 bump 版號；本機修改程式碼、實作功能、除錯時 **勿** 變更 `package.json` version，也 **勿** 執行 `npm run version:bump` 或 `npm run sync:html-version`。
+- 使用者明確要求 commit／push（或依 `prompt-commit-push.md` 推送流程）時，於推送前一步驟 bump 並同步。
+- 格式：`大.小.YYYYMMDD[a-z]`（例 `0.1.20260618b`）；`package.json` 為單一來源，執行 `npm run version:bump`（或手動改 version 後）再執行 `npm run sync:html-version`，同步 `JCMS.html` script `?v=`、stylesheet `?v=` 與頂端標題列版號。
 - 標題列版本僅顯示數字，**不加** `v` 前綴。

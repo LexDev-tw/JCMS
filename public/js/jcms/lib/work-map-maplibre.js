@@ -12,6 +12,9 @@ const WORK_MAP_SELECT_LAYER = 'work-map-selection-pt';
 const WORK_MAP_VERTEX_SOURCE = 'work-map-vertices';
 const WORK_MAP_VERTEX_LAYER = 'work-map-vertices-pt';
 
+/** 地圖上點要素半徑（較先前縮小 50%） */
+export const WORK_MAP_POINT_RADIUS = 4;
+
 export const WORK_MAP_LAYER_COLORS = Object.freeze({
     fill: 'rgba(240, 90, 40, 0.12)',
     stroke: '#F05A28',
@@ -67,7 +70,7 @@ function removeListLayers(map, listId) {
 function applySolidPointPaint(map, layerId) {
     if (!map.getLayer(layerId)) return;
     map.setPaintProperty(layerId, 'circle-color', ['coalesce', ['get', 'color'], WORK_MAP_DEFAULT_COLOR]);
-    map.setPaintProperty(layerId, 'circle-radius', 8);
+    map.setPaintProperty(layerId, 'circle-radius', WORK_MAP_POINT_RADIUS);
     map.setPaintProperty(layerId, 'circle-stroke-width', 0);
     map.setPaintProperty(layerId, 'circle-stroke-opacity', 0);
     map.setPaintProperty(layerId, 'circle-opacity', 1);
@@ -127,7 +130,7 @@ function syncListLayers(map, list) {
             source: ids.sourcePoints,
             paint: {
                 'circle-color': ['coalesce', ['get', 'color'], WORK_MAP_DEFAULT_COLOR],
-                'circle-radius': 8,
+                'circle-radius': WORK_MAP_POINT_RADIUS,
                 'circle-stroke-width': 0,
                 'circle-stroke-opacity': 0,
                 'circle-opacity': 1,
@@ -141,7 +144,7 @@ function syncListLayers(map, list) {
             type: 'symbol',
             source: ids.sourceLabels,
             layout: {
-                'text-field': ['coalesce', ['get', 'titleLabel'], ['get', 'areaLabel']],
+                'text-field': ['coalesce', ['get', 'titleLabel'], ['get', 'lengthLabel'], ['get', 'areaLabel']],
                 'text-font': ['Noto Sans Regular'],
                 'text-size': 10,
                 'text-anchor': ['case', ['has', 'titleLabel'], 'top', 'center'],
@@ -222,7 +225,7 @@ export function syncWorkMapDraftLayer(map, draftCoords, drawMode, draftCursor = 
             filter: ['==', ['geometry-type'], 'Point'],
             paint: {
                 'circle-color': WORK_MAP_LAYER_COLORS.draft,
-                'circle-radius': 8,
+                'circle-radius': WORK_MAP_POINT_RADIUS,
                 'circle-stroke-width': 0,
                 'circle-stroke-opacity': 0,
                 'circle-opacity': 1,
@@ -307,7 +310,7 @@ export function syncWorkMapSelectionLayer(map, feature) {
             filter: ['==', ['geometry-type'], 'Point'],
             paint: {
                 'circle-color': '#111111',
-                'circle-radius': 11,
+                'circle-radius': 5,
                 'circle-opacity': 0.12,
                 'circle-stroke-width': 0,
                 'circle-stroke-opacity': 0,
@@ -370,7 +373,7 @@ export function syncWorkMapVertexLayer(map, feature, toolMode) {
             source: WORK_MAP_VERTEX_SOURCE,
             paint: {
                 'circle-color': '#FFFFFF',
-                'circle-radius': 5,
+                'circle-radius': 2.5,
                 'circle-stroke-width': 2,
                 'circle-stroke-color': '#111111',
                 'circle-opacity': 1,

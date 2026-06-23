@@ -1541,3 +1541,19 @@
             width: 1.5rem !important;
             height: 1.5rem !important;
         }
+
+        .jcms-current-location-marker {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #f05a28;
+            border: 1.5px solid #ffffff;
+            box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.12);
+            pointer-events: none;
+            animation: jcms-current-location-blink 2.8s ease-in-out infinite;
+        }
+
+        @keyframes jcms-current-location-blink {
+            0%, 100% { opacity: 0.35; }
+            50% { opacity: 1; }
+        }

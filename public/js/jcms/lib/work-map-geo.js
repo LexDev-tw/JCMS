@@ -95,9 +95,57 @@ export function formatLengthLabel(meters) {
     return `${Math.round(m)} m`;
 }
 
+/** 折線中點（依路徑長度取一半處） */
+export function lineMidpoint(coords) {
+    if (!Array.isArray(coords) || !coords.length) return null;
+    if (coords.length === 1) return [coords[0][0], coords[0][1]];
+    if (coords.length === 2) {
+        return [
+            (coords[0][0] + coords[1][0]) / 2,
+            (coords[0][1] + coords[1][1]) / 2,
+        ];
+    }
+    const total = lineLengthMeters(coords);
+    if (total <= 0) return [coords[0][0], coords[0][1]];
+    const half = total / 2;
+    let acc = 0;
+    for (let i = 1; i < coords.length; i += 1) {
+        const seg = haversineMeters(coords[i - 1], coords[i]);
+        if (acc + seg >= half) {
+            const t = seg > 0 ? (half - acc) / seg : 0;
+            return [
+                coords[i - 1][0] + t * (coords[i][0] - coords[i - 1][0]),
+                coords[i - 1][1] + t * (coords[i][1] - coords[i - 1][1]),
+            ];
+        }
+        acc += seg;
+    }
+    const last = coords[coords.length - 1];
+    return [last[0], last[1]];
+}
+
 export function draftIsPolygon(draftCoords) {
     if (!Array.isArray(draftCoords) || draftCoords.length < 3) return false;
     return isClosedRing(draftCoords);
+}
+
+/** 地圖項目中心點（點／線／面或機關點） */
+export function featureMapCenter(feat) {
+    if (!feat) return null;
+    const coords = feat.coordinates;
+    if (!Array.isArray(coords) || !coords.length) return null;
+    if (typeof coords[0] === 'number') {
+        const lng = Number(coords[0]);
+        const lat = Number(coords[1]);
+        return Number.isFinite(lng) && Number.isFinite(lat) ? [lng, lat] : null;
+    }
+    if (feat.type === 'polygon') {
+        return ringCentroid(coords) || lineMidpoint(coords);
+    }
+    if (feat.type === 'line') {
+        return lineMidpoint(coords);
+    }
+    return lineMidpoint(coords) || ringCentroid(coords);
 }
 
 export function measureDraft(draftCoords, drawMode) {

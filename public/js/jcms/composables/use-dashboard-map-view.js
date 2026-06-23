@@ -300,6 +300,9 @@ export function useDashboardMapView({
         const state = createDefaultMapLayerState();
         const persisted = loadPersistedMapSettings();
         state.defaultView = normalizeDefaultView(persisted?.defaultView);
+        state.majorTransport = Boolean(persisted?.majorTransport);
+        state.nlscOrthophoto = Boolean(persisted?.nlscOrthophoto);
+        state.adminLabels = Boolean(persisted?.adminLabels);
         return state;
     }
 
@@ -329,11 +332,15 @@ export function useDashboardMapView({
     function persistMapSettings() {
         try {
             const loc = getCurrentLocation();
+            const persisted = loadPersistedMapSettings();
             localStorage.setItem(
                 MAP_SETTINGS_STORAGE_KEY,
                 JSON.stringify({
                     defaultView: mapLayerState.defaultView,
-                    currentLocation: loc,
+                    currentLocation: loc ?? persisted?.currentLocation ?? null,
+                    majorTransport: mapLayerState.majorTransport,
+                    nlscOrthophoto: mapLayerState.nlscOrthophoto,
+                    adminLabels: mapLayerState.adminLabels,
                 })
             );
         } catch (err) {
@@ -341,9 +348,31 @@ export function useDashboardMapView({
         }
     }
 
+    function getCurrentLocationPayload() {
+        const loc = getCurrentLocation();
+        if (loc) return loc;
+        const raw = currentLocationRef?.value ?? currentLocationRef;
+        if (!raw || typeof raw !== 'object') return null;
+        const lng = Number(raw.lng);
+        const lat = Number(raw.lat);
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
+        return {
+            lng,
+            lat,
+            title: String(raw.title || '').trim() || '現在位置',
+            description: String(raw.description || '').trim(),
+        };
+    }
+
     function syncCurrentLocationOnMap() {
-        if (!mapInstance || !currentLocationApi) return;
-        currentLocationApi.syncCurrentLocation(mapInstance, getCurrentLocation());
+        if (!mapInstance) return;
+        const raw = currentLocationRef?.value ?? currentLocationRef;
+        if (typeof globalThis.DashboardMapCurrentLocation?.syncCurrentLocation === 'function') {
+            globalThis.DashboardMapCurrentLocation.syncCurrentLocation(mapInstance, raw);
+            return;
+        }
+        if (!currentLocationApi) return;
+        currentLocationApi.syncCurrentLocation(mapInstance, getCurrentLocationPayload());
     }
 
     async function resolveAgencyGeoJson(kind) {
@@ -356,6 +385,7 @@ export function useDashboardMapView({
         if (!mapInstance || !workMapDocRef) return;
         const doc = workMapDocRef?.value ?? workMapDocRef;
         syncWorkMapDocLayers(mapInstance, doc);
+        syncCurrentLocationOnMap();
     }
 
     function applyPendingOverviewView() {
@@ -431,8 +461,8 @@ export function useDashboardMapView({
             urbanPlanApi.teardownUrbanPlanLayers();
             urbanPlanApi = null;
         }
-        if (currentLocationApi?.stopBlink) {
-            currentLocationApi.stopBlink();
+        if (mapInstance && typeof globalThis.DashboardMapCurrentLocation?.clearCurrentLocationMarker === 'function') {
+            globalThis.DashboardMapCurrentLocation.clearCurrentLocationMarker(mapInstance);
         }
         populationApi = null;
         while (caseStatsCharts.length) {
@@ -1069,6 +1099,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 return;
             }
             globalThis.DashboardMapLayerStack.reconcileDashboardLayerStack(map, mapLayerState, LAYER_IDS);
+            syncCurrentLocationOnMap();
         }
 
         async function applyAdminLayerState(map) {
@@ -1346,6 +1377,11 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             await waitMapSettled(map);
             if (!isMapAlive(map)) return;
             await applyAllMapLayerState();
+            if (!isMapAlive(map)) return;
+            syncCurrentLocationOnMap();
+            map.once('idle', () => {
+                if (isMapAlive(map)) syncCurrentLocationOnMap();
+            });
         }
 
         function syncMapLayerSwitch(input) {
@@ -1419,6 +1455,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             adminInput.addEventListener('change', () => {
                 mapLayerState.adminLabels = adminInput.checked;
                 syncMapLayerSwitch(adminInput);
+                persistMapSettings();
                 void applyMapLayerVisibility().then(() => {
                     if (populationApi && mapLayerState.populationLabels && mapInstance) {
                         populationApi.onAdminLabelsChanged(mapInstance);
@@ -1438,6 +1475,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             majorTransportInput.addEventListener('change', () => {
                 mapLayerState.majorTransport = majorTransportInput.checked;
                 syncMapLayerSwitch(majorTransportInput);
+                persistMapSettings();
                 void applyMapLayerVisibility();
             }, { signal });
             if (rainInput) {
@@ -1480,6 +1518,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 nlscOrthophotoInput.addEventListener('change', () => {
                     mapLayerState.nlscOrthophoto = nlscOrthophotoInput.checked;
                     syncMapLayerSwitch(nlscOrthophotoInput);
+                    persistMapSettings();
                     void applyMapLayerVisibility();
                 }, { signal });
             }
@@ -2097,6 +2136,9 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             if (map.loaded()) {
                 startMapReady();
             }
+            map.on('load', () => {
+                if (isMapAlive(map)) syncCurrentLocationOnMap();
+            });
 
             mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
             bindRestoreDefaultViewSync(mapInstance);
@@ -2117,8 +2159,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             stopWatchAgencyDoc = watch(agencyLayerDocRef, () => {
                 policeApi?.invalidatePoliceGeoJsonCache?.();
                 judicialApi?.invalidateJudicialGeoJsonCache?.();
-                void applyPoliceLayerVisibility();
-                void applyJudicialLayerVisibility();
+                void applyPoliceLayerVisibility().then(() => syncCurrentLocationOnMap());
+                void applyJudicialLayerVisibility().then(() => syncCurrentLocationOnMap());
             }, { deep: true });
         }
         if (currentLocationRef) {
@@ -2170,5 +2212,6 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             const c = mapInstance.getCenter();
             return { center: [c.lng, c.lat], zoom: mapInstance.getZoom() };
         },
+        syncCurrentLocation: syncCurrentLocationOnMap,
     };
 }
