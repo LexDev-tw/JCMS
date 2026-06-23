@@ -4,6 +4,10 @@
     const LAYER_FILL = 'taipei-urban-plan-fill';
     const LAYER_LINE = 'taipei-urban-plan-line';
     const DATA_URLS = Object.freeze([
+        'data/urban-plan.geojson',
+        '/api/map/urban-plan.geojson',
+    ]);
+    const LEGACY_DATA_URLS = Object.freeze([
         'data/taipei-urban-plan.geojson',
         'data/ntpc-urban-plan.geojson',
     ]);
@@ -76,27 +80,62 @@
             return [...DATA_URLS];
         }
 
+        async function fetchGeoJsonCollection(url) {
+            const res = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { Accept: 'application/geo+json, application/json' },
+            });
+            if (!res.ok) throw new Error(`${url} HTTP ${res.status}`);
+            const contentType = res.headers.get('content-type') || '';
+            if (contentType.includes('text/html')) {
+                throw new Error(`${url} 回傳 HTML（可能為登入頁或 404）`);
+            }
+            const data = await res.json();
+            if (!Array.isArray(data?.features)) {
+                throw new Error(`${url} 非 FeatureCollection`);
+            }
+            return data;
+        }
+
         async function loadGeoJson() {
             if (geoJsonCache) return geoJsonCache;
             if (!geoJsonPromise) {
-                geoJsonPromise = Promise.all(
-                    getDataUrls().map((url) => fetch(url, { headers: { Accept: 'application/geo+json, application/json' } })
-                        .then((res) => {
-                            if (!res.ok) throw new Error(`${url} HTTP ${res.status}`);
-                            return res.json();
-                        }))
-                )
-                    .then((collections) => {
-                        const features = collections.flatMap((data) => (
-                            Array.isArray(data?.features) ? data.features : []
-                        ));
+                geoJsonPromise = (async () => {
+                    const candidates = getDataUrls();
+                    let lastErr = null;
+
+                    for (let i = 0; i < candidates.length; i += 1) {
+                        const url = candidates[i];
+                        try {
+                            geoJsonCache = await fetchGeoJsonCollection(url);
+                            return geoJsonCache;
+                        } catch (err) {
+                            lastErr = err;
+                            console.warn('[dashboard-map] 都市計畫資料來源失敗', url, err);
+                        }
+                    }
+
+                    const settled = await Promise.allSettled(
+                        LEGACY_DATA_URLS.map((url) => fetchGeoJsonCollection(url))
+                    );
+                    const features = [];
+                    settled.forEach((result, idx) => {
+                        if (result.status === 'fulfilled') {
+                            features.push(...result.value.features);
+                            return;
+                        }
+                        console.warn('[dashboard-map] 都市計畫分區資料失敗', LEGACY_DATA_URLS[idx], result.reason);
+                    });
+                    if (features.length) {
                         geoJsonCache = { type: 'FeatureCollection', features };
                         return geoJsonCache;
-                    })
-                    .catch((err) => {
-                        geoJsonPromise = null;
-                        throw err;
-                    });
+                    }
+
+                    throw lastErr || new Error('都市計畫 GeoJSON 載入失敗');
+                })().catch((err) => {
+                    geoJsonPromise = null;
+                    throw err;
+                });
             }
             return geoJsonPromise;
         }
@@ -262,6 +301,7 @@
         LAYER_FILL,
         LAYER_LINE,
         DATA_URLS,
+        LEGACY_DATA_URLS,
         ATTRIBUTION,
         createUrbanPlanLayersApi,
     };

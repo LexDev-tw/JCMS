@@ -11,7 +11,9 @@ RUN npm ci --omit=dev
 
 COPY server.js ./
 COPY src ./src
+COPY scripts/merge-urban-plan-geojson.js ./scripts/merge-urban-plan-geojson.js
 COPY public ./public
+RUN node scripts/merge-urban-plan-geojson.js
 COPY uploads ./uploads
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \

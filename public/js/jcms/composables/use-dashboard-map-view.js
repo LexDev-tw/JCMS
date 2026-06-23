@@ -867,8 +867,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             urbanPlanApi = globalThis.DashboardMapUrbanPlan.createUrbanPlanLayersApi({
                 getMapLayerState: () => mapLayerState,
                 getGeoJsonUrls: () => [
-                    'data/taipei-urban-plan.geojson',
-                    'data/ntpc-urban-plan.geojson',
+                    'data/urban-plan.geojson',
+                    '/api/map/urban-plan.geojson',
                 ],
                 setUrbanPlanMeta,
             });

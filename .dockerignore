@@ -19,6 +19,8 @@ tmp-*
 *.log
 .DS_Store
 public/dist/
+# 合併產物（Docker build 內執行 merge-urban-plan-geojson.js）
+public/data/urban-plan.geojson
 
 # Windows-only launchers (removed from VPS repo)
 Start-JCMS.bat

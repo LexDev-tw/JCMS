@@ -3,8 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const shapefile = require('shapefile');
 const {
+    DEFAULT_SIMPLIFY_TOLERANCE,
     aciToHex,
     transformGeometry,
+    simplifyGeometry,
     cleanText,
     extractZip,
     findShapefileBase,
@@ -45,9 +47,11 @@ async function convert(basePath) {
         const result = await source.read();
         if (result.done) break;
         const props = result.value.properties || {};
+        const projected = transformGeometry(result.value.geometry);
+        const geometry = simplifyGeometry(projected, DEFAULT_SIMPLIFY_TOLERANCE);
         features.push({
             type: 'Feature',
-            geometry: transformGeometry(result.value.geometry),
+            geometry,
             properties: {
                 region: '臺北市',
                 zoneCode: cleanText(props['分區代碼']),

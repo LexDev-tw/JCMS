@@ -1,0 +1,41 @@
+---
+description: 公開儲存庫禁止寫入個人隱私資料（網域、帳號、金鑰等）
+alwaysApply: true
+---
+
+# 不可寫入隱私資料
+
+本儲存庫為**公開**；任何會進 Git 的檔案（程式碼、README、`.env.example`、Cursor 規則、prompt 模板、開發日誌）**不得**含可識別個人的資料。
+
+## 禁止寫入版本庫
+
+- **個人／專用網域**（例：實際 production 子網域、根網域）
+- **GitHub 帳號、org/repo 完整路徑**（例：`yourname/JCMS`）
+- **Email、電話、真實姓名**（含 commit message、README、註解）
+- **API 金鑰、OAuth secret、token、密碼、私鑰**（含 `.env.example` 的實值）
+- **VPS IP、SSH 主機名、僅本人使用的內網位址**
+- **`.env`、`data/*.db`、`uploads/` 內容**（已在 `.gitignore`，勿移除或 force-add）
+
+## 占位寫法（文件與範例）
+
+| 項目 | 版本庫內使用 |
+|------|-------------|
+| 對外網址 | `https://jcms.example.com` |
+| OAuth redirect | `https://jcms.example.com/api/google-calendar/oauth/callback` |
+| GitHub repo | `{你的 org/repo}` 或 `example-org/JCMS` |
+| 金鑰 | 註解占位，例 `# CWA_API_KEY=` |
+
+實際網域與金鑰**僅**寫在 VPS／本機 `.env`（不進 Git）。
+
+## 程式碼約束
+
+- 正式環境設定一律讀 `process.env`（如 `JCMS_PUBLIC_URL`），**勿**硬編碼個人網域。
+- 允許 `127.0.0.1` / `localhost` 僅用於本機開發或容器 healthcheck，**不可**作為 production fallback URL。
+
+## 推送前檢查
+
+1. 搜尋是否誤留個人網域、email、金鑰、GitHub 路徑。
+2. 確認 `.env.example`、README、規則檔僅含 `example.com` 類占位。
+3. 確認未 staged：`.env`、`.vscode/`、本機備忘（如 `command.md`）、runtime 產物。
+
+若開發日誌需提及部署變更，用「NPM 反向代理」「占位網域」等通用描述，**勿**寫入真實網域。

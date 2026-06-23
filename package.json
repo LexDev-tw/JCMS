@@ -1,6 +1,6 @@
 {
   "name": "jcms",
-  "version": "0.1.20260622b",
+  "version": "0.1.20260623",
   "description": "JCMS — Judicial Case Management System (Docker / VPS deployment)",
   "main": "server.js",
   "scripts": {
@@ -15,7 +15,8 @@
     "gen:judicial-geojson": "node scripts/fetch-moj-agency-addresses.js && node scripts/convert-judicial-geojson.js",
     "gen:taipei-urban-plan-geojson": "node scripts/convert-taipei-urban-plan-geojson.js",
     "gen:ntpc-urban-plan-geojson": "node scripts/convert-ntpc-urban-plan-geojson.js",
-    "gen:urban-plan-geojson": "node scripts/convert-taipei-urban-plan-geojson.js && node scripts/convert-ntpc-urban-plan-geojson.js",
+    "gen:urban-plan-geojson": "node scripts/convert-taipei-urban-plan-geojson.js && node scripts/convert-ntpc-urban-plan-geojson.js && node scripts/merge-urban-plan-geojson.js",
+    "merge:urban-plan-geojson": "node scripts/merge-urban-plan-geojson.js",
     "gen:taipei-police-geojson": "npm run gen:police-geojson"
   },
   "engines": {
@@ -26,6 +27,7 @@
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

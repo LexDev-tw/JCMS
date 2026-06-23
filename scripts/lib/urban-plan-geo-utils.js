@@ -5,7 +5,7 @@ const { polygon, multiPolygon } = require('@turf/helpers');
 
 proj4.defs('EPSG:3826', '+proj=tmerc +lat_0=0 +lon_0=121 +k=0.9999 +x_0=250000 +y_0=0 +ellps=GRS80 +units=m +no_defs');
 
-const DEFAULT_SIMPLIFY_TOLERANCE = 0.0001;
+const DEFAULT_SIMPLIFY_TOLERANCE = 0.0002;
 
 /** AutoCAD Color Index → #RRGGBB（臺北市資料集「顏色」欄位） */
 function aciToHex(index) {

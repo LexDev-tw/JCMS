@@ -1,6 +1,8 @@
 node_modules/
 # 建置產物（勘驗離線單檔）
 public/dist/
+# 合併產物（Docker build 或 npm run merge:urban-plan-geojson 產生）
+public/data/urban-plan.geojson
 .env
 /data/
 *.db
@@ -12,6 +14,9 @@ public/dist/
 
 # 本機 IDE（不推送）
 .vscode/
+
+# 本機開發備忘（不推送）
+command.md
 
 # 執行時產物（啟動腳本／PM2 狀態）
 .jcms-runtime/

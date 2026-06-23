@@ -3,6 +3,7 @@ require('dotenv').config();
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 
 const { initDatabase, closeDatabase } = require('./src/config/database');
 const caseRoutes = require('./src/routes/caseRoutes');
@@ -16,6 +17,7 @@ const googleCalendarRoutes = require('./src/routes/googleCalendarRoutes');
 const weatherRoutes = require('./src/routes/weatherRoutes');
 const populationRoutes = require('./src/routes/populationRoutes');
 const airQualityRoutes = require('./src/routes/airQualityRoutes');
+const mapRoutes = require('./src/routes/mapRoutes');
 const routes = require('./src/routes');
 const dynamicsController = require('./src/controllers/dynamicsController');
 const { notFoundHandler } = require('./src/middleware/notFoundHandler');
@@ -41,6 +43,7 @@ app.use(
     })
 );
 app.options('*', cors({ origin: true }));
+app.use(compression({ threshold: 1024 }));
 // 決議全文匯入可能較長，避免超過預設 ~100kb 導致非預期錯誤；OPTIONS 預檢勿經 JSON body 解析
 const jsonBody = express.json({ limit: '8mb' });
 app.use((req, res, next) => {
@@ -82,6 +85,7 @@ app.use('/api/google-calendar', googleCalendarRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/population', populationRoutes);
 app.use('/api/air-quality', airQualityRoutes);
+app.use('/api/map', mapRoutes);
 app.use('/api', routes);
 
 app.use((req, res, next) => {
