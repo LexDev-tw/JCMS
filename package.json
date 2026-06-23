@@ -1,6 +1,6 @@
 {
   "name": "jcms",
-  "version": "0.1.20260623f",
+  "version": "0.1.20260623g",
   "description": "JCMS — Judicial Case Management System (Docker / VPS deployment)",
   "main": "server.js",
   "scripts": {

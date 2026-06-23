@@ -8,24 +8,24 @@ import {
   onUnmounted,
   nextTick,
   watch,
-} from '../vue-api.js';
-import { util } from '../utils.js';
-import { apiService } from '../api/client.js';
-import { RocDateInput, RocMonthInput, RocTimeInput } from '../components/roc-inputs.js';
-import { useClock } from '../composables/use-clock.js';
-import { useSettings } from '../composables/use-settings.js';
-import { usePersonalAdmin } from '../composables/use-personal-admin.js';
-import { useCasesManager } from '../composables/use-cases-manager.js';
-import { useDynamics } from '../composables/use-dynamics.js';
-import { usePayscaleChart } from '../composables/use-payscale-chart.js';
-import { useDashboardCharts } from '../composables/use-dashboard-charts.js';
+} from '../vue-api.js?v=0.1.20260623g';
+import { util } from '../utils.js?v=0.1.20260623g';
+import { apiService } from '../api/client.js?v=0.1.20260623g';
+import { RocDateInput, RocMonthInput, RocTimeInput } from '../components/roc-inputs.js?v=0.1.20260623g';
+import { useClock } from '../composables/use-clock.js?v=0.1.20260623g';
+import { useSettings } from '../composables/use-settings.js?v=0.1.20260623g';
+import { usePersonalAdmin } from '../composables/use-personal-admin.js?v=0.1.20260623g';
+import { useCasesManager } from '../composables/use-cases-manager.js?v=0.1.20260623g';
+import { useDynamics } from '../composables/use-dynamics.js?v=0.1.20260623g';
+import { usePayscaleChart } from '../composables/use-payscale-chart.js?v=0.1.20260623g';
+import { useDashboardCharts } from '../composables/use-dashboard-charts.js?v=0.1.20260623g';
 import {
     useMobileLayout,
     resolveViewForMobileLayout,
     MOBILE_REDIRECT_VIEWS,
-} from '../composables/use-mobile-layout.js';
-import { useDashboardMapView } from '../composables/use-dashboard-map-view.js';
-import { useWorkMapEditor } from '../composables/use-work-map-editor.js';
+} from '../composables/use-mobile-layout.js?v=0.1.20260623g';
+import { useDashboardMapView } from '../composables/use-dashboard-map-view.js?v=0.1.20260623g';
+import { useWorkMapEditor } from '../composables/use-work-map-editor.js?v=0.1.20260623g';
 import {
     loadWorkMapDoc,
     saveWorkMapDoc,
@@ -38,8 +38,8 @@ import {
     WORK_MAP_DEFAULT_COLOR,
     normalizeColor,
     featureTypeLabel,
-} from '../lib/work-map-model.js';
-import { createWorkMapHistory, cloneWorkMapDoc } from '../lib/work-map-history.js';
+} from '../lib/work-map-model.js?v=0.1.20260623g';
+import { createWorkMapHistory, cloneWorkMapDoc } from '../lib/work-map-history.js?v=0.1.20260623g';
 import {
     AGENCY_LAYER_KINDS,
     loadAgencyLayerDoc,
@@ -48,7 +48,7 @@ import {
     ensureAgencyLayerInitialized,
     createDefaultJudicialFeature,
     createDefaultPoliceFeature,
-} from '../lib/agency-layer-model.js';
+} from '../lib/agency-layer-model.js?v=0.1.20260623g';
 import {
     measureDraft,
     ringAreaSqMeters,
@@ -56,21 +56,21 @@ import {
     formatAreaLabel,
     formatLengthLabel,
     coordsNearlyEqual,
-} from '../lib/work-map-geo.js';
+    featureMapCenter,
+} from '../lib/work-map-geo.js?v=0.1.20260623g';
 import {
     hitTestVertex,
     applyCoordToFeature,
     moveFeatureByDelta,
-} from '../lib/work-map-interaction.js';
+} from '../lib/work-map-interaction.js?v=0.1.20260623g';
 import {
     loadBasemapLayerPrefs,
     persistBasemapLayerPrefs,
     persistMapSettingsPatch,
     loadCurrentLocationFromStorage,
     persistCurrentLocation,
-} from '../lib/work-map-basemap-layers.js';
-import { featureMapCenter } from '../lib/work-map-geo.js';
-import { ensureTaiwanHolidaysForYears } from '../composables/use-taiwan-holidays.js';
+} from '../lib/work-map-basemap-layers.js?v=0.1.20260623g';
+import { ensureTaiwanHolidaysForYears } from '../composables/use-taiwan-holidays.js?v=0.1.20260623g';
 import {
   ensureSalaryYear,
   salaryYearFootAggregate,
@@ -112,7 +112,7 @@ import {
   careerIsoAtNoonMs,
   migrateCareerTimelineRecord,
   careerRowHasAttachment,
-} from '../composables/personal-admin-shared.js';
+} from '../composables/personal-admin-shared.js?v=0.1.20260623g';
 
 export function mountJcmsApp() {
   createApp({

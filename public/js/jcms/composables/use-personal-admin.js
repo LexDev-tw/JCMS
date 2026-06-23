@@ -1,5 +1,5 @@
-import { ref, reactive, computed, watch, nextTick } from '../vue-api.js';
-import { util } from '../utils.js';
+import { ref, reactive, computed, watch, nextTick } from '../vue-api.js?v=0.1.20260623g';
+import { util } from '../utils.js?v=0.1.20260623g';
 import {
     applyPersonalAdminFromPayload,
     buildInitialPayscaleRowOverrides,
@@ -10,7 +10,7 @@ import {
     PERSONAL_ADMIN_KEY,
     readPersonalAdminRaw,
     tryMigrateSalaryRecordsToYearBook,
-} from './personal-admin-shared.js';
+} from './personal-admin-shared.js?v=0.1.20260623g';
 
 export function usePersonalAdmin(api) {
     const t7 = util.todayRocDate7();

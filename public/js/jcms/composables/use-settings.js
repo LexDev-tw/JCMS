@@ -1,5 +1,5 @@
-import { ref, reactive, watch, nextTick } from '../vue-api.js';
-import { util } from '../utils.js';
+import { ref, reactive, watch, nextTick } from '../vue-api.js?v=0.1.20260623g';
+import { util } from '../utils.js?v=0.1.20260623g';
 
 const SETTINGS_STORAGE_KEY = 'jcms_app_settings';
 
