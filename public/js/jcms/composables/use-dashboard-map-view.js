@@ -1,11 +1,11 @@
 /** 地圖總覽：MapLibre + 案件統計圖 + 版面寬度同步 */
-import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260623g';
-import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js?v=0.1.20260623g';
+import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260624';
+import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js?v=0.1.20260624';
 import {
     AGENCY_LAYER_KINDS,
     resolveAgencyFeatures,
     agencyFeaturesToGeoJson,
-} from '../lib/agency-layer-model.js?v=0.1.20260623g';
+} from '../lib/agency-layer-model.js?v=0.1.20260624';
 
 /** 內建行政區界線（VPS 同源，不依賴外部 CDN） */
 const TW_LOCAL_COUNTIES_GEOJSON_URL = 'data/tw-counties.geojson';
@@ -204,6 +204,7 @@ export function useDashboardMapView({
     let mapInstance = null;
     let weatherApi = null;
     let airQualityApi = null;
+    let waterReservoirApi = null;
     let policeApi = null;
     let judicialApi = null;
     let currentLocationApi = null;
@@ -287,6 +288,7 @@ export function useDashboardMapView({
             satelliteCloud: false,
             radarEcho: false,
             airQuality: false,
+            waterReservoir: false,
             policeAgencies: false,
             judicialAgencies: false,
             nlscOrthophoto: false,
@@ -317,6 +319,7 @@ export function useDashboardMapView({
         mapLayerState.satelliteCloud = defaults.satelliteCloud;
         mapLayerState.radarEcho = defaults.radarEcho;
         mapLayerState.airQuality = defaults.airQuality;
+        mapLayerState.waterReservoir = defaults.waterReservoir;
         mapLayerState.policeAgencies = defaults.policeAgencies;
         mapLayerState.judicialAgencies = defaults.judicialAgencies;
         mapLayerState.nlscOrthophoto = defaults.nlscOrthophoto;
@@ -448,6 +451,10 @@ export function useDashboardMapView({
         if (airQualityApi) {
             airQualityApi.teardownAirQualityRefresh();
             airQualityApi = null;
+        }
+        if (waterReservoirApi) {
+            waterReservoirApi.teardownWaterReservoirRefresh();
+            waterReservoirApi = null;
         }
         if (policeApi) {
             policeApi.teardownPoliceLayers();
@@ -734,6 +741,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             radarEcho: 'cwa-radar-echo',
             airQualityCircle: 'epa-aq-station-circle',
             airQualityLabel: 'epa-aq-station-label',
+            waterReservoirCircle: 'wra-reservoir-circle',
+            waterReservoirLabel: 'wra-reservoir-label',
             policeCircle: 'police-agency-circle',
             judicialCircle: 'judicial-agency-circle',
             judicialJurisdictionFill: 'judicial-jurisdiction-fill',
@@ -747,6 +756,11 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
 
         function setAirQualityMeta(message) {
             const el = q(root, 'map-air-quality-meta');
+            if (el) el.textContent = message || '';
+        }
+
+        function setWaterReservoirMeta(message) {
+            const el = q(root, 'map-water-reservoir-meta');
             if (el) el.textContent = message || '';
         }
 
@@ -805,6 +819,10 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
 
         function isAirQualityLayerActive() {
             return Boolean(isActiveRef.value && mapInstance && !disposed && mapLayerState.airQuality);
+        }
+
+        function isWaterReservoirLayerActive() {
+            return Boolean(isActiveRef.value && mapInstance && !disposed && mapLayerState.waterReservoir);
         }
 
         if (typeof globalThis.DashboardMapWeather !== 'undefined') {
@@ -868,6 +886,16 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 layerIds: LAYER_IDS,
                 getMapLayerState: () => mapLayerState,
                 setAirQualityMeta,
+                getApiBase: getDashboardMapApiBase,
+            });
+        }
+
+        if (typeof globalThis.DashboardMapWaterReservoir !== 'undefined') {
+            waterReservoirApi = globalThis.DashboardMapWaterReservoir.createWaterReservoirLayersApi({
+                mapColors: MAP_COLORS,
+                layerIds: LAYER_IDS,
+                getMapLayerState: () => mapLayerState,
+                setWaterReservoirMeta,
                 getApiBase: getDashboardMapApiBase,
             });
         }
@@ -1282,6 +1310,19 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             }
         }
 
+        async function applyWaterReservoirLayerVisibility() {
+            if (!mapInstance || !waterReservoirApi) return;
+            try {
+                await waterReservoirApi.refreshWaterReservoirLayers(mapInstance);
+                if (mapLayerState.waterReservoir) {
+                    waterReservoirApi.scheduleWaterReservoirRefresh(mapInstance, isWaterReservoirLayerActive);
+                }
+                reconcileLayerStack(mapInstance);
+            } catch (err) {
+                console.warn('[dashboard-map] 水庫水情圖層載入失敗', err);
+            }
+        }
+
         async function applyPoliceLayerVisibility() {
             if (!mapInstance || !policeApi) return;
             try {
@@ -1318,6 +1359,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             await applyWeatherLayerVisibility();
             if (!mapInstance || disposed) return;
             await applyAirQualityLayerVisibility();
+            if (!mapInstance || disposed) return;
+            await applyWaterReservoirLayerVisibility();
             if (!mapInstance || disposed) return;
             await applyPoliceLayerVisibility();
             if (!mapInstance || disposed) return;
@@ -1396,6 +1439,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             const rainInput = q(root, 'map-toggle-rain-advisory');
             const radarInput = q(root, 'map-toggle-radar-echo');
             const airQualityInput = q(root, 'map-toggle-air-quality');
+            const waterReservoirInput = q(root, 'map-toggle-water-reservoir');
             const policeInput = q(root, 'map-toggle-police-agencies');
             const judicialInput = q(root, 'map-toggle-judicial-agencies');
             const nlscOrthophotoInput = q(root, 'map-toggle-nlsc-orthophoto');
@@ -1409,6 +1453,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             if (rainInput) rainInput.checked = mapLayerState.rainAdvisory;
             if (radarInput) radarInput.checked = mapLayerState.radarEcho;
             if (airQualityInput) airQualityInput.checked = mapLayerState.airQuality;
+            if (waterReservoirInput) waterReservoirInput.checked = mapLayerState.waterReservoir;
             if (policeInput) policeInput.checked = mapLayerState.policeAgencies;
             if (judicialInput) judicialInput.checked = mapLayerState.judicialAgencies;
             if (nlscOrthophotoInput) nlscOrthophotoInput.checked = mapLayerState.nlscOrthophoto;
@@ -1420,6 +1465,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             if (rainInput) syncMapLayerSwitch(rainInput);
             if (radarInput) syncMapLayerSwitch(radarInput);
             if (airQualityInput) syncMapLayerSwitch(airQualityInput);
+            if (waterReservoirInput) syncMapLayerSwitch(waterReservoirInput);
             if (policeInput) syncMapLayerSwitch(policeInput);
             if (judicialInput) syncMapLayerSwitch(judicialInput);
             if (nlscOrthophotoInput) syncMapLayerSwitch(nlscOrthophotoInput);
@@ -1445,6 +1491,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             const rainInput = q(root, 'map-toggle-rain-advisory');
             const radarInput = q(root, 'map-toggle-radar-echo');
             const airQualityInput = q(root, 'map-toggle-air-quality');
+            const waterReservoirInput = q(root, 'map-toggle-water-reservoir');
             const policeInput = q(root, 'map-toggle-police-agencies');
             const judicialInput = q(root, 'map-toggle-judicial-agencies');
             const nlscOrthophotoInput = q(root, 'map-toggle-nlsc-orthophoto');
@@ -1498,6 +1545,14 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                     syncMapLayerSwitch(airQualityInput);
                     if (!airQualityInput.checked) setAirQualityMeta('');
                     void applyAirQualityLayerVisibility();
+                }, { signal });
+            }
+            if (waterReservoirInput) {
+                waterReservoirInput.addEventListener('change', () => {
+                    mapLayerState.waterReservoir = waterReservoirInput.checked;
+                    syncMapLayerSwitch(waterReservoirInput);
+                    if (!waterReservoirInput.checked) setWaterReservoirMeta('');
+                    void applyWaterReservoirLayerVisibility();
                 }, { signal });
             }
             if (policeInput) {

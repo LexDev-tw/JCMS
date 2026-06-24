@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="jcms-dash-map-view">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>即時新聞區塊預覽 · JCMS</title>
+    <link rel="icon" href="ico/jcms-icon.png" type="image/png" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '"Noto Sans TC"', 'PingFang TC', 'Microsoft JhengHei', 'sans-serif'],
+                    },
+                    colors: {
+                        surface: '#FFFFFF',
+                        panel: '#F7F7F5',
+                        ink: { 900: '#111111', 600: '#666666', 400: '#999999', 100: '#EAEAEA' },
+                        accent: '#F05A28',
+                    },
+                },
+            },
+        };
+    </script>
+    <link rel="stylesheet" href="css/jcms.css?v=preview" />
+    <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=preview" />
+    <link rel="stylesheet" href="css/jcms-news-block.css?v=preview" />
+</head>
+<body>
+    <div class="news-preview-shell">
+        <header class="news-preview-header">
+            <div>
+                <h1>地圖總覽 — 即時新聞區塊預覽</h1>
+                <p>模擬左欄週曆下方位置 · 格式：[來源] 標題 HH:MM · 重大新聞橘色醒目</p>
+            </div>
+            <div class="news-preview-controls">
+                <div class="news-preview-mode-seg" role="group" aria-label="預覽模式">
+                    <button type="button" class="news-preview-mode-seg__btn news-preview-mode-seg__btn--active" data-preview-mode="live">即時新聞</button>
+                    <button type="button" class="news-preview-mode-seg__btn" data-preview-mode="demo">示範資料</button>
+                    <button type="button" class="news-preview-mode-seg__btn" data-preview-mode="loading">模擬載入中</button>
+                    <button type="button" class="news-preview-mode-seg__btn" data-preview-mode="error">模擬錯誤</button>
+                    <button type="button" class="news-preview-mode-seg__btn" data-preview-mode="empty">空白</button>
+                </div>
+                <button type="button" class="news-preview-refresh-btn" id="news-preview-refresh">重新整理</button>
+            </div>
+        </header>
+
+        <div class="news-preview-stage">
+            <div class="news-preview-map-placeholder" aria-hidden="true"></div>
+
+            <div class="news-preview-overlay">
+                <div class="dash-top-stats-row">
+                    <div class="dash-top-stats-main">
+                        <section class="news-preview-stub-calendar" aria-hidden="true">
+                            <header class="news-preview-stub-calendar__head">
+                                <div class="swiss-section-heading min-w-0">
+                                    <h2 class="swiss-section-heading__title">行事曆</h2>
+                                    <p class="swiss-section-subtitle">WEEKLY SCHEDULE</p>
+                                </div>
+                                <span class="dash-map-week-nav__range font-mono tabular-nums text-[10px] text-ink-600">06/23 — 06/29</span>
+                            </header>
+                            <div class="news-preview-stub-calendar__grid">
+                                <div class="news-preview-stub-calendar__cell"></div>
+                                <div class="news-preview-stub-calendar__cell"></div>
+                                <div class="news-preview-stub-calendar__cell"></div>
+                                <div class="news-preview-stub-calendar__cell"></div>
+                                <div class="news-preview-stub-calendar__cell"></div>
+                                <div class="news-preview-stub-calendar__cell"></div>
+                                <div class="news-preview-stub-calendar__cell"></div>
+                            </div>
+                        </section>
+
+                        <div id="news-block-mount"></div>
+                    </div>
+
+                    <aside class="news-preview-stub-todo dash-map-module" aria-hidden="true">
+                        <header class="news-preview-stub-todo__head dash-section-head dash-map-module__head">
+                            <div class="swiss-section-heading min-w-0">
+                                <h2 class="swiss-section-heading__title">待辦事項</h2>
+                                <p class="swiss-section-subtitle">TO-DO LIST</p>
+                            </div>
+                        </header>
+                        <div class="news-preview-stub-todo__line"></div>
+                        <div class="news-preview-stub-todo__line"></div>
+                        <div class="news-preview-stub-todo__line"></div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/jcms/lib/news-block-mock.js?v=preview"></script>
+    <script>
+        (function () {
+            const modeButtons = document.querySelectorAll('[data-preview-mode]');
+            const refreshBtn = document.getElementById('news-preview-refresh');
+
+            const preview = NewsBlockMock.initNewsBlockPreview({
+                mount: '#news-block-mount',
+                defaultMode: 'live',
+                refreshDelayMs: 800,
+            });
+
+            function setActiveModeButton(mode) {
+                modeButtons.forEach((btn) => {
+                    btn.classList.toggle(
+                        'news-preview-mode-seg__btn--active',
+                        btn.getAttribute('data-preview-mode') === mode
+                    );
+                });
+            }
+
+            modeButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const mode = btn.getAttribute('data-preview-mode');
+                    setActiveModeButton(mode);
+                    preview.setMode(mode);
+                });
+            });
+
+            refreshBtn.addEventListener('click', async () => {
+                const prevMode = previewModeActive();
+                refreshBtn.disabled = true;
+                setActiveModeButton('loading');
+                try {
+                    await preview.refresh();
+                    setActiveModeButton(prevMode);
+                } finally {
+                    refreshBtn.disabled = false;
+                }
+            });
+
+            function previewModeActive() {
+                const active = document.querySelector('[data-preview-mode].news-preview-mode-seg__btn--active');
+                return active?.getAttribute('data-preview-mode') || 'live';
+            }
+        }());
+    </script>
+</body>
+</html>

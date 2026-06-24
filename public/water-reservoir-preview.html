@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>水情圖層預覽 · JCMS</title>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <style>
+        :root {
+            --surface: #ffffff;
+            --panel: #f4f4f4;
+            --ink-900: #111111;
+            --ink-600: #666666;
+            --accent: #f05a28;
+        }
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            height: 100%;
+            font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+            color: var(--ink-900);
+            background: var(--panel);
+        }
+        .preview-shell {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            height: 100%;
+        }
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .preview-header h1 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .preview-header p {
+            margin: 4px 0 0;
+            font-size: 11px;
+            color: var(--ink-600);
+        }
+        .preview-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .map-layer-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .map-layer-switch__label {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .map-layer-switch__input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .map-layer-switch__track {
+            width: 36px;
+            height: 20px;
+            border-radius: 999px;
+            background: #d4d4d4;
+            position: relative;
+            transition: background 0.15s ease;
+        }
+        .map-layer-switch__thumb {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+        }
+        .map-layer-switch__input:checked + .map-layer-switch__track {
+            background: var(--accent);
+        }
+        .map-layer-switch__input:checked + .map-layer-switch__track .map-layer-switch__thumb {
+            transform: translateX(16px);
+        }
+        .preview-meta {
+            font-size: 11px;
+            color: var(--ink-600);
+            font-family: ui-monospace, monospace;
+            min-width: 220px;
+            text-align: right;
+        }
+        #preview-map {
+            position: absolute;
+            inset: 0;
+        }
+        .preview-legend {
+            position: absolute;
+            left: 12px;
+            bottom: 28px;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 10px;
+            color: var(--ink-600);
+            line-height: 1.5;
+            max-width: 240px;
+        }
+        .preview-legend strong {
+            display: block;
+            color: var(--ink-900);
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+        .preview-map-wrap {
+            position: relative;
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        .dash-map-water-popup .maplibregl-popup-content {
+            padding: 6px 8px;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-shell">
+        <header class="preview-header">
+            <div>
+                <h1>水情圖層預覽</h1>
+                <p>圓點大小＝有效庫容量 · 數字＝蓄水百分比 · 資料來源：經濟部水利署 Open Data</p>
+            </div>
+            <div class="preview-controls">
+                <label class="map-layer-switch" for="preview-toggle-air-quality">
+                    <span class="map-layer-switch__label">空品</span>
+                    <input type="checkbox" class="map-layer-switch__input" id="preview-toggle-air-quality" disabled />
+                    <span class="map-layer-switch__track" aria-hidden="true">
+                        <span class="map-layer-switch__thumb"></span>
+                    </span>
+                </label>
+                <label class="map-layer-switch" for="preview-toggle-water-reservoir">
+                    <span class="map-layer-switch__label">水情</span>
+                    <input type="checkbox" class="map-layer-switch__input" id="preview-toggle-water-reservoir" checked />
+                    <span class="map-layer-switch__track" aria-hidden="true">
+                        <span class="map-layer-switch__thumb"></span>
+                    </span>
+                </label>
+                <div class="preview-meta" id="preview-water-meta">載入中…</div>
+            </div>
+        </header>
+        <div class="preview-map-wrap">
+            <div id="preview-map"></div>
+            <aside class="preview-legend" aria-label="圖例">
+                <strong>圖例</strong>
+                圓點面積依有效庫容量（萬m³）縮放<br />
+                圓內數字為有效蓄水百分比<br />
+                色彩僅用藍色系（非水情燈號）<br />
+                滑鼠懸停顯示庫容量、蓄水量、水位、時間
+            </aside>
+        </div>
+    </div>
+
+    <script src="js/jcms/lib/dashboard-map-water-reservoir.js?v=preview5"></script>
+    <script>
+        (function () {
+            const MAP_COLORS = {
+                surface: '#ffffff',
+                panel: '#f4f4f4',
+                ink100: '#e5e5e5',
+                ink400: '#999999',
+                ink600: '#666666',
+                ink900: '#111111',
+                accent: '#F05A28',
+            };
+
+            const LAYER_IDS = {
+                waterReservoirCircle: 'wra-reservoir-circle',
+                waterReservoirLabel: 'wra-reservoir-label',
+            };
+
+            const mapLayerState = { waterReservoir: true };
+
+            const metaEl = document.getElementById('preview-water-meta');
+            const toggle = document.getElementById('preview-toggle-water-reservoir');
+
+            const waterApi = DashboardMapWaterReservoir.createWaterReservoirLayersApi({
+                mapColors: MAP_COLORS,
+                layerIds: LAYER_IDS,
+                getMapLayerState: () => mapLayerState,
+                setWaterReservoirMeta: (msg) => { metaEl.textContent = msg || ''; },
+                getApiBase: () => {
+                    const { protocol, hostname, port } = window.location;
+                    if (port === '3000' || port === '') {
+                        return `${protocol}//${hostname}${port ? `:${port}` : ''}/api`;
+                    }
+                    return 'http://127.0.0.1:3000/api';
+                },
+            });
+
+            const map = new maplibregl.Map({
+                container: 'preview-map',
+                style: {
+                    version: 8,
+                    glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+                    sources: {
+                        openmaptiles: {
+                            type: 'vector',
+                            url: 'https://tiles.openfreemap.org/planet',
+                        },
+                    },
+                    layers: [
+                        {
+                            id: 'background',
+                            type: 'background',
+                            paint: { 'background-color': MAP_COLORS.surface },
+                        },
+                        {
+                            id: 'water',
+                            type: 'fill',
+                            source: 'openmaptiles',
+                            'source-layer': 'water',
+                            paint: { 'fill-color': MAP_COLORS.surface },
+                        },
+                        {
+                            id: 'landcover',
+                            type: 'fill',
+                            source: 'openmaptiles',
+                            'source-layer': 'landcover',
+                            paint: {
+                                'fill-color': '#E8E8E8',
+                                'fill-opacity': 0.9,
+                            },
+                        },
+                    ],
+                },
+                center: [121.0, 23.8],
+                zoom: 7.3,
+                minZoom: 6.5,
+                maxZoom: 14,
+            });
+
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+
+            const loadLayers = () => {
+                waterApi.refreshWaterReservoirLayers(map).catch((err) => {
+                    console.error('[water-preview] 圖層載入失敗', err);
+                    metaEl.textContent = '水庫水情載入失敗';
+                });
+            };
+
+            map.on('load', () => {
+                loadLayers();
+                waterApi.scheduleWaterReservoirRefresh(map, () => mapLayerState.waterReservoir);
+            });
+
+            toggle.addEventListener('change', () => {
+                mapLayerState.waterReservoir = toggle.checked;
+                waterApi.refreshWaterReservoirLayers(map);
+                if (toggle.checked) {
+                    waterApi.scheduleWaterReservoirRefresh(map, () => mapLayerState.waterReservoir);
+                } else {
+                    waterApi.teardownWaterReservoirRefresh();
+                }
+            });
+        }());
+    </script>
+</body>
+</html>

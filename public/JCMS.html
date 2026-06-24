@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JCMS</title>
-    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260623g"></script>
+    <script src="js/jcms/lib/mobile-layout-boot.js?v=0.1.20260624"></script>
     <link rel="icon" href="ico/jcms-icon.png" type="image/png">
     <link rel="apple-touch-icon" href="ico/jcms-icon.png">
 
@@ -42,9 +42,10 @@
         }
     </script>
     
-    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260623g">
-    <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=0.1.20260623g">
-    <link rel="stylesheet" href="css/jcms-work-map-edit.css?v=0.1.20260623g">
+    <link rel="stylesheet" href="css/jcms.css?v=0.1.20260624">
+    <link rel="stylesheet" href="css/jcms-dashboard-map.css?v=0.1.20260624">
+    <link rel="stylesheet" href="css/jcms-news-block.css?v=0.1.20260624">
+    <link rel="stylesheet" href="css/jcms-work-map-edit.css?v=0.1.20260624">
     <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
     <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
     <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
@@ -56,7 +57,7 @@
         <header class="jcms-app-header flex items-center h-12 px-3 md:px-6 bg-ink-900 border-b border-ink-600/30 shrink-0 relative z-20">
             <div class="flex items-center gap-3 md:gap-6 flex-1 min-w-0">
                 <div class="inline-flex items-end gap-1.5 font-bold text-lg tracking-tight text-white leading-none shrink-0">
-                    <span>JCMS</span><span class="text-accent font-normal text-[10px] leading-none hidden md:inline">0.1.20260623g</span>
+                    <span>JCMS</span><span class="text-accent font-normal text-[10px] leading-none hidden md:inline">0.1.20260624</span>
                 </div>
                 
                 <div class="relative flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-ink-600/40 min-w-0 flex-1">
@@ -367,6 +368,83 @@
                                                         </div>
                                                     </div>
                                                         </div>
+                                                        <section
+                                                            class="dash-map-news-block dash-map-module"
+                                                            :class="{ 'dash-map-news-block--collapsed': dashNews.collapsed }"
+                                                            aria-label="即時新聞"
+                                                        >
+                                                            <header class="dash-section-head dash-map-module__head dash-map-news-block__head">
+                                                                <div class="swiss-section-heading min-w-0">
+                                                                    <h2 class="swiss-section-heading__title">即時新聞</h2>
+                                                                    <p class="swiss-section-subtitle">LIVE NEWS</p>
+                                                                </div>
+                                                                <div class="flex items-center gap-1.5 shrink-0">
+                                                                    <span
+                                                                        v-if="dashNews.hasBreaking && !dashNews.collapsed"
+                                                                        class="dash-map-news-block__breaking-badge"
+                                                                        aria-label="有重大新聞"
+                                                                    ><i class="ph ph-lightning" aria-hidden="true"></i>BREAKING</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        class="dash-map-news-hide-btn"
+                                                                        :aria-expanded="!dashNews.collapsed"
+                                                                        @click="dashNews.toggleCollapsed()"
+                                                                    >{{ dashNews.collapsed ? '顯示' : '隱藏' }}</button>
+                                                                    <span
+                                                                        v-if="dashNews.updatedAt"
+                                                                        class="dash-section-head__extra font-mono"
+                                                                    >UPDATED {{ dashNews.updatedAt }}</span>
+                                                                </div>
+                                                            </header>
+                                                            <div v-show="!dashNews.collapsed" class="dash-map-news-block__expandable">
+                                                                <div
+                                                                    v-if="dashNews.sourceStatus.length"
+                                                                    class="dash-map-news-sources"
+                                                                    aria-label="新聞來源狀態"
+                                                                >
+                                                                    <span
+                                                                        v-for="src in dashNews.sourceStatus"
+                                                                        :key="'news-src-' + src.source"
+                                                                        class="dash-map-news-source"
+                                                                        :class="src.ok ? 'dash-map-news-source--ok' : 'dash-map-news-source--err'"
+                                                                        :title="src.ok ? (src.source + '：正常') : (src.source + '：' + (src.error || '載入失敗'))"
+                                                                        :role="src.ok ? undefined : 'img'"
+                                                                        :aria-label="src.ok ? undefined : (src.source + '來源失效')"
+                                                                    >
+                                                                        <span class="dash-map-news-source__label">{{ src.source }}</span>
+                                                                        <i v-if="!src.ok" class="ph ph-warning-circle" aria-hidden="true"></i>
+                                                                    </span>
+                                                                </div>
+                                                                <div v-if="dashNews.loading" class="dash-map-news-status dash-map-news-status--loading" role="status" aria-live="polite">
+                                                                    <span class="dash-map-news-status__spinner" aria-hidden="true"></span>
+                                                                    載入新聞中…
+                                                                </div>
+                                                                <div v-else-if="dashNews.error" class="dash-map-news-status dash-map-news-status--error" role="alert">
+                                                                    {{ dashNews.error }}
+                                                                </div>
+                                                                <div v-else-if="!dashNews.items.length" class="dash-map-news-status">
+                                                                    目前無相關新聞
+                                                                </div>
+                                                                <div v-else class="dash-map-news-list" role="list">
+                                                                    <a
+                                                                        v-for="(item, newsIdx) in dashNews.items"
+                                                                        :key="'news-item-' + newsIdx + '-' + item.url"
+                                                                        :href="item.url"
+                                                                        class="dash-map-news-item"
+                                                                        :class="item.breaking ? 'dash-map-news-item--breaking' : ''"
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        :title="item.title"
+                                                                    >
+                                                                        <span class="dash-map-news-item__source">
+                                                                            <i v-if="item.breaking" class="ph ph-lightning" aria-hidden="true"></i>[{{ item.source }}]
+                                                                        </span>
+                                                                        <span class="dash-map-news-item__title">{{ item.title }}</span>
+                                                                        <span class="dash-map-news-item__time">{{ item.time }}</span>
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </section>
                                                     </div>
                                                     <aside class="dash-map-todo-block dash-map-module" aria-label="待辦事項">
                                                         <header class="dash-section-head dash-map-module__head">
@@ -538,6 +616,7 @@
                                     <p id="map-population-source-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" hidden aria-live="polite"></p>
                                     <p id="map-weather-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-air-quality-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
+                                    <p id="map-water-reservoir-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-nlsc-layer-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" aria-live="polite"></p>
                                     <p id="map-urban-plan-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta" hidden aria-live="polite"></p>
                                     <p id="map-layer-health-meta" class="dash-map-toolbar__status dash-map-toolbar__status--layer-meta dash-map-toolbar__status--layer-health" hidden aria-live="polite"></p>
@@ -619,6 +698,13 @@
                                 <label class="map-layer-switch" for="map-toggle-major-transport">
                                     <span class="map-layer-switch__label">交通</span>
                                     <input type="checkbox" class="map-layer-switch__input" id="map-toggle-major-transport" role="switch" autocomplete="off" />
+                                    <span class="map-layer-switch__track" aria-hidden="true">
+                                        <span class="map-layer-switch__thumb"></span>
+                                    </span>
+                                </label>
+                                <label class="map-layer-switch" for="map-toggle-water-reservoir">
+                                    <span class="map-layer-switch__label">水情</span>
+                                    <input type="checkbox" class="map-layer-switch__input" id="map-toggle-water-reservoir" role="switch" autocomplete="off" />
                                     <span class="map-layer-switch__track" aria-hidden="true">
                                         <span class="map-layer-switch__thumb"></span>
                                     </span>
@@ -5235,29 +5321,30 @@
     </div>
 
     <!-- [Logic] Vue 3 Composition API — ES modules -->
-    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-urban-plan.js?v=0.1.20260623g"></script>
-    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260623g"></script>
-    <script type="module" src="js/jcms/main.js?v=0.1.20260623g"></script>
-    <script src="vendor/pdfjs.min.js?v=0.1.20260623g"></script>
-    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260623g"></script>
-    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260623g"></script>
-    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260623g"></script>
-    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260623g"></script>
-    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260623g"></script>
-    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260623g"></script>
-    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260623g"></script>
-    <script src="lib/genealogyLayout.js?v=0.1.20260623g"></script>
-    <script src="lib/inheritanceCompute.js?v=0.1.20260623g"></script>
-    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260623g"></script>
-    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260623g"></script>
+    <script src="js/jcms/lib/api-base-global.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-stack.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-layer-health.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-current-location.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-nlsc.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-weather.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-air-quality.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-water-reservoir.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-police.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-judicial.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-urban-plan.js?v=0.1.20260624"></script>
+    <script src="js/jcms/lib/dashboard-map-population.js?v=0.1.20260624"></script>
+    <script type="module" src="js/jcms/main.js?v=0.1.20260624"></script>
+    <script src="vendor/pdfjs.min.js?v=0.1.20260624"></script>
+    <script src="vendor/html2pdf.bundle.min.js?v=0.1.20260624"></script>
+    <script src="vendor/ffmpeg/ffmpeg.js?v=0.1.20260624"></script>
+    <script src="lib/jcms-inspection-import-queue.js?v=0.1.20260624"></script>
+    <script type="text/babel" data-presets="react" src="apps/civil-tools-sld.jsx?v=0.1.20260624"></script>
+    <script type="text/babel" data-presets="react" src="apps/inspection-layout-app.jsx?v=0.1.20260624"></script>
+    <script type="text/babel" data-presets="react" src="apps/video-inspection-app.jsx?v=0.1.20260624"></script>
+    <script type="text/babel" data-presets="react" src="apps/hoffmann-tool-app.jsx?v=0.1.20260624"></script>
+    <script src="lib/genealogyLayout.js?v=0.1.20260624"></script>
+    <script src="lib/inheritanceCompute.js?v=0.1.20260624"></script>
+    <script type="text/babel" data-presets="react" src="apps/inheritance-chart-app.jsx?v=0.1.20260624"></script>
+    <script type="text/babel" data-presets="react" src="apps/case-stats-app.jsx?v=0.1.20260624"></script>
 </body>
 </html>

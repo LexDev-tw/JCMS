@@ -7,7 +7,7 @@ import {
     lineLengthMeters,
     formatLengthLabel,
     lineMidpoint,
-} from './work-map-geo.js?v=0.1.20260623g';
+} from './work-map-geo.js?v=0.1.20260624';
 
 export const WORK_MAP_FEATURE_TYPES = Object.freeze({
     point: 'point',

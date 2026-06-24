@@ -2,7 +2,7 @@
 
 **J**udicial **C**ase **M**anagement **S**ystem — 司法案件與事務管理系統。
 
-**目前版本：** `0.1.20260623g`
+**目前版本：** `0.1.20260624`
 
 ## 快速開始（本機）
 
@@ -50,6 +50,26 @@ docker compose up -d --build
 - 建議 RAM ≥ 2 GB；production image 使用 `npm ci --omit=dev`。
 
 ## 開發日誌
+
+### 2026-06-24
+
+**版號**
+
+- 版號升至 `0.1.20260624`。
+
+**儀表板地圖：即時新聞區塊**
+
+- 總覽地圖左欄新增「即時新聞」模組（`use-dashboard-news.js`、`jcms-news-block.css`）：彙整中央社、自由、聯合、鏡新聞、法務部、司法院等來源，依政經、社會、司法關鍵字篩選；支援 BREAKING 標記、來源狀態與收合。
+- 後端 `GET /api/news`（`newsService.js`）：RSS／官方 API proxy、5 分鐘快取；DB 未就緒時仍可回應（stateless API）。
+
+**儀表板地圖：水庫水情圖層**
+
+- 新增水利署水庫位置與即時水情圖層（`dashboard-map-water-reservoir.js`、`waterReservoirService.js`）：圓點依蓄水率著色、標籤顯示名稱與百分比；內建 `wra-reservoir-map-snapshot.json` 備援。
+- 後端 `GET /api/water-reservoir/*`；TWD97 TM2 座標轉換（`src/lib/twd97tm2.js`）；建置腳本 `build-wra-reservoir-locations.js`。
+
+**啟動與 API**
+
+- `server.js`：氣象、人口、空品、水庫、新聞等 stateless API 於 SQLite 初始化完成前即可服務，避免總覽地圖圖層等待 DB。
 
 ### 2026-06-23
 

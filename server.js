@@ -17,6 +17,8 @@ const googleCalendarRoutes = require('./src/routes/googleCalendarRoutes');
 const weatherRoutes = require('./src/routes/weatherRoutes');
 const populationRoutes = require('./src/routes/populationRoutes');
 const airQualityRoutes = require('./src/routes/airQualityRoutes');
+const waterReservoirRoutes = require('./src/routes/waterReservoirRoutes');
+const newsRoutes = require('./src/routes/newsRoutes');
 const mapRoutes = require('./src/routes/mapRoutes');
 const routes = require('./src/routes');
 const dynamicsController = require('./src/controllers/dynamicsController');
@@ -63,7 +65,13 @@ app.get('/JCMS.html', (req, res) => {
 });
 
 app.use((req, res, next) => {
-    if (dbReady || req.method === 'OPTIONS' || !req.path.startsWith('/api')) {
+    const statelessApi =
+        req.path.startsWith('/api/weather')
+        || req.path.startsWith('/api/population')
+        || req.path.startsWith('/api/air-quality')
+        || req.path.startsWith('/api/water-reservoir')
+        || req.path.startsWith('/api/news');
+    if (dbReady || req.method === 'OPTIONS' || !req.path.startsWith('/api') || statelessApi) {
         return next();
     }
     res.set('Retry-After', '2');
@@ -85,6 +93,8 @@ app.use('/api/google-calendar', googleCalendarRoutes);
 app.use('/api/weather', weatherRoutes);
 app.use('/api/population', populationRoutes);
 app.use('/api/air-quality', airQualityRoutes);
+app.use('/api/water-reservoir', waterReservoirRoutes);
+app.use('/api/news', newsRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api', routes);
 

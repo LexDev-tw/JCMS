@@ -1,6 +1,6 @@
 /** Chart.js 俸表棒棒糖圖（透明 bar 定位 + canvas 手繪 stem／圓頭） */
-import { watch, onMounted, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260623g';
-import { payscaleRowTotal } from './personal-admin-shared.js?v=0.1.20260623g';
+import { watch, onMounted, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260624';
+import { payscaleRowTotal } from './personal-admin-shared.js?v=0.1.20260624';
 
 const CHART_INK = '#111111';
 const CHART_ACCENT = '#F05A28';
