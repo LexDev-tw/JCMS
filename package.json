@@ -1,6 +1,6 @@
 {
   "name": "jcms",
-  "version": "0.1.20260624",
+  "version": "0.1.20260625",
   "description": "JCMS — Judicial Case Management System (Docker / VPS deployment)",
   "main": "server.js",
   "scripts": {
@@ -17,7 +17,9 @@
     "gen:ntpc-urban-plan-geojson": "node scripts/convert-ntpc-urban-plan-geojson.js",
     "gen:urban-plan-geojson": "node scripts/convert-taipei-urban-plan-geojson.js && node scripts/convert-ntpc-urban-plan-geojson.js && node scripts/merge-urban-plan-geojson.js",
     "merge:urban-plan-geojson": "node scripts/merge-urban-plan-geojson.js",
-    "gen:taipei-police-geojson": "npm run gen:police-geojson"
+    "gen:taipei-police-geojson": "npm run gen:police-geojson",
+    "gen:wra-reservoir-locations": "node scripts/build-wra-reservoir-locations.js",
+    "audit:wra-reservoir-locations": "node scripts/audit-reservoir-locations.js"
   },
   "engines": {
     "node": ">=18"

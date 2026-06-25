@@ -1,0 +1,35 @@
+---
+description: README 與 GitHub 文件定位（個人專用，非對外產品文件）
+alwaysApply: true
+---
+
+# 儲存庫文件定位
+
+## 用途
+
+- 本專案公開於 GitHub **僅供本人**備份程式碼、同步 VPS 部署、回溯開發歷程。
+- **不**打算支援其他使用者；勿撰寫面向第三方的安裝指南、快速開始、操作手冊或貢獻說明。
+
+## README.md 應保留
+
+- 專案簡介與目前版號
+- **技術棧**（後端、前端、地圖、部署架構等摘要）
+- **開發日誌**（`### YYYY-MM-DD`）：每次 push 前新增當日條目，記錄功能變更與版號
+
+## README.md 勿寫入
+
+- 本機安裝步驟（`npm ci`、`npm start` 等操作教學）
+- VPS／Docker 首次部署、更新、`git pull` 逐步說明
+- 面向他人的「如何使用」「貢獻」「授權使用」類章節
+- 個人網域、金鑰、帳號（見 `no-privacy-data-in-repo.mdc`）
+
+## 部署與推送細節放哪裡
+
+- VPS Docker、NPM、版號 bump、推送檢查清單 → **`.cursor/rules/vps-deployment.mdc`**
+- 標準 commit & push 流程 → **`prompt-commit-push.md`**
+- 環境變數占位範例 → **`.env.example`**（不含實值）
+
+## 變更 README 時
+
+- 新增功能可寫入開發日誌，無須補充安裝說明。
+- 若誤加安裝／使用章節，推送前應刪除或移回 Cursor 規則／prompt，不留在 README。

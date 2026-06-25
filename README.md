@@ -2,54 +2,35 @@
 
 **J**udicial **C**ase **M**anagement **S**ystem — 司法案件與事務管理系統。
 
-**目前版本：** `0.1.20260624`
+**目前版本：** `0.1.20260625`
 
-## 快速開始（本機）
+本儲存庫公開於 GitHub 僅作個人備份與開發歷程追溯，**不開放給其他使用者**；README 不含安裝或操作說明。部署與推送約束見 `.cursor/rules/`、`prompt-commit-push.md`。
 
-```bash
-npm ci
-cp .env.example .env   # Windows: copy .env.example .env
-npm start
-```
+## 技術棧
 
-瀏覽 `http://127.0.0.1:3000`。API 金鑰與 OAuth 設定見 `.env.example` 註解；亦可於 UI 內設定 Google Calendar OAuth。
-
-## VPS 部署（Docker + Nginx Proxy Manager）
-
-正式環境以 Docker Compose 運行，TLS 由 **Nginx Proxy Manager（NPM）** 處理。儲存庫內**不含**個人網域；實際網址僅寫在 VPS 本機 `.env`（已在 `.gitignore`，`git pull` 不會覆寫）。
-
-### 首次部署
-
-1. 在 VPS clone 本儲存庫，進入專案目錄。
-2. 複製並編輯環境變數：
-   ```bash
-   cp .env.example .env
-   # 編輯 .env：JCMS_PUBLIC_URL=https://你的子網域
-   # 依需要填入 GOOGLE_*、CWA_API_KEY、MOENV_API_KEY
-   ```
-3. 確認 NPM 已建立外部 Docker 網路 `npm_default`（或與 `docker-compose.yml` 一致）。
-4. 在 NPM 新增 Proxy Host：`https://你的子網域` → `http://jcms:3000`。
-5. 建置並啟動：
-   ```bash
-   docker compose up -d --build
-   ```
-
-### 更新（git pull）
-
-```bash
-git pull
-docker compose up -d --build
-```
-
-資料與上傳檔保存在 Docker volumes（`jcms-data`、`jcms-uploads`），更新映像不會清除。
-
-### 注意事項
-
-- 容器僅 `expose: 3000`，勿在 compose 綁定主機 port；對外由 NPM 代理。
-- Google OAuth redirect URI 須為 `{JCMS_PUBLIC_URL}/api/google-calendar/oauth/callback`，並在 Google Cloud Console 登記相同 URI。
-- 建議 RAM ≥ 2 GB；production image 使用 `npm ci --omit=dev`。
+| 層級 | 技術 |
+|------|------|
+| 執行環境 | Node.js ≥ 18 |
+| 後端 | Express、SQLite（`sqlite3`）、`compression`、`multer` |
+| 前端 | Vue 3（Composition API、ES modules）、Tailwind CSS |
+| 地圖 | MapLibre GL JS 4.7、本地 GeoJSON、CWA 氣象疊圖、水利署水庫圖層 |
+| 圖表／媒體 | Chart.js、FFmpeg.wasm（`@ffmpeg/*`） |
+| 整合 | Google Calendar OAuth（`googleapis`）、中央社／法務部等 RSS 新聞 proxy |
+| 正式環境 | Docker Compose、Nginx Proxy Manager（`npm_default` 外部網路） |
+| 資料持久化 | Docker volumes：`jcms-data`（SQLite）、`jcms-uploads` |
 
 ## 開發日誌
+
+### 2026-06-25
+
+**版號**
+
+- 版號升至 `0.1.20260625`。
+
+**README 與文件定位**
+
+- README 移除「快速開始」「VPS 部署」等安裝／使用說明，僅保留技術棧與開發日誌，供個人回溯開發歷程。
+- 新增 `.cursor/rules/repo-documentation.mdc`；`vps-deployment.mdc`、`prompt-commit-push.md` 同步註明 README 文件政策。
 
 ### 2026-06-24
 
@@ -184,4 +165,3 @@ docker compose up -d --build
 - 新增司法／警察機關圖層編輯（`agency-layer-model.js`、`agency-layer-maplibre.js`）：可切換自訂圖層、司法、警察、現在位置等編輯目標。
 - `create-app.js` / `JCMS.html`：機關點位表單、工具列 `editTarget` 切換、非自訂模式停用線／面繪製。
 - `use-work-map-editor.js` 整合機關圖層同步與現在位置拖放。
-

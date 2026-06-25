@@ -7,7 +7,8 @@ alwaysApply: true
 
 ## 儲存庫定位
 
-- 推送到 **GitHub** 的程式碼僅供 **VPS Docker 部署**；每次 push 後必須能在 VPS 上 `git pull`（或 `clone`）並 **`docker compose up -d --build`** 成功更新運行。
+- 推送到 **GitHub** 的程式碼僅供 **本人** VPS Docker 部署與開發歷程備份；**不**對外提供安裝或使用說明（README 政策見 **`.cursor/rules/repo-documentation.mdc`**）。
+- 每次 push 後必須能在 VPS 上 `git pull`（或 `clone`）並 **`docker compose up -d --build`** 成功更新運行。
 - **勿**將僅供本機開發的腳本、設定（`.vscode/`、Windows `.bat`、PM2 啟動器等）納入推送內容。
 - 本機 native 開發（`npm start`）為輔助，**不可**與 VPS 部署設定衝突。
 - 隱私資料約束見 **`.cursor/rules/no-privacy-data-in-repo.mdc`**；實際網域與金鑰僅存在 VPS 本機 `.env`（已在 `.gitignore`）。
@@ -38,7 +39,7 @@ alwaysApply: true
 ## 變更檢查清單（推送前）
 
 1. `docker compose config` 無誤，且使用 `npm_default` 外部網路
-2. README / `.env.example` 僅含占位網域（`example.com`），不含個人資料
+2. README 僅含技術棧與開發日誌（**勿**寫安裝／部署教學）；`.env.example` 僅含占位網域（`example.com`），不含個人資料
 3. 無 localhost 專用邏輯混入正式路徑
 4. 2GB RAM 下可建置並啟動（避免不必要的大型 dev 依賴進 production image）
 5. **更新 `README.md`「開發日誌」**：每次 push 前新增當日條目（`### YYYY-MM-DD`），簡述本次變更；版號 bump 時一併記錄
