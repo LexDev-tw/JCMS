@@ -1,9 +1,12 @@
 /** 地圖總覽：水利署水庫水情（preview / composable 共用） */
 (function (global) {
     const SOURCE_ID = 'wra-reservoirs';
+    const SUPPLY_SOURCE_ID = 'wra-reservoir-supply-towns';
+    const SUPPLY_DISTRICTS_URL = 'data/wra-supply-districts.json';
 
     const WATER_BLUE = '#38BDF8';
     const WATER_BLUE_DEEP = '#0369A1';
+    const SUPPLY_HIGHLIGHT = '#0284C7';
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -11,6 +14,70 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    function normalizeAreaText(text) {
+        return String(text || '')
+            .replace(/\u3000/g, '')
+            .replace(/臺/g, '台')
+            .replace(/巿/g, '市')
+            .replace(/\s+/g, '')
+            .trim();
+    }
+
+    function districtMatches(townName, districtName) {
+        const town = normalizeAreaText(townName);
+        const district = normalizeAreaText(districtName);
+        if (!town || !district) return false;
+        if (town === district) return true;
+        const townBase = town.replace(/(區|鄉|鎮|市)$/, '');
+        const districtBase = district.replace(/(區|鄉|鎮|市)$/, '');
+        return townBase === districtBase;
+    }
+
+    function townMatchesRule(props, rule) {
+        if (!props || !rule) return false;
+        const county = normalizeAreaText(props.COUNTYNAME);
+        const ruleCounty = normalizeAreaText(rule.county);
+        if (!county || county !== ruleCounty) return false;
+        if (rule.wholeCounty) return true;
+        const towns = Array.isArray(rule.towns) ? rule.towns : [];
+        return towns.some((town) => districtMatches(props.TOWNNAME, town));
+    }
+
+    function townInDistrictRules(props, rules) {
+        if (!Array.isArray(rules) || !rules.length) return false;
+        return rules.some((rule) => townMatchesRule(props, rule));
+    }
+
+    function buildSupplyDistrictGeoJson(twTownsGeoJson, districtDefs, districtIds) {
+        if (!twTownsGeoJson?.features?.length || !districtDefs || !districtIds?.length) {
+            return { type: 'FeatureCollection', features: [] };
+        }
+
+        const mergedRules = [];
+        const labels = [];
+        districtIds.forEach((id) => {
+            const def = districtDefs[id];
+            if (!def) return;
+            if (def.label) labels.push(def.label);
+            if (Array.isArray(def.rules)) mergedRules.push(...def.rules);
+        });
+        if (!mergedRules.length) {
+            return { type: 'FeatureCollection', features: [], labels };
+        }
+
+        const seen = new Set();
+        const features = [];
+        twTownsGeoJson.features.forEach((feature) => {
+            if (!townInDistrictRules(feature.properties, mergedRules)) return;
+            const key = `${normalizeAreaText(feature.properties?.COUNTYNAME)}|${normalizeAreaText(feature.properties?.TOWNNAME)}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+            features.push(feature);
+        });
+
+        return { type: 'FeatureCollection', features, labels };
     }
 
     function formatVolumeWanM3(value) {
@@ -35,7 +102,7 @@
         if (!data) return '';
         const count = data.reservoirCount || (Array.isArray(data.reservoirs) ? data.reservoirs.length : 0);
         const time = data.observationTime ? ` · ${data.observationTime}` : '';
-        return `${data.sourceAgency || '經濟部水利署'}${time} · ${count} 座`;
+        return `${data.sourceAgency || '經濟部水利署'}${time} · ${count} 座 · 點擊水庫顯示供水區`;
     }
 
     function baseCircleRadius(capacity) {
@@ -108,19 +175,23 @@
         return { type: 'FeatureCollection', features };
     }
 
-    function popupHtml(props) {
+    function popupHtml(props, supplyLabels) {
         const name = escapeHtml(props?.name || '—');
         const capacity = formatVolumeWanM3(props?.effectiveCapacity);
         const storage = formatVolumeWanM3(props?.effectiveStorage);
         const level = formatWaterLevel(props?.waterLevel);
         const time = escapeHtml(props?.observationTime || '—');
         const row = (text) => `<p style="font-family:ui-monospace,monospace;font-size:9px;color:#444;margin:0;line-height:1.25">${text}</p>`;
+        const supplyLine = Array.isArray(supplyLabels) && supplyLabels.length
+            ? `<p style="font-size:10px;color:#0369A1;margin:4px 0 0;line-height:1.35">供水區：${supplyLabels.map(escapeHtml).join('、')}</p>`
+            : '';
         return [
             `<p style="font-size:11px;font-weight:700;color:#111;margin:0 0 2px;line-height:1.25">${name}</p>`,
             row(`庫容量：${capacity}`),
             row(`蓄水量：${storage}`),
             row(`水位高度：${level}`),
             `<p style="font-family:ui-monospace,monospace;font-size:9px;color:#666;margin:0;line-height:1.25">時間：${time}</p>`,
+            supplyLine,
         ].join('');
     }
 
@@ -130,6 +201,8 @@
         getMapLayerState,
         setWaterReservoirMeta,
         getApiBase,
+        getTwTownsGeoJson,
+        ensureTwTownsGeoJson,
         layerStateKey = 'waterReservoir',
     }) {
         let hoverPopup = null;
@@ -138,10 +211,50 @@
         let enterHandler = null;
         let moveHandler = null;
         let leaveHandler = null;
+        let clickHandler = null;
+        let mapClickHandler = null;
+        let interactionsBound = false;
+        let selectedReservoirKey = null;
+        let selectedSupplyLabels = [];
+        let supplyDistrictsCache = null;
+        let supplyDistrictsPromise = null;
 
         function isLayerActive() {
             const state = getMapLayerState();
             return Boolean(state?.[layerStateKey]);
+        }
+
+        async function loadSupplyDistricts() {
+            if (supplyDistrictsCache) return supplyDistrictsCache;
+            if (!supplyDistrictsPromise) {
+                supplyDistrictsPromise = fetch(SUPPLY_DISTRICTS_URL, {
+                    headers: { Accept: 'application/json' },
+                })
+                    .then((res) => {
+                        if (!res.ok) throw new Error(`supply-districts HTTP ${res.status}`);
+                        return res.json();
+                    })
+                    .then((data) => {
+                        supplyDistrictsCache = data;
+                        return data;
+                    })
+                    .catch((err) => {
+                        supplyDistrictsPromise = null;
+                        throw err;
+                    });
+            }
+            return supplyDistrictsPromise;
+        }
+
+        function resolveSupplyDistrictIds(config, reservoirName) {
+            if (!config?.reservoirs || !reservoirName) return [];
+            const direct = config.reservoirs[reservoirName];
+            if (Array.isArray(direct) && direct.length) return direct;
+            const normalized = normalizeAreaText(reservoirName);
+            for (const [key, ids] of Object.entries(config.reservoirs)) {
+                if (normalizeAreaText(key) === normalized) return ids;
+            }
+            return [];
         }
 
         function circleRadiusPaint() {
@@ -160,13 +273,129 @@
             map.setPaintProperty(layerIds.waterReservoirCircle, 'circle-color', ['get', 'fillColor']);
             map.setPaintProperty(layerIds.waterReservoirCircle, 'circle-opacity', 0.86);
             map.setPaintProperty(layerIds.waterReservoirCircle, 'circle-blur', 0.12);
-            map.setPaintProperty(layerIds.waterReservoirCircle, 'circle-stroke-width', 0);
+            map.setPaintProperty(layerIds.waterReservoirCircle, 'circle-stroke-color', [
+                'case',
+                ['==', ['get', 'reservoirId'], selectedReservoirKey || ''],
+                mapColors?.ink900 || '#111111',
+                'rgba(255,255,255,0.55)',
+            ]);
+            map.setPaintProperty(layerIds.waterReservoirCircle, 'circle-stroke-width', [
+                'case',
+                ['==', ['get', 'reservoirId'], selectedReservoirKey || ''],
+                2.4,
+                0,
+            ]);
+        }
+
+        function ensureSupplyLayers(map) {
+            if (map.getSource(SUPPLY_SOURCE_ID)) return;
+
+            map.addSource(SUPPLY_SOURCE_ID, {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features: [] },
+            });
+
+            map.addLayer({
+                id: layerIds.waterReservoirSupplyFill,
+                type: 'fill',
+                source: SUPPLY_SOURCE_ID,
+                layout: { visibility: 'none' },
+                paint: {
+                    'fill-color': SUPPLY_HIGHLIGHT,
+                    'fill-opacity': 0.16,
+                },
+            });
+
+            map.addLayer({
+                id: layerIds.waterReservoirSupplyLine,
+                type: 'line',
+                source: SUPPLY_SOURCE_ID,
+                layout: { visibility: 'none' },
+                paint: {
+                    'line-color': SUPPLY_HIGHLIGHT,
+                    'line-opacity': 0.42,
+                    'line-width': 1.1,
+                },
+            });
+        }
+
+        function setSupplyHighlightVisibility(map, visible) {
+            const layout = visible ? 'visible' : 'none';
+            if (map.getLayer(layerIds.waterReservoirSupplyFill)) {
+                map.setLayoutProperty(layerIds.waterReservoirSupplyFill, 'visibility', layout);
+            }
+            if (map.getLayer(layerIds.waterReservoirSupplyLine)) {
+                map.setLayoutProperty(layerIds.waterReservoirSupplyLine, 'visibility', layout);
+            }
+        }
+
+        function clearSupplyHighlight(map) {
+            selectedReservoirKey = null;
+            selectedSupplyLabels = [];
+            if (map?.getSource(SUPPLY_SOURCE_ID)) {
+                map.getSource(SUPPLY_SOURCE_ID).setData({
+                    type: 'FeatureCollection',
+                    features: [],
+                });
+            }
+            if (map) {
+                setSupplyHighlightVisibility(map, false);
+                syncCirclePaint(map);
+            }
+        }
+
+        async function setSupplyHighlight(map, reservoirId, reservoirName) {
+            let twTownsGeoJson = typeof getTwTownsGeoJson === 'function' ? getTwTownsGeoJson() : null;
+            if (!twTownsGeoJson && typeof ensureTwTownsGeoJson === 'function') {
+                twTownsGeoJson = await ensureTwTownsGeoJson();
+            }
+            if (!twTownsGeoJson) {
+                console.warn('[dashboard-map] 鄉鎮界線尚未載入，無法顯示供水區');
+                if (typeof setWaterReservoirMeta === 'function') {
+                    setWaterReservoirMeta('鄉鎮界線載入中，請稍後再點選');
+                }
+                return;
+            }
+
+            let config;
+            try {
+                config = await loadSupplyDistricts();
+            } catch (err) {
+                console.warn('[dashboard-map] 供水區對照載入失敗', err);
+                if (typeof setWaterReservoirMeta === 'function') {
+                    setWaterReservoirMeta('供水區對照資料載入失敗');
+                }
+                return;
+            }
+
+            const districtIds = resolveSupplyDistrictIds(config, reservoirName);
+            ensureSupplyLayers(map);
+            const data = buildSupplyDistrictGeoJson(twTownsGeoJson, config.districts, districtIds);
+            map.getSource(SUPPLY_SOURCE_ID).setData({
+                type: 'FeatureCollection',
+                features: data.features,
+            });
+            selectedReservoirKey = reservoirId || null;
+            selectedSupplyLabels = data.labels || [];
+            setSupplyHighlightVisibility(map, data.features.length > 0);
+            syncCirclePaint(map);
+            raiseLayers(map);
+
+            if (typeof setWaterReservoirMeta === 'function') {
+                if (selectedSupplyLabels.length) {
+                    setWaterReservoirMeta(`供水區：${selectedSupplyLabels.join('、')}`);
+                } else if (!districtIds.length) {
+                    setWaterReservoirMeta('此水庫尚無供水區對照');
+                }
+            }
         }
 
         function ensureLayers(map) {
             if (!map.isStyleLoaded()) {
                 throw new Error('map style not loaded');
             }
+
+            ensureSupplyLayers(map);
 
             if (!map.getSource(SOURCE_ID)) {
                 map.addSource(SOURCE_ID, {
@@ -224,7 +453,12 @@
         }
 
         function raiseLayers(map) {
-            [layerIds.waterReservoirCircle, layerIds.waterReservoirLabel].forEach((layerId) => {
+            [
+                layerIds.waterReservoirSupplyFill,
+                layerIds.waterReservoirSupplyLine,
+                layerIds.waterReservoirCircle,
+                layerIds.waterReservoirLabel,
+            ].forEach((layerId) => {
                 if (!map.getLayer(layerId)) return;
                 try {
                     map.moveLayer(layerId);
@@ -234,7 +468,7 @@
             });
         }
 
-        function bindHoverPopup(map) {
+        function bindInteractions(map) {
             if (!enterHandler) {
                 hoverPopup = new maplibregl.Popup({
                     closeButton: false,
@@ -250,9 +484,12 @@
                     if (!feature) return;
                     map.getCanvas().style.cursor = 'pointer';
                     hoverPopupActive = true;
+                    const showSupply = selectedReservoirKey === feature.properties?.reservoirId
+                        ? selectedSupplyLabels
+                        : [];
                     hoverPopup
                         .setLngLat(feature.geometry.coordinates)
-                        .setHTML(popupHtml(feature.properties))
+                        .setHTML(popupHtml(feature.properties, showSupply))
                         .addTo(map);
                 };
 
@@ -268,6 +505,44 @@
                     hoverPopupActive = false;
                     hoverPopup.remove();
                 };
+
+                clickHandler = async (e) => {
+                    if (!isLayerActive()) return;
+                    const feature = e.features && e.features[0];
+                    if (!feature) return;
+
+                    const reservoirId = feature.properties?.reservoirId || '';
+                    const reservoirName = feature.properties?.name || '';
+                    if (!reservoirId && !reservoirName) return;
+
+                    if (selectedReservoirKey === reservoirId) {
+                        clearSupplyHighlight(map);
+                        if (typeof setWaterReservoirMeta === 'function') setWaterReservoirMeta('');
+                        return;
+                    }
+
+                    await setSupplyHighlight(map, reservoirId, reservoirName);
+                    if (hoverPopupActive) {
+                        hoverPopup.setHTML(popupHtml(feature.properties, selectedSupplyLabels));
+                    }
+                };
+
+                mapClickHandler = (e) => {
+                    if (!isLayerActive() || !selectedReservoirKey) return;
+                    const layers = [
+                        layerIds.waterReservoirCircle,
+                        layerIds.waterReservoirLabel,
+                    ].filter((id) => map.getLayer(id));
+                    const hits = map.queryRenderedFeatures(e.point, { layers });
+                    if (hits.length) return;
+                    clearSupplyHighlight(map);
+                    if (typeof setWaterReservoirMeta === 'function') setWaterReservoirMeta('');
+                };
+            }
+
+            if (!interactionsBound) {
+                interactionsBound = true;
+                map.on('click', mapClickHandler);
             }
 
             [layerIds.waterReservoirCircle, layerIds.waterReservoirLabel].forEach((layerId) => {
@@ -276,6 +551,7 @@
                 map.on('mouseenter', layerId, enterHandler);
                 map.on('mousemove', layerId, moveHandler);
                 map.on('mouseleave', layerId, leaveHandler);
+                map.on('click', layerId, clickHandler);
             });
         }
 
@@ -287,9 +563,12 @@
             if (map.getLayer(layerIds.waterReservoirLabel)) {
                 map.setLayoutProperty(layerIds.waterReservoirLabel, 'visibility', visible);
             }
-            if (visible === 'none' && hoverPopup) {
-                hoverPopupActive = false;
-                hoverPopup.remove();
+            if (!isLayerActive()) {
+                clearSupplyHighlight(map);
+                if (hoverPopup) {
+                    hoverPopupActive = false;
+                    hoverPopup.remove();
+                }
             }
         }
 
@@ -337,11 +616,12 @@
                     });
                 }
                 ensureLayers(map);
-                bindHoverPopup(map);
+                bindInteractions(map);
                 map.getSource(SOURCE_ID).setData(buildGeoJson(payload.reservoirs));
+                syncCirclePaint(map);
                 raiseLayers(map);
                 applyVisibility(map);
-                if (typeof setWaterReservoirMeta === 'function') {
+                if (typeof setWaterReservoirMeta === 'function' && !selectedReservoirKey) {
                     setWaterReservoirMeta(formatMonitorMeta(payload));
                 }
             } catch (err) {
@@ -371,6 +651,15 @@
                 global.clearInterval(scheduleWaterReservoirRefresh._timer);
                 scheduleWaterReservoirRefresh._timer = null;
             }
+            selectedReservoirKey = null;
+            selectedSupplyLabels = [];
+            interactionsBound = false;
+            boundLayers.clear();
+            enterHandler = null;
+            moveHandler = null;
+            leaveHandler = null;
+            clickHandler = null;
+            mapClickHandler = null;
         }
 
         return {
@@ -378,14 +667,18 @@
             refreshWaterReservoirLayers,
             scheduleWaterReservoirRefresh,
             teardownWaterReservoirRefresh,
+            clearSupplyHighlight,
             formatMonitorMeta,
             buildGeoJson,
+            buildSupplyDistrictGeoJson,
             popupHtml,
         };
     }
 
     global.DashboardMapWaterReservoir = {
         createWaterReservoirLayersApi,
+        buildSupplyDistrictGeoJson,
         SOURCE_ID,
+        SUPPLY_SOURCE_ID,
     };
 }(typeof window !== 'undefined' ? window : globalThis));

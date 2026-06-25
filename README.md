@@ -2,7 +2,7 @@
 
 **J**udicial **C**ase **M**anagement **S**ystem — 司法案件與事務管理系統。
 
-**目前版本：** `0.1.20260625`
+**目前版本：** `0.1.20260625a`
 
 本儲存庫公開於 GitHub 僅作個人備份與開發歷程追溯。
 
@@ -25,12 +25,22 @@
 
 **版號**
 
-- 版號升至 `0.1.20260625`。
+- 版號升至 `0.1.20260625`；水庫供水區圖層強化後為 `0.1.20260625a`。
 
 **README 與文件定位**
 
 - README 移除「快速開始」「VPS 部署」等安裝／使用說明，僅保留技術棧與開發日誌，供個人回溯開發歷程。
 - 新增 `.cursor/rules/repo-documentation.mdc`；`vps-deployment.mdc`、`prompt-commit-push.md` 同步註明 README 文件政策。
+
+**儀表板地圖：水庫供水區高亮**
+
+- 點選水庫圓點可於地圖疊加該水庫供水鄉鎮區域（`wra-supply-districts.json`、`dashboard-map-water-reservoir.js`）；圖層堆疊納入 supply fill／line。
+- `waterReservoirService.js`：解析供水區鄉鎮標籤、水庫座標對照表（`RESERVOIR_LOCATION_HINTS`）、縣市質心備援；`build-wra-reservoir-locations.js` 堰壩 API 不可用時改以基本資料推算。
+- 新增 `wra-reservoir-locations.json`、`audit:wra-reservoir-locations` 稽核腳本；`use-dashboard-map-view.js` 強化鄉鎮 GeoJSON 取得與圖層關閉時清除高亮。
+
+**儀表板地圖：雨量標籤縮放**
+
+- 縮放級數 < 10 時雨量標籤僅顯示全台最大降雨站，避免低縮放圖面擁擠（`dashboard-map-weather.js`）。
 
 ### 2026-06-24
 

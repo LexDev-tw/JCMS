@@ -84,6 +84,8 @@
             'tw-town-population-labels',
             'epa-aq-station-circle',
             'epa-aq-station-label',
+            layerIds.waterReservoirSupplyFill || 'wra-reservoir-supply-fill',
+            layerIds.waterReservoirSupplyLine || 'wra-reservoir-supply-line',
             layerIds.waterReservoirCircle || 'wra-reservoir-circle',
             layerIds.waterReservoirLabel || 'wra-reservoir-label',
             'police-agency-circle',

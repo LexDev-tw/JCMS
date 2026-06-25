@@ -11,6 +11,43 @@ const BUNDLED_LOCATIONS = path.join(__dirname, '../../public/data/wra-reservoir-
 const SNAPSHOT_PATH = path.join(__dirname, '../../public/data/wra-reservoir-map-snapshot.json');
 const TW_TOWNS_GEOJSON = path.join(__dirname, '../../public/data/tw-towns.geojson');
 
+/** 基本資料未收錄或鄉鎮欄位不足時的對照（鄉鎮標籤格式同水利署） */
+const RESERVOIR_LOCATION_HINTS = Object.freeze({
+    '10802': '宜蘭縣三星鄉',
+    '10206': '桃園市復興區',
+    '10211': '新北市新店區',
+    '20405': '臺北市士林區',
+    '20507': '南投縣仁愛鄉',
+    '20508': '南投縣魚池鄉',
+    '30306': '嘉義縣大林鎮',
+    '31002': '高雄市甲仙區',
+    '50104': '澎湖縣白沙鄉',
+    '50109': '澎湖縣馬公市',
+    '50201': '金門縣金湖鎮',
+    '50202': '金門縣金沙鎮',
+    '50203': '金門縣金湖鎮',
+    '50204': '金門縣金城鎮',
+    '50205': '金門縣金湖鎮',
+    '50206': '金門縣金寧鄉',
+    '50207': '金門縣金沙鎮',
+    '50208': '金門縣金寧鄉',
+    '50209': '金門縣烈嶼鄉',
+    '50210': '金門縣金城鎮',
+    '50212': '金門縣金湖鎮',
+    '50213': '金門縣金湖鎮',
+    '50214': '金門縣金寧鄉',
+    '50301': '金門縣金城鎮',
+    '50302': '金門縣烈嶼鄉',
+    '50303': '金門縣烈嶼鄉',
+    '50304': '金門縣烈嶼鄉',
+    '50305': '金門縣烈嶼鄉',
+    '50306': '金門縣金沙鎮',
+    '50307': '金門縣金沙鎮',
+    '50308': '金門縣烈嶼鄉',
+    '50309': '金門縣烈嶼鄉',
+    '50310': '金門縣烈嶼鄉',
+});
+
 const ENDPOINTS = Object.freeze({
     situation: `${WRA_V2}/2be9044c-6e44-4856-aad5-dd108c2e6679?format=JSON`,
     dailyOps: `${WRA_V2}/51023e88-4c76-4dbc-bbb9-470da690d539?format=JSON`,
@@ -37,6 +74,7 @@ function regionCentroidForId(reservoirId) {
 
 const cache = new Map();
 let townCentroidCache = null;
+let countyCentroidCache = null;
 
 function cacheGet(key) {
     const entry = cache.get(key);
@@ -86,6 +124,157 @@ function normalizeTownLabel(raw) {
     const m = text.match(/(.+?[縣市])(.+?[區鄉鎮市])/);
     if (!m) return { county: text, town: '' };
     return { county: m[1], town: m[2] };
+}
+
+function splitConcatenatedTowns(rest) {
+    const towns = [];
+    const re = /(.+?(?:區|鄉|鎮|市))/g;
+    let match;
+    while ((match = re.exec(rest)) !== null) {
+        towns.push(match[1]);
+    }
+    return towns;
+}
+
+function parseTownLabelSegments(townLabel) {
+    const text = normalizeCountyName(townLabel).replace(/\s+/g, '');
+    if (!text) return [];
+    const countyMatch = text.match(/^(.+?[縣市])/);
+    if (!countyMatch) return [];
+    const county = countyMatch[1];
+    const rest = text.slice(county.length);
+    if (!rest) return [{ county, wholeCounty: true }];
+
+    if (/[、,，\n]/.test(rest)) {
+        return rest
+            .split(/[、,，\n]/)
+            .map((town) => town.trim())
+            .filter(Boolean)
+            .map((town) => ({ county, town }));
+    }
+
+    const towns = splitConcatenatedTowns(rest);
+    if (towns.length > 1) {
+        return towns.map((town) => ({ county, town }));
+    }
+    if (towns.length === 1) {
+        return [{ county, town: towns[0] }];
+    }
+    return [{ county, town: rest }];
+}
+
+function townLookupKeys(county, town) {
+    const c = normalizeCountyName(county);
+    const t = normalizeCountyName(town);
+    const keys = new Set([`${c}|${t}`]);
+    const base = t.replace(/(區|鄉|鎮|市)$/, '');
+    if (base) {
+        ['市', '鎮', '鄉', '區'].forEach((suffix) => keys.add(`${c}|${base}${suffix}`));
+    }
+    return [...keys];
+}
+
+function lookupTownCentroid(townCentroids, county, town) {
+    for (const key of townLookupKeys(county, town)) {
+        const coords = townCentroids.get(key);
+        if (coords) return { coords, key };
+    }
+    return null;
+}
+
+function resolveCentroidFromTownLabel(townCentroids, townLabel, reservoirId, countyCentroids = null) {
+    const segments = parseTownLabelSegments(townLabel);
+    if (!segments.length) {
+        const { county, town } = normalizeTownLabel(townLabel);
+        if (county && town) segments.push({ county, town });
+        else if (county) segments.push({ county, wholeCounty: true });
+    }
+
+    const matched = [];
+    let matchedKey = null;
+    segments.forEach(({ county, town, wholeCounty }) => {
+        if (wholeCounty) {
+            const counties = countyCentroids || loadCountyCentroids();
+            const coords = counties.get(normalizeCountyName(county));
+            if (coords) {
+                matched.push(coords);
+                matchedKey = `${normalizeCountyName(county)}|*`;
+            }
+            return;
+        }
+        const hit = lookupTownCentroid(townCentroids, county, town);
+        if (hit) {
+            matched.push(hit.coords);
+            matchedKey = hit.key;
+        }
+    });
+
+    if (matched.length) {
+        const lng = matched.reduce((sum, c) => sum + c.lng, 0) / matched.length;
+        const lat = matched.reduce((sum, c) => sum + c.lat, 0) / matched.length;
+        const wholeCountyOnly = segments.every((seg) => seg.wholeCounty);
+        return {
+            lng,
+            lat,
+            source: wholeCountyOnly
+                ? 'basic-info-county-centroid'
+                : (matched.length > 1 ? 'basic-info-multi-town-centroid' : 'basic-info-town-centroid'),
+            townKey: matchedKey,
+        };
+    }
+
+    const region = regionCentroidForId(reservoirId);
+    if (region) {
+        return { lng: region.lng, lat: region.lat, source: 'basic-info-region-centroid', townKey: null };
+    }
+    return null;
+}
+
+function loadCountyCentroids() {
+    if (countyCentroidCache) return countyCentroidCache;
+    const townCentroids = loadTownCentroids();
+    const byCounty = new Map();
+    const counts = new Map();
+
+    townCentroids.forEach((coords, key) => {
+        const county = key.split('|')[0];
+        if (!county) return;
+        const prev = byCounty.get(county) || { lng: 0, lat: 0 };
+        const n = (counts.get(county) || 0) + 1;
+        counts.set(county, n);
+        byCounty.set(county, {
+            lng: prev.lng + coords.lng,
+            lat: prev.lat + coords.lat,
+        });
+    });
+
+    byCounty.forEach((sum, county) => {
+        const n = counts.get(county) || 1;
+        byCounty.set(county, { lng: sum.lng / n, lat: sum.lat / n });
+    });
+
+    countyCentroidCache = byCounty;
+    return byCounty;
+}
+
+function townLabelForReservoir(reservoirId, name, basicRow) {
+    const id = normalizeReservoirId(reservoirId);
+    if (RESERVOIR_LOCATION_HINTS[id]) return RESERVOIR_LOCATION_HINTS[id];
+    if (basicRow?.townLabel) return basicRow.townLabel;
+
+    const prefix3 = id.slice(0, 3);
+    if (prefix3 === '501') return '澎湖縣';
+    if (prefix3 === '502' || prefix3 === '503') return '金門縣';
+    return null;
+}
+
+function resolveReservoirCoordinates(reservoirId, name, townLabel) {
+    const id = normalizeReservoirId(reservoirId);
+    const townCentroids = loadTownCentroids();
+    const countyCentroids = loadCountyCentroids();
+    const label = townLabel || townLabelForReservoir(id, name, null);
+    if (!label) return null;
+    return resolveCentroidFromTownLabel(townCentroids, label, id, countyCentroids);
 }
 
 function ringCentroid(ring) {
@@ -215,8 +404,12 @@ function buildBasicInfoIndex(rows) {
         const id = normalizeReservoirId(pickField(row, '水庫代碼', 'reservoiridentifier', 'ReservoirIdentifier'));
         const name = String(pickField(row, '水庫名稱', 'reservoirname', 'ReservoirName') || '').trim();
         const townLabel = pickField(row, '鄉鎮市區名稱', 'townname', 'TownName');
-        const { county, town } = normalizeTownLabel(townLabel);
-        const centroid = townCentroids.get(`${county}|${town}`) || regionCentroidForId(id);
+        const resolved = resolveCentroidFromTownLabel(
+            townCentroids,
+            townLabel,
+            id,
+            loadCountyCentroids()
+        );
         const capacity = parseNumber(
             pickField(row, '目前有效容量', 'currunteffectivecapacity', 'CurruntEffectiveCapacity')
         ) ?? parseNumber(
@@ -228,12 +421,10 @@ function buildBasicInfoIndex(rows) {
             reservoirId: id,
             name,
             effectiveCapacity: capacity,
-            lng: centroid?.lng ?? null,
-            lat: centroid?.lat ?? null,
+            lng: resolved?.lng ?? null,
+            lat: resolved?.lat ?? null,
             townLabel: townLabel || null,
-            source: townCentroids.has(`${county}|${town}`)
-                ? 'basic-info-town-centroid'
-                : 'basic-info-region-centroid',
+            source: resolved?.source || null,
         };
         byId.set(id, entry);
         if (name) byName.set(name, entry);
@@ -249,18 +440,44 @@ function augmentLocationRowsFromDailyOps(locationRows, dailyRows, basicInfo) {
         const name = String(pickField(row, 'reservoirname', 'ReservoirName') || '').trim();
         if (!id || byId.has(id)) return;
 
-        const named = name && basicInfo.byName.get(name);
-        const region = regionCentroidForId(id);
-        const coords = named || region;
-        if (!coords?.lng || !coords?.lat) return;
+        const basicRow = basicInfo.byId.get(id) || null;
+        let lng = null;
+        let lat = null;
+        let source = null;
+
+        if (
+            basicRow
+            && Number.isFinite(basicRow.lng)
+            && Number.isFinite(basicRow.lat)
+            && basicRow.source !== 'basic-info-region-centroid'
+        ) {
+            lng = basicRow.lng;
+            lat = basicRow.lat;
+            source = 'daily-name-match';
+        } else {
+            const label = townLabelForReservoir(id, name, basicRow);
+            const resolved = label ? resolveReservoirCoordinates(id, name, label) : null;
+            if (
+                resolved
+                && Number.isFinite(resolved.lng)
+                && Number.isFinite(resolved.lat)
+                && resolved.source !== 'basic-info-region-centroid'
+            ) {
+                lng = resolved.lng;
+                lat = resolved.lat;
+                source = RESERVOIR_LOCATION_HINTS[id] ? 'location-hint' : 'daily-hint-match';
+            }
+        }
+
+        if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
 
         byId.set(id, {
             reservoirId: id,
-            name: name || named?.name || id,
-            lng: coords.lng,
-            lat: coords.lat,
-            effectiveCapacity: parseNumber(pickField(row, 'capacity', 'Capacity')) ?? named?.effectiveCapacity ?? null,
-            source: named ? 'daily-name-match' : 'daily-region-centroid',
+            name: name || basicRow?.name || id,
+            lng,
+            lat,
+            effectiveCapacity: parseNumber(pickField(row, 'capacity', 'Capacity')) ?? basicRow?.effectiveCapacity ?? null,
+            source,
         });
     });
     return Array.from(byId.values());
@@ -429,7 +646,7 @@ async function buildWaterReservoirMapData() {
             situation: '水庫水情資料',
             capacity: '水庫每日營運狀況 / 水庫基本資料',
             locations: readBundledLocations()?.length
-                ? '水庫堰壩位置圖（本地快取）'
+                ? '水庫座標（本地快取 wra-reservoir-locations.json）'
                 : '水庫基本資料 + 鄉鎮中心點（預覽近似）',
         },
         reservoirCount: reservoirs.length,
@@ -456,7 +673,27 @@ async function getWaterReservoirMapData() {
     }
 }
 
+async function buildBundledReservoirLocations() {
+    const [dailyRows, basicRows] = await Promise.all([
+        fetchJson(ENDPOINTS.dailyOps).then(extractArrayPayload),
+        fetchJson(ENDPOINTS.basicInfo).then(extractArrayPayload),
+    ]);
+    const basicInfo = buildBasicInfoIndex(basicRows);
+    const basicLocations = [...basicInfo.byId.values()]
+        .filter((row) => Number.isFinite(row.lng) && Number.isFinite(row.lat))
+        .map((row) => ({
+            reservoirId: row.reservoirId,
+            name: row.name,
+            lng: row.lng,
+            lat: row.lat,
+            effectiveCapacity: row.effectiveCapacity,
+            source: row.source,
+        }));
+    return augmentLocationRowsFromDailyOps(basicLocations, dailyRows, basicInfo);
+}
+
 module.exports = {
     getWaterReservoirMapData,
+    buildBundledReservoirLocations,
     ENDPOINTS,
 };

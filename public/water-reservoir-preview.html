@@ -170,12 +170,13 @@
                 圓點面積依有效庫容量（萬m³）縮放<br />
                 圓內數字為有效蓄水百分比<br />
                 色彩僅用藍色系（非水情燈號）<br />
-                滑鼠懸停顯示庫容量、蓄水量、水位、時間
+                滑鼠懸停顯示庫容量、蓄水量、水位、時間<br />
+                點擊水庫點亮供水區域（再點一次或點空白取消）
             </aside>
         </div>
     </div>
 
-    <script src="js/jcms/lib/dashboard-map-water-reservoir.js?v=preview5"></script>
+    <script src="js/jcms/lib/dashboard-map-water-reservoir.js?v=preview6"></script>
     <script>
         (function () {
             const MAP_COLORS = {
@@ -191,9 +192,12 @@
             const LAYER_IDS = {
                 waterReservoirCircle: 'wra-reservoir-circle',
                 waterReservoirLabel: 'wra-reservoir-label',
+                waterReservoirSupplyFill: 'wra-reservoir-supply-fill',
+                waterReservoirSupplyLine: 'wra-reservoir-supply-line',
             };
 
             const mapLayerState = { waterReservoir: true };
+            let twTownsGeoJson = null;
 
             const metaEl = document.getElementById('preview-water-meta');
             const toggle = document.getElementById('preview-toggle-water-reservoir');
@@ -203,6 +207,7 @@
                 layerIds: LAYER_IDS,
                 getMapLayerState: () => mapLayerState,
                 setWaterReservoirMeta: (msg) => { metaEl.textContent = msg || ''; },
+                getTwTownsGeoJson: () => twTownsGeoJson,
                 getApiBase: () => {
                     const { protocol, hostname, port } = window.location;
                     if (port === '3000' || port === '') {
@@ -264,8 +269,14 @@
             };
 
             map.on('load', () => {
-                loadLayers();
-                waterApi.scheduleWaterReservoirRefresh(map, () => mapLayerState.waterReservoir);
+                fetch('data/tw-towns.geojson')
+                    .then((res) => res.json())
+                    .then((data) => { twTownsGeoJson = data; })
+                    .catch(() => { /* 供水區高亮需鄉鎮界線 */ })
+                    .finally(() => {
+                        loadLayers();
+                        waterApi.scheduleWaterReservoirRefresh(map, () => mapLayerState.waterReservoir);
+                    });
             });
 
             toggle.addEventListener('change', () => {

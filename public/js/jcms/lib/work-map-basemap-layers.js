@@ -2,7 +2,7 @@
 import {
     LAYER_IDS,
     MAJOR_TRANSPORT_LAYER_IDS,
-} from './map-jcms-bootstrap.js?v=0.1.20260625';
+} from './map-jcms-bootstrap.js?v=0.1.20260625a';
 
 export const MAP_SETTINGS_STORAGE_KEY = 'jcms.dashboard-map.settings';
 

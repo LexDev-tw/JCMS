@@ -8,6 +8,8 @@
 
     const RAIN_WATER_BLUE = '#38BDF8';
     const RAIN_WATER_BLUE_DEEP = '#0369A1';
+    /** 縮放級數低於此值時，雨量標籤僅顯示全台最大降雨站（避免圖面擁擠） */
+    const RAIN_LABEL_ALL_ZOOM = 10;
 
     function escapeHtml(value) {
         return String(value ?? '')
@@ -40,24 +42,40 @@
         return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
     }
 
+    function rainLabelFilter() {
+        return [
+            'all',
+            ['>', ['coalesce', ['get', 'rainMm'], 0], 0],
+            [
+                'any',
+                ['>=', ['zoom'], RAIN_LABEL_ALL_ZOOM],
+                ['==', ['coalesce', ['get', 'isMaxRain'], false], true],
+            ],
+        ];
+    }
+
     function buildRainfallGeoJson(stations) {
         if (!Array.isArray(stations) || !stations.length) {
             return { type: 'FeatureCollection', features: [] };
         }
-        const features = stations
-            .filter((s) => Number.isFinite(s.lng) && Number.isFinite(s.lat))
-            .map((s) => ({
+        const valid = stations.filter((s) => Number.isFinite(s.lng) && Number.isFinite(s.lat));
+        const maxRain = valid.reduce((max, s) => Math.max(max, Number(s.rainMm) || 0), 0);
+        const features = valid.map((s) => {
+            const rainMm = Number(s.rainMm) || 0;
+            return {
                 type: 'Feature',
                 properties: {
                     stationId: s.stationId || '',
                     name: s.name || '雨量站',
-                    rainMm: Number(s.rainMm) || 0,
-                    rainLabel: formatRainLabel(s.rainMm),
+                    rainMm,
+                    rainLabel: formatRainLabel(rainMm),
+                    isMaxRain: maxRain > 0 && rainMm === maxRain,
                     county: s.county || '',
                     town: s.town || '',
                 },
                 geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
-            }));
+            };
+        });
         return { type: 'FeatureCollection', features };
     }
 
@@ -160,7 +178,7 @@
                 ['to-string', ['/', ['round', ['*', ['get', 'rainMm'], 10]], 10]],
             ]);
             map.setLayoutProperty(layerIds.rainAdvisoryLabel, 'text-font', ['Noto Sans Regular']);
-            map.setFilter(layerIds.rainAdvisoryLabel, ['>', ['coalesce', ['get', 'rainMm'], 0], 0]);
+            map.setFilter(layerIds.rainAdvisoryLabel, rainLabelFilter());
         }
 
         function applyRainCirclePaint(map) {
@@ -219,7 +237,7 @@
                     type: 'symbol',
                     source: WEATHER_SOURCE_IDS.rainObs,
                     minzoom: 7,
-                    filter: ['>', ['coalesce', ['get', 'rainMm'], 0], 0],
+                    filter: rainLabelFilter(),
                     layout: {
                         visibility: 'none',
                         'text-field': [

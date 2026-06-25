@@ -1,8 +1,8 @@
 /** 地圖總覽：即時新聞區塊（政治／社會／司法合併） */
 
-import { ref, watch, onUnmounted } from '../vue-api.js?v=0.1.20260625';
+import { ref, watch, onUnmounted } from '../vue-api.js?v=0.1.20260625a';
 
-import { resolveJcmsApiBaseUrl } from '../lib/api-base.js?v=0.1.20260625';
+import { resolveJcmsApiBaseUrl } from '../lib/api-base.js?v=0.1.20260625a';
 
 
 

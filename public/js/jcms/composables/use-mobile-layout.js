@@ -1,5 +1,5 @@
 /** 偵測手機瀏覽，供手機版精簡 UI（不依賴 pointer:coarse，iOS Safari 相容） */
-import { ref, onMounted, onUnmounted } from '../vue-api.js?v=0.1.20260625';
+import { ref, onMounted, onUnmounted } from '../vue-api.js?v=0.1.20260625a';
 
 export function detectMobileLayout() {
     if (typeof window === 'undefined') return false;

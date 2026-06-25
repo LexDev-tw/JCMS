@@ -1,4 +1,4 @@
-import { reactive, onMounted, onUnmounted } from '../vue-api.js?v=0.1.20260625';
+import { reactive, onMounted, onUnmounted } from '../vue-api.js?v=0.1.20260625a';
 
 export function useClock() {
     const time = reactive({ y: '000', m: '00', d: '00', day: 'M', h: '00', min: '00', s: '00' });

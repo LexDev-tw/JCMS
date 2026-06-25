@@ -1,0 +1,186 @@
+{
+  "source": "經濟部水利署枯旱預警供水區定義（開放資料）",
+  "districts": {
+    "taipei-newtaipei-partial": {
+      "label": "台北市及新北市部分地區",
+      "rules": [
+        { "county": "台北市", "wholeCounty": true },
+        {
+          "county": "新北市",
+          "towns": ["新店區", "烏來區", "淡水區", "三芝區", "石門區", "金山區", "萬里區", "瑞芳區", "平溪區", "雙溪區", "貢寮區", "深坑區", "石碇區", "坪林區"]
+        }
+      ]
+    },
+    "newtaipei-partial": {
+      "label": "新北市部分地區",
+      "rules": [
+        {
+          "county": "新北市",
+          "towns": ["三峽區", "鶯歌區", "樹林區", "土城區", "中和區", "永和區"]
+        }
+      ]
+    },
+    "banxin": {
+      "label": "新北市板新地區",
+      "rules": [
+        {
+          "county": "新北市",
+          "towns": ["板橋區", "新莊區", "三重區", "中和區", "永和區", "土城區", "樹林區", "鶯歌區"]
+        }
+      ]
+    },
+    "keelung-xizhi": {
+      "label": "基隆市及新北市汐止區",
+      "rules": [
+        { "county": "基隆市", "wholeCounty": true },
+        { "county": "新北市", "towns": ["汐止區"] }
+      ]
+    },
+    "taoyuan-linkou": {
+      "label": "桃園市及新北市林口區",
+      "rules": [
+        { "county": "桃園市", "wholeCounty": true },
+        { "county": "新北市", "towns": ["林口區"] }
+      ]
+    },
+    "hsinchu": {
+      "label": "新竹縣(市)",
+      "rules": [
+        { "county": "新竹市", "wholeCounty": true },
+        { "county": "新竹縣", "wholeCounty": true }
+      ]
+    },
+    "hsinchu-area": {
+      "label": "新竹地區",
+      "rules": [
+        { "county": "新竹市", "wholeCounty": true },
+        { "county": "新竹縣", "wholeCounty": true }
+      ]
+    },
+    "miaoli": {
+      "label": "苗栗縣",
+      "rules": [{ "county": "苗栗縣", "wholeCounty": true }]
+    },
+    "taichung-changhua-north": {
+      "label": "台中市及彰化縣北部地區",
+      "rules": [
+        { "county": "台中市", "wholeCounty": true },
+        {
+          "county": "彰化縣",
+          "towns": ["彰化市", "芬園鄉", "花壇鄉", "秀水鄉", "鹿港鎮", "福興鄉", "線西鄉", "伸港鄉", "和美鎮"]
+        }
+      ]
+    },
+    "taichung-area": {
+      "label": "台中地區",
+      "rules": [{ "county": "台中市", "wholeCounty": true }]
+    },
+    "nantou": {
+      "label": "南投縣",
+      "rules": [{ "county": "南投縣", "wholeCounty": true }]
+    },
+    "changhua-south": {
+      "label": "彰化縣南部地區",
+      "rules": [
+        {
+          "county": "彰化縣",
+          "towns": ["溪湖鎮", "田中鎮", "北斗鎮", "埤頭鄉", "溪州鄉", "竹塘鄉", "二林鎮", "大城鄉", "芳苑鄉", "員林市", "埔心鄉", "埔鹽鄉", "永靖鄉", "社頭鄉", "田尾鄉", "二水鄉", "溪州鄉"]
+        }
+      ]
+    },
+    "yunlin": {
+      "label": "雲林縣",
+      "rules": [{ "county": "雲林縣", "wholeCounty": true }]
+    },
+    "chiayi": {
+      "label": "嘉義縣(市)",
+      "rules": [
+        { "county": "嘉義市", "wholeCounty": true },
+        { "county": "嘉義縣", "wholeCounty": true }
+      ]
+    },
+    "tainan": {
+      "label": "台南市",
+      "rules": [{ "county": "台南市", "wholeCounty": true }]
+    },
+    "kaohsiung": {
+      "label": "高雄市",
+      "rules": [{ "county": "高雄市", "wholeCounty": true }]
+    },
+    "pingtung-north": {
+      "label": "屏東縣北部地區",
+      "rules": [
+        {
+          "county": "屏東縣",
+          "towns": ["屏東市", "長治鄉", "麟洛鄉", "九如鄉", "里港鄉", "高樹鄉", "鹽埔鄉", "內埔鄉", "竹田鄉", "萬丹鄉", "潮州鎮"]
+        }
+      ]
+    },
+    "pingtung-south": {
+      "label": "屏東縣南部地區",
+      "rules": [
+        {
+          "county": "屏東縣",
+          "towns": ["崁頂鄉", "南州鄉", "林邊鄉", "東港鎮", "琉球鄉", "新園鄉", "枋寮鄉", "枋山鄉", "春日鄉", "獅子鄉", "車城鄉", "牡丹鄉", "恆春鎮", "滿州鄉", "泰武鄉", "來義鄉", "瑪家鄉", "霧台鄉", "三地門鄉", "竹田鄉"]
+        }
+      ]
+    },
+    "yilan": {
+      "label": "宜蘭縣",
+      "rules": [{ "county": "宜蘭縣", "wholeCounty": true }]
+    },
+    "hualien": {
+      "label": "花蓮縣",
+      "rules": [{ "county": "花蓮縣", "wholeCounty": true }]
+    },
+    "taitung": {
+      "label": "台東縣",
+      "rules": [{ "county": "台東縣", "wholeCounty": true }]
+    },
+    "penghu": {
+      "label": "澎湖縣",
+      "rules": [{ "county": "澎湖縣", "wholeCounty": true }]
+    },
+    "kinmen": {
+      "label": "金門縣",
+      "rules": [{ "county": "金門縣", "wholeCounty": true }]
+    },
+    "lienchiang": {
+      "label": "連江縣",
+      "rules": [{ "county": "連江縣", "wholeCounty": true }]
+    }
+  },
+  "reservoirs": {
+    "翡翠水庫": ["taipei-newtaipei-partial", "newtaipei-partial"],
+    "石門水庫": ["taoyuan-linkou", "banxin"],
+    "新山水庫": ["keelung-xizhi"],
+    "西勢水庫": ["keelung-xizhi"],
+    "直潭壩": ["taipei-newtaipei-partial"],
+    "寶山水庫": ["hsinchu"],
+    "寶山第二水庫": ["hsinchu", "hsinchu-area"],
+    "明德水庫": ["miaoli"],
+    "永和山水庫": ["miaoli"],
+    "鯉魚潭水庫": ["taichung-changhua-north", "taichung-area"],
+    "石岡壩": ["taichung-changhua-north", "taichung-area"],
+    "日月潭水庫": ["nantou"],
+    "集集攔河堰": ["nantou", "changhua-south", "yunlin"],
+    "仁義潭水庫": ["chiayi"],
+    "蘭潭水庫": ["chiayi"],
+    "曾文水庫": ["tainan"],
+    "南化水庫": ["tainan"],
+    "烏山頭水庫": ["tainan"],
+    "白河水庫": ["tainan"],
+    "鏡面水庫": ["tainan"],
+    "澄清湖水庫": ["kaohsiung"],
+    "阿公店水庫": ["kaohsiung"],
+    "鳳山水庫": ["kaohsiung"],
+    "牡丹水庫": ["pingtung-north", "pingtung-south"],
+    "湖山水庫": ["yunlin", "chiayi"],
+    "七美水庫": ["penghu"],
+    "小池水庫": ["penghu"],
+    "成功水庫": ["penghu"],
+    "東衛水庫": ["penghu"],
+    "興仁水庫": ["penghu"],
+    "西安水庫": ["penghu"]
+  }
+}

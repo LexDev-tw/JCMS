@@ -1,11 +1,11 @@
 /** 地圖總覽：MapLibre + 案件統計圖 + 版面寬度同步 */
-import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260624';
-import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js?v=0.1.20260624';
+import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260625a';
+import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js?v=0.1.20260625a';
 import {
     AGENCY_LAYER_KINDS,
     resolveAgencyFeatures,
     agencyFeaturesToGeoJson,
-} from '../lib/agency-layer-model.js?v=0.1.20260624';
+} from '../lib/agency-layer-model.js?v=0.1.20260625a';
 
 /** 內建行政區界線（VPS 同源，不依賴外部 CDN） */
 const TW_LOCAL_COUNTIES_GEOJSON_URL = 'data/tw-counties.geojson';
@@ -743,6 +743,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             airQualityLabel: 'epa-aq-station-label',
             waterReservoirCircle: 'wra-reservoir-circle',
             waterReservoirLabel: 'wra-reservoir-label',
+            waterReservoirSupplyFill: 'wra-reservoir-supply-fill',
+            waterReservoirSupplyLine: 'wra-reservoir-supply-line',
             policeCircle: 'police-agency-circle',
             judicialCircle: 'judicial-agency-circle',
             judicialJurisdictionFill: 'judicial-jurisdiction-fill',
@@ -834,10 +836,46 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
             });
         }
 
+        function resolveTwTownsGeoJson() {
+            if (twTownsGeoJson) return twTownsGeoJson;
+            if (twBoundaryGeoCache?.towns) {
+                twTownsGeoJson = twBoundaryGeoCache.towns;
+            }
+            return twTownsGeoJson;
+        }
+
+        async function ensureTwTownsGeoJsonReady(map) {
+            let data = resolveTwTownsGeoJson();
+            if (data) return data;
+            if (!map) return null;
+            try {
+                await ensureTwBoundaryLayersOnMap(map);
+            } catch (err) {
+                console.warn('[dashboard-map] 鄉鎮界線載入失敗', err);
+                return null;
+            }
+            data = resolveTwTownsGeoJson();
+            if (data) return data;
+            if (map.getSource('tw-towns')) {
+                try {
+                    const src = map.getSource('tw-towns');
+                    const raw = typeof src.serialize === 'function'
+                        ? src.serialize()?.data
+                        : src._data;
+                    if (raw?.type === 'FeatureCollection') {
+                        twTownsGeoJson = raw;
+                    }
+                } catch (_) {
+                    /* ignore */
+                }
+            }
+            return twTownsGeoJson;
+        }
+
         if (typeof globalThis.DashboardMapPopulation !== 'undefined') {
             populationApi = globalThis.DashboardMapPopulation.createPopulationLabelsApi({
                 mapColors: MAP_COLORS,
-                getTwTownsGeoJson: () => twTownsGeoJson,
+                getTwTownsGeoJson: () => resolveTwTownsGeoJson(),
                 featureCentroid,
                 getMapLayerState: () => mapLayerState,
                 setPopulationMeta: updatePopulationSourceMeta,
@@ -897,6 +935,8 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 getMapLayerState: () => mapLayerState,
                 setWaterReservoirMeta,
                 getApiBase: getDashboardMapApiBase,
+                getTwTownsGeoJson: () => resolveTwTownsGeoJson(),
+                ensureTwTownsGeoJson: () => ensureTwTownsGeoJsonReady(mapInstance),
             });
         }
 
@@ -916,7 +956,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 layerIds: LAYER_IDS,
                 getMapLayerState: () => mapLayerState,
                 getGeoJsonUrl: () => 'data/judicial-agencies.geojson',
-                getTwTownsGeoJson: () => twTownsGeoJson,
+                getTwTownsGeoJson: () => resolveTwTownsGeoJson(),
                 getResolvedGeoJson: () => resolveAgencyGeoJson(AGENCY_LAYER_KINDS.judicial),
             });
         }
@@ -1017,11 +1057,7 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
         }
 
         function syncTwTownsGeoJsonFromMap(map) {
-            if (twTownsGeoJson) return;
-            if (twBoundaryGeoCache?.towns) {
-                twTownsGeoJson = twBoundaryGeoCache.towns;
-                return;
-            }
+            if (resolveTwTownsGeoJson()) return;
             if (!map.getSource('tw-towns')) return;
             try {
                 const src = map.getSource('tw-towns');
@@ -1316,6 +1352,9 @@ const CHART = { ink: '#111111', muted: '#666666', accent: '#F05A28', grid: '#EAE
                 await waterReservoirApi.refreshWaterReservoirLayers(mapInstance);
                 if (mapLayerState.waterReservoir) {
                     waterReservoirApi.scheduleWaterReservoirRefresh(mapInstance, isWaterReservoirLayerActive);
+                } else {
+                    waterReservoirApi.teardownWaterReservoirRefresh();
+                    waterReservoirApi.clearSupplyHighlight(mapInstance);
                 }
                 reconcileLayerStack(mapInstance);
             } catch (err) {

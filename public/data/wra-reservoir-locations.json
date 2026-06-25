@@ -1,0 +1,591 @@
+{
+  "updatedAt": "2026-06-25T01:03:57.509Z",
+  "source": "basic-info + location-hints",
+  "count": 73,
+  "locations": [
+    {
+      "reservoirId": "10204",
+      "name": "新山水庫",
+      "lng": 121.70865898038505,
+      "lat": 25.14495454707322,
+      "effectiveCapacity": 996,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10203",
+      "name": "西勢水庫",
+      "lng": 121.7438779148837,
+      "lat": 25.08621606232303,
+      "effectiveCapacity": 37.8,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10205",
+      "name": "翡翠水庫",
+      "lng": 121.5328425747827,
+      "lat": 24.930193801843654,
+      "effectiveCapacity": 33347.3,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10212",
+      "name": "直潭壩",
+      "lng": 121.5328425747827,
+      "lat": 24.930193801843654,
+      "effectiveCapacity": 174.9,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10201",
+      "name": "石門水庫",
+      "lng": 121.29234042871155,
+      "lat": 24.820712284284344,
+      "effectiveCapacity": 20441.1,
+      "source": "basic-info-multi-town-centroid"
+    },
+    {
+      "reservoirId": "10401",
+      "name": "寶山水庫",
+      "lng": 120.99907200538377,
+      "lat": 24.73386934864971,
+      "effectiveCapacity": 500.8,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10405",
+      "name": "寶山第二水庫",
+      "lng": 120.99907200538377,
+      "lat": 24.73386934864971,
+      "effectiveCapacity": 3174.3,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10503",
+      "name": "大埔水庫",
+      "lng": 121.0100546303383,
+      "lat": 24.67942558053757,
+      "effectiveCapacity": 507.6,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10501",
+      "name": "永和山水庫",
+      "lng": 120.93947595134037,
+      "lat": 24.655401813584575,
+      "effectiveCapacity": 2993.4,
+      "source": "basic-info-multi-town-centroid"
+    },
+    {
+      "reservoirId": "10601",
+      "name": "明德水庫",
+      "lng": 120.88373414633926,
+      "lat": 24.576004355044454,
+      "effectiveCapacity": 1251,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20101",
+      "name": "鯉魚潭水庫",
+      "lng": 120.84741543890561,
+      "lat": 24.359401307743045,
+      "effectiveCapacity": 11550.5,
+      "source": "basic-info-multi-town-centroid"
+    },
+    {
+      "reservoirId": "20201",
+      "name": "德基水庫",
+      "lng": 121.13655684173472,
+      "lat": 24.27426747567147,
+      "effectiveCapacity": 18796.18,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20203",
+      "name": "谷關水庫",
+      "lng": 121.13655684173472,
+      "lat": 24.27426747567147,
+      "effectiveCapacity": 421.9,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20202",
+      "name": "石岡壩",
+      "lng": 120.7900577499991,
+      "lat": 24.258887778876236,
+      "effectiveCapacity": 138,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20501",
+      "name": "霧社水庫",
+      "lng": 121.1304515019455,
+      "lat": 24.021188660038277,
+      "effectiveCapacity": 2868.56,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20502",
+      "name": "日月潭水庫",
+      "lng": 120.92172946722556,
+      "lat": 23.87788963841535,
+      "effectiveCapacity": 12949.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20503",
+      "name": "集集攔河堰",
+      "lng": 120.78543385771168,
+      "lat": 23.84281726595838,
+      "effectiveCapacity": 653.2,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "20509",
+      "name": "湖山水庫",
+      "lng": 120.59520487165784,
+      "lat": 23.662943067597595,
+      "effectiveCapacity": 5060.8,
+      "source": "basic-info-multi-town-centroid"
+    },
+    {
+      "reservoirId": "30301",
+      "name": "仁義潭水庫",
+      "lng": 120.59166915661923,
+      "lat": 23.436535174569944,
+      "effectiveCapacity": 2465.7,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30302",
+      "name": "蘭潭水庫",
+      "lng": 120.44540909444581,
+      "lat": 23.480401936917165,
+      "effectiveCapacity": 921.8,
+      "source": "basic-info-county-centroid"
+    },
+    {
+      "reservoirId": "30303",
+      "name": "鹿寮溪水庫",
+      "lng": 120.45956248020764,
+      "lat": 23.352580317694713,
+      "effectiveCapacity": 71.4,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30401",
+      "name": "白河水庫",
+      "lng": 120.45956248020764,
+      "lat": 23.352580317694713,
+      "effectiveCapacity": 1378.8,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30402",
+      "name": "尖山埤水庫",
+      "lng": 120.35663857034771,
+      "lat": 23.265666355745577,
+      "effectiveCapacity": 85.3,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30403",
+      "name": "德元埤水庫",
+      "lng": 120.35663857034771,
+      "lat": 23.265666355745577,
+      "effectiveCapacity": 229.8,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30501",
+      "name": "烏山頭水庫",
+      "lng": 120.36711470651619,
+      "lat": 23.21109814268216,
+      "effectiveCapacity": 7846,
+      "source": "basic-info-multi-town-centroid"
+    },
+    {
+      "reservoirId": "30502",
+      "name": "曾文水庫",
+      "lng": 120.59564196166528,
+      "lat": 23.288386863927617,
+      "effectiveCapacity": 50479,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30503",
+      "name": "南化水庫",
+      "lng": 120.53747212699285,
+      "lat": 23.11540370368123,
+      "effectiveCapacity": 8920.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30504",
+      "name": "鏡面水庫",
+      "lng": 120.53747212699285,
+      "lat": 23.11540370368123,
+      "effectiveCapacity": 97.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30602",
+      "name": "鹽水埤水庫",
+      "lng": 120.34214443330848,
+      "lat": 23.038340555927387,
+      "effectiveCapacity": 47.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30601",
+      "name": "虎頭埤水庫",
+      "lng": 120.34214443330848,
+      "lat": 23.038340555927387,
+      "effectiveCapacity": 122.2,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30802",
+      "name": "阿公店水庫",
+      "lng": 120.36792889195301,
+      "lat": 22.787226469779203,
+      "effectiveCapacity": 1502.7,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30803",
+      "name": "鳳山水庫",
+      "lng": 120.38567682369677,
+      "lat": 22.51634189613471,
+      "effectiveCapacity": 684.2,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "30801",
+      "name": "澄清湖水庫",
+      "lng": 120.3721824185749,
+      "lat": 22.663678327063803,
+      "effectiveCapacity": 259.5,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "31201",
+      "name": "牡丹水庫",
+      "lng": 120.8225929502286,
+      "lat": 22.155646007130443,
+      "effectiveCapacity": 2652.09,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "31301",
+      "name": "成功水庫",
+      "lng": 119.6445019803927,
+      "lat": 23.58297383906834,
+      "effectiveCapacity": 121.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "50102",
+      "name": "興仁水庫",
+      "lng": 119.52350362551887,
+      "lat": 23.490442836735387,
+      "effectiveCapacity": 72.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "50103",
+      "name": "東衛水庫",
+      "lng": 119.52350362551887,
+      "lat": 23.490442836735387,
+      "effectiveCapacity": 34.3,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "50108",
+      "name": "小池水庫",
+      "lng": 119.50944335744916,
+      "lat": 23.607459808777758,
+      "effectiveCapacity": 17.9,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "50105",
+      "name": "西安水庫",
+      "lng": 119.61647494160081,
+      "lat": 23.249174204133546,
+      "effectiveCapacity": 22.7,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "50106",
+      "name": "七美水庫",
+      "lng": 119.42666319167071,
+      "lat": 23.204990279234345,
+      "effectiveCapacity": 28.1,
+      "source": "basic-info-town-centroid"
+    },
+    {
+      "reservoirId": "10802",
+      "name": "羅東攔河堰",
+      "lng": 121.67084434463007,
+      "lat": 24.664854003101297,
+      "effectiveCapacity": null,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "31002",
+      "name": "甲仙攔河堰",
+      "lng": 120.6193262908904,
+      "lat": 23.11431602735863,
+      "effectiveCapacity": null,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50109",
+      "name": "烏溝蓄水塘",
+      "lng": 119.52350362551887,
+      "lat": 23.490442836735387,
+      "effectiveCapacity": 2.7,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "10206",
+      "name": "榮華壩",
+      "lng": 121.36597772972604,
+      "lat": 24.73785789047043,
+      "effectiveCapacity": 6.4,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50104",
+      "name": "赤崁地下水庫",
+      "lng": 119.5683326171065,
+      "lat": 23.619506041840403,
+      "effectiveCapacity": 51,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "20507",
+      "name": "武界壩",
+      "lng": 121.1304515019455,
+      "lat": 24.021188660038277,
+      "effectiveCapacity": 60,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "20405",
+      "name": "士林攔河堰",
+      "lng": 121.54981906023298,
+      "lat": 25.133585082074248,
+      "effectiveCapacity": 68.23,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "30306",
+      "name": "內埔子水庫",
+      "lng": 120.47844295294216,
+      "lat": 23.595683880834862,
+      "effectiveCapacity": 69,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "10211",
+      "name": "青潭堰",
+      "lng": 121.5328425747827,
+      "lat": 24.930193801843654,
+      "effectiveCapacity": 69.6,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "20508",
+      "name": "明湖下池水庫",
+      "lng": 120.92172946722556,
+      "lat": 23.87788963841535,
+      "effectiveCapacity": 836.04,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50310",
+      "name": "后沃水庫",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 0.47,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50303",
+      "name": "珠螺水壩",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 0.47,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50307",
+      "name": "津沙一號水庫",
+      "lng": 118.42391274599973,
+      "lat": 24.492472535658184,
+      "effectiveCapacity": 1.26,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50304",
+      "name": "儲水沃上壩",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 2.29,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50302",
+      "name": "秋桂山水庫",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 3.15,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50305",
+      "name": "儲水沃水庫",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 4.17,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50306",
+      "name": "津沙水庫",
+      "lng": 118.42391274599973,
+      "lat": 24.492472535658184,
+      "effectiveCapacity": 4.58,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50309",
+      "name": "東湧水庫",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 8.5,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50308",
+      "name": "坂里水庫",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 14.11,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50301",
+      "name": "勝利水庫",
+      "lng": 118.31258672858519,
+      "lat": 24.413125949602076,
+      "effectiveCapacity": 18.18,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50208",
+      "name": "蓮湖水庫",
+      "lng": 118.32866881206529,
+      "lat": 24.4529370813834,
+      "effectiveCapacity": 5.07,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50209",
+      "name": "菱湖水庫",
+      "lng": 118.15667724723467,
+      "lat": 24.380308695980432,
+      "effectiveCapacity": 8.25,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50214",
+      "name": "蘭湖",
+      "lng": 118.32866881206529,
+      "lat": 24.4529370813834,
+      "effectiveCapacity": 17.62,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50204",
+      "name": "山西水庫",
+      "lng": 118.31258672858519,
+      "lat": 24.413125949602076,
+      "effectiveCapacity": 19.02,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50206",
+      "name": "擎天水庫",
+      "lng": 118.32866881206529,
+      "lat": 24.4529370813834,
+      "effectiveCapacity": 23.65,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50203",
+      "name": "陽明湖水庫",
+      "lng": 118.42567106556184,
+      "lat": 24.436589514160193,
+      "effectiveCapacity": 27.65,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50213",
+      "name": "瓊林水庫",
+      "lng": 118.42567106556184,
+      "lat": 24.436589514160193,
+      "effectiveCapacity": 29.32,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50205",
+      "name": "榮湖水庫",
+      "lng": 118.42567106556184,
+      "lat": 24.436589514160193,
+      "effectiveCapacity": 35.96,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50212",
+      "name": "金湖水庫",
+      "lng": 118.42567106556184,
+      "lat": 24.436589514160193,
+      "effectiveCapacity": 38.11,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50210",
+      "name": "西湖水庫",
+      "lng": 118.31258672858519,
+      "lat": 24.413125949602076,
+      "effectiveCapacity": 41.41,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50207",
+      "name": "金沙水庫",
+      "lng": 118.42391274599973,
+      "lat": 24.492472535658184,
+      "effectiveCapacity": 43.47,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50202",
+      "name": "田埔水庫",
+      "lng": 118.42391274599973,
+      "lat": 24.492472535658184,
+      "effectiveCapacity": 48.62,
+      "source": "location-hint"
+    },
+    {
+      "reservoirId": "50201",
+      "name": "太湖水庫",
+      "lng": 118.42567106556184,
+      "lat": 24.436589514160193,
+      "effectiveCapacity": 148.08,
+      "source": "location-hint"
+    }
+  ]
+}

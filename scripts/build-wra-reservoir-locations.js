@@ -1,7 +1,8 @@
-/** 從水利署堰壩位置 Open Data 產生 public/data/wra-reservoir-locations.json */
+/** 產生 public/data/wra-reservoir-locations.json（堰壩 API 優先，否則基本資料+對照表） */
 const fs = require('fs');
 const path = require('path');
 const { coordsFromTwd97Tm2 } = require('../src/lib/twd97tm2');
+const { buildBundledReservoirLocations } = require('../src/services/waterReservoirService');
 
 const LEGACY_URL =
     'https://data.wra.gov.tw/Service/OpenData.aspx?format=json&id=923F16D6-070B-4A7D-9DA7-6CF010EEB090';
@@ -28,15 +29,15 @@ function normalizeReservoirId(raw) {
     return digits ? digits.slice(-5).padStart(5, '0') : '';
 }
 
-async function main() {
+async function fetchLegacyLocations() {
     const res = await fetch(LEGACY_URL, { headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`legacy HTTP ${res.status}`);
     const payload = await res.json();
     const rows = Array.isArray(payload)
         ? payload
         : Object.values(payload).find(Array.isArray) || [];
 
-    const locations = rows
+    return rows
         .map((row) => {
             const reservoirId = normalizeReservoirId(
                 pickField(row, 'COMPARE_ID', 'ReservoirIdentifier', 'reservoiridentifier')
@@ -59,6 +60,23 @@ async function main() {
             };
         })
         .filter(Boolean);
+}
+
+async function main() {
+    let locations = [];
+    let source = '';
+
+    try {
+        locations = await fetchLegacyLocations();
+        if (locations.length) source = LEGACY_URL;
+    } catch (err) {
+        console.warn('[build-wra-reservoir-locations] legacy API 不可用，改用水庫基本資料推算', err.message);
+    }
+
+    if (!locations.length) {
+        locations = await buildBundledReservoirLocations();
+        source = 'basic-info + location-hints';
+    }
 
     fs.mkdirSync(path.dirname(OUT), { recursive: true });
     fs.writeFileSync(
@@ -66,7 +84,7 @@ async function main() {
         JSON.stringify(
             {
                 updatedAt: new Date().toISOString(),
-                source: LEGACY_URL,
+                source,
                 count: locations.length,
                 locations,
             },
