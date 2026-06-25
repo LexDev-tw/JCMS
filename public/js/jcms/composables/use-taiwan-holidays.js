@@ -2,7 +2,7 @@
  * 中華民國政府行政機關辦公日曆表（政府資料開放平台）
  * JSON 來源：https://github.com/ruyut/TaiwanCalendar
  */
-import { util } from '../utils.js?v=0.1.20260624';
+import { util } from '../utils.js?v=0.1.20260625';
 
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/ruyut/TaiwanCalendar/data';
 
