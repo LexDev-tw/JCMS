@@ -1,12 +1,12 @@
 /** 工作地圖編輯頁：MapLibre + 繪製互動 */
-import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260625a';
+import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260626';
 import {
     createJcmsMapStyle,
     loadTaiwanAdminBoundaries,
     ensureAdminLabelLayer,
     normalizeDefaultView,
     applyDefaultMapView,
-} from '../lib/map-jcms-bootstrap.js?v=0.1.20260625a';
+} from '../lib/map-jcms-bootstrap.js?v=0.1.20260626';
 import {
     syncWorkMapDocLayers,
     syncWorkMapDraftLayer,
@@ -14,17 +14,17 @@ import {
     syncWorkMapSelectionLayer,
     syncWorkMapVertexLayer,
     queryWorkMapFeatureAt,
-} from '../lib/work-map-maplibre.js?v=0.1.20260625a';
+} from '../lib/work-map-maplibre.js?v=0.1.20260626';
 import {
     syncAgencyEditLayers,
     clearAgencyEditLayer,
     queryAgencyFeatureAt,
-} from '../lib/agency-layer-maplibre.js?v=0.1.20260625a';
-import { AGENCY_LAYER_KINDS } from '../lib/agency-layer-model.js?v=0.1.20260625a';
+} from '../lib/agency-layer-maplibre.js?v=0.1.20260626';
+import { AGENCY_LAYER_KINDS } from '../lib/agency-layer-model.js?v=0.1.20260626';
 import {
     applyWorkMapBasemapLayers,
     loadBasemapLayerPrefs,
-} from '../lib/work-map-basemap-layers.js?v=0.1.20260625a';
+} from '../lib/work-map-basemap-layers.js?v=0.1.20260626';
 
 export function useWorkMapEditor({
     rootRef,

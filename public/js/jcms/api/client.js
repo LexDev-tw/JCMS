@@ -1,7 +1,7 @@
 /** REST API 抽象層 */
-import { util } from '../utils.js?v=0.1.20260625a';
-import { buildThisWeekSchedule, buildContinuousCalendarSchedule } from '../composables/personal-admin-shared.js?v=0.1.20260625a';
-import { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl } from '../lib/api-base.js?v=0.1.20260625a';
+import { util } from '../utils.js?v=0.1.20260626';
+import { buildThisWeekSchedule, buildContinuousCalendarSchedule } from '../composables/personal-admin-shared.js?v=0.1.20260626';
+import { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl } from '../lib/api-base.js?v=0.1.20260626';
 
 export { ensureJcmsApiBaseUrl, resolveJcmsApiBaseUrl };
 

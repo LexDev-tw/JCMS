@@ -1,9 +1,9 @@
 /** 個人行政：薪資／俸表／職涯／差勤共用常數與純函式 */
-import { util } from '../utils.js?v=0.1.20260625a';
+import { util } from '../utils.js?v=0.1.20260626';
 import {
     getTaiwanGovHolidayDisplayLabel,
     isTaiwanGovHoliday,
-} from './use-taiwan-holidays.js?v=0.1.20260625a';
+} from './use-taiwan-holidays.js?v=0.1.20260626';
 
 
 export function buildThisWeekSchedule(weekOffset = 0) {

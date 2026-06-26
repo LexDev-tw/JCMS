@@ -2,7 +2,7 @@
 import {
     AGENCY_LAYER_KINDS,
     agencyFeaturesToGeoJson,
-} from './agency-layer-model.js?v=0.1.20260625a';
+} from './agency-layer-model.js?v=0.1.20260626';
 
 const LAYER_COLORS = Object.freeze({
     judicial: 'rgb(37, 74, 125)',

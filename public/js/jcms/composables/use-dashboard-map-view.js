@@ -1,11 +1,11 @@
 /** 地圖總覽：MapLibre + 案件統計圖 + 版面寬度同步 */
-import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260625a';
-import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js?v=0.1.20260625a';
+import { watch, onUnmounted, nextTick } from '../vue-api.js?v=0.1.20260626';
+import { syncWorkMapDocLayers } from '../lib/work-map-maplibre.js?v=0.1.20260626';
 import {
     AGENCY_LAYER_KINDS,
     resolveAgencyFeatures,
     agencyFeaturesToGeoJson,
-} from '../lib/agency-layer-model.js?v=0.1.20260625a';
+} from '../lib/agency-layer-model.js?v=0.1.20260626';
 
 /** 內建行政區界線（VPS 同源，不依賴外部 CDN） */
 const TW_LOCAL_COUNTIES_GEOJSON_URL = 'data/tw-counties.geojson';

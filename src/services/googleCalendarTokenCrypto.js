@@ -8,11 +8,7 @@ function setActiveTokenEncSeed(seed) {
 }
 
 function deriveKey() {
-  const raw =
-    activeEncSeed ||
-    String(process.env.GOOGLE_TOKEN_ENC_KEY || '').trim() ||
-    String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
-  const seed = raw || 'jcms-google-calendar-dev';
+  const seed = activeEncSeed || 'jcms-google-calendar-dev';
   return crypto.createHash('sha256').update(seed).digest();
 }
 

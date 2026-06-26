@@ -8,25 +8,25 @@ import {
   onUnmounted,
   nextTick,
   watch,
-} from '../vue-api.js?v=0.1.20260625a';
-import { util } from '../utils.js?v=0.1.20260625a';
-import { apiService } from '../api/client.js?v=0.1.20260625a';
-import { RocDateInput, RocMonthInput, RocTimeInput } from '../components/roc-inputs.js?v=0.1.20260625a';
-import { useClock } from '../composables/use-clock.js?v=0.1.20260625a';
-import { useSettings } from '../composables/use-settings.js?v=0.1.20260625a';
-import { usePersonalAdmin } from '../composables/use-personal-admin.js?v=0.1.20260625a';
-import { useCasesManager } from '../composables/use-cases-manager.js?v=0.1.20260625a';
-import { useDynamics } from '../composables/use-dynamics.js?v=0.1.20260625a';
-import { usePayscaleChart } from '../composables/use-payscale-chart.js?v=0.1.20260625a';
-import { useDashboardCharts } from '../composables/use-dashboard-charts.js?v=0.1.20260625a';
+} from '../vue-api.js?v=0.1.20260626';
+import { util } from '../utils.js?v=0.1.20260626';
+import { apiService } from '../api/client.js?v=0.1.20260626';
+import { RocDateInput, RocMonthInput, RocTimeInput } from '../components/roc-inputs.js?v=0.1.20260626';
+import { useClock } from '../composables/use-clock.js?v=0.1.20260626';
+import { useSettings } from '../composables/use-settings.js?v=0.1.20260626';
+import { usePersonalAdmin } from '../composables/use-personal-admin.js?v=0.1.20260626';
+import { useCasesManager } from '../composables/use-cases-manager.js?v=0.1.20260626';
+import { useDynamics } from '../composables/use-dynamics.js?v=0.1.20260626';
+import { usePayscaleChart } from '../composables/use-payscale-chart.js?v=0.1.20260626';
+import { useDashboardCharts } from '../composables/use-dashboard-charts.js?v=0.1.20260626';
 import {
     useMobileLayout,
     resolveViewForMobileLayout,
     MOBILE_REDIRECT_VIEWS,
-} from '../composables/use-mobile-layout.js?v=0.1.20260625a';
-import { useDashboardMapView } from '../composables/use-dashboard-map-view.js?v=0.1.20260625a';
-import { useDashboardNews } from '../composables/use-dashboard-news.js?v=0.1.20260625a';
-import { useWorkMapEditor } from '../composables/use-work-map-editor.js?v=0.1.20260625a';
+} from '../composables/use-mobile-layout.js?v=0.1.20260626';
+import { useDashboardMapView } from '../composables/use-dashboard-map-view.js?v=0.1.20260626';
+import { useDashboardNews } from '../composables/use-dashboard-news.js?v=0.1.20260626';
+import { useWorkMapEditor } from '../composables/use-work-map-editor.js?v=0.1.20260626';
 import {
     loadWorkMapDoc,
     saveWorkMapDoc,
@@ -39,8 +39,8 @@ import {
     WORK_MAP_DEFAULT_COLOR,
     normalizeColor,
     featureTypeLabel,
-} from '../lib/work-map-model.js?v=0.1.20260625a';
-import { createWorkMapHistory, cloneWorkMapDoc } from '../lib/work-map-history.js?v=0.1.20260625a';
+} from '../lib/work-map-model.js?v=0.1.20260626';
+import { createWorkMapHistory, cloneWorkMapDoc } from '../lib/work-map-history.js?v=0.1.20260626';
 import {
     AGENCY_LAYER_KINDS,
     loadAgencyLayerDoc,
@@ -49,7 +49,7 @@ import {
     ensureAgencyLayerInitialized,
     createDefaultJudicialFeature,
     createDefaultPoliceFeature,
-} from '../lib/agency-layer-model.js?v=0.1.20260625a';
+} from '../lib/agency-layer-model.js?v=0.1.20260626';
 import {
     measureDraft,
     ringAreaSqMeters,
@@ -58,20 +58,20 @@ import {
     formatLengthLabel,
     coordsNearlyEqual,
     featureMapCenter,
-} from '../lib/work-map-geo.js?v=0.1.20260625a';
+} from '../lib/work-map-geo.js?v=0.1.20260626';
 import {
     hitTestVertex,
     applyCoordToFeature,
     moveFeatureByDelta,
-} from '../lib/work-map-interaction.js?v=0.1.20260625a';
+} from '../lib/work-map-interaction.js?v=0.1.20260626';
 import {
     loadBasemapLayerPrefs,
     persistBasemapLayerPrefs,
     persistMapSettingsPatch,
     loadCurrentLocationFromStorage,
     persistCurrentLocation,
-} from '../lib/work-map-basemap-layers.js?v=0.1.20260625a';
-import { ensureTaiwanHolidaysForYears } from '../composables/use-taiwan-holidays.js?v=0.1.20260625a';
+} from '../lib/work-map-basemap-layers.js?v=0.1.20260626';
+import { ensureTaiwanHolidaysForYears } from '../composables/use-taiwan-holidays.js?v=0.1.20260626';
 import {
   ensureSalaryYear,
   salaryYearFootAggregate,
@@ -113,7 +113,7 @@ import {
   careerIsoAtNoonMs,
   migrateCareerTimelineRecord,
   careerRowHasAttachment,
-} from '../composables/personal-admin-shared.js?v=0.1.20260625a';
+} from '../composables/personal-admin-shared.js?v=0.1.20260626';
 
 export function mountJcmsApp() {
   createApp({
@@ -4377,6 +4377,7 @@ export function mountJcmsApp() {
               tokenEncKey: '',
               hasClientSecret: false,
               hasTokenEncKey: false,
+              hasDbRecord: false,
               source: 'none',
               saving: false,
           });
@@ -4422,6 +4423,7 @@ export function mountJcmsApp() {
               googleCalendarOAuthDraft.tokenEncKey = '';
               googleCalendarOAuthDraft.hasClientSecret = !!data?.hasClientSecret;
               googleCalendarOAuthDraft.hasTokenEncKey = !!data?.hasTokenEncKey;
+              googleCalendarOAuthDraft.hasDbRecord = !!data?.hasDbRecord;
               googleCalendarOAuthDraft.source = String(data?.source || 'none');
               await loadGoogleCalendarStatus();
           }
@@ -4442,6 +4444,7 @@ export function mountJcmsApp() {
                   googleCalendarStatus.configured = !!data?.configured;
                   googleCalendarOAuthDraft.hasClientSecret = !!data?.hasClientSecret;
                   googleCalendarOAuthDraft.hasTokenEncKey = !!data?.hasTokenEncKey;
+                  googleCalendarOAuthDraft.hasDbRecord = !!data?.hasDbRecord;
                   googleCalendarOAuthDraft.source = String(data?.source || 'db');
                   googleCalendarStatus.message = data?.configured
                       ? 'OAuth 設定已儲存。請在下方點「連結 Google 行事曆」完成授權，事件才會出現在週曆。'

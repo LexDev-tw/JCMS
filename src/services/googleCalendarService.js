@@ -47,7 +47,7 @@ async function applyTokenEncSeedFromConfig(cfg) {
 async function createOAuthClient() {
   const cfg = await applyTokenEncSeedFromConfig();
   if (!cfg.configured) {
-    throw new Error('Google Calendar OAuth 尚未設定（請於系統內或 .env 設定 Client ID／Client Secret）');
+    throw new Error('Google Calendar OAuth 尚未設定（請於週曆 ⚙ 面板儲存 Client ID／Client Secret）');
   }
   return new google.auth.OAuth2(cfg.clientId, cfg.clientSecret, cfg.redirectUri);
 }

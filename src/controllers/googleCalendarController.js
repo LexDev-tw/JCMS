@@ -7,7 +7,7 @@ const startAuth = wrapAsyncController(async (req, res) => {
   if (!configured) {
     return res.status(503).json({
       success: false,
-      error: 'Google Calendar OAuth 尚未設定（請於系統內或 .env 設定 Client ID／Client Secret）',
+      error: 'Google Calendar OAuth 尚未設定（請於週曆 ⚙ 面板儲存 Client ID／Client Secret）',
     });
   }
   const state = googleCalendarService.issueOAuthState();

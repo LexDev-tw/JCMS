@@ -18,15 +18,6 @@ function readStoredOAuth(obj) {
   return raw;
 }
 
-function envOAuthConfig() {
-  return {
-    clientId: String(process.env.GOOGLE_CLIENT_ID || '').trim(),
-    clientSecret: String(process.env.GOOGLE_CLIENT_SECRET || '').trim(),
-    redirectUri: String(process.env.GOOGLE_OAUTH_REDIRECT_URI || '').trim() || defaultRedirectUri(),
-    tokenEncKey: String(process.env.GOOGLE_TOKEN_ENC_KEY || '').trim(),
-  };
-}
-
 async function getStoredOAuthRecord() {
   const settings = await appSettingsService.getAppSettings();
   const { _updatedAt, ...rest } = settings;
@@ -53,36 +44,32 @@ async function getDecryptedDbConfig() {
 
 async function resolveOAuthConfig() {
   const fromDb = await getDecryptedDbConfig();
-  const fromEnv = envOAuthConfig();
-  const hasDb = Boolean(fromDb.clientId && fromDb.clientSecret);
-  const hasEnv = Boolean(fromEnv.clientId && fromEnv.clientSecret);
-  const source = hasDb ? 'db' : hasEnv ? 'env' : 'none';
-  const pick = hasDb ? fromDb : fromEnv;
+  const configured = Boolean(fromDb.clientId && fromDb.clientSecret);
   return {
-    clientId: pick.clientId,
-    clientSecret: pick.clientSecret,
-    redirectUri: pick.redirectUri || defaultRedirectUri(),
-    tokenEncKey: pick.tokenEncKey || fromEnv.tokenEncKey || fromDb.tokenEncKey,
-    configured: Boolean(pick.clientId && pick.clientSecret),
-    source,
+    clientId: fromDb.clientId,
+    clientSecret: fromDb.clientSecret,
+    redirectUri: fromDb.redirectUri || defaultRedirectUri(),
+    tokenEncKey: fromDb.tokenEncKey,
+    configured,
+    source: configured ? 'db' : 'none',
   };
 }
 
 async function getOAuthConfigPublic() {
   const fromDb = await getDecryptedDbConfig();
-  const fromEnv = envOAuthConfig();
   const resolved = await resolveOAuthConfig();
-  const hasDb = Boolean(fromDb.clientId || fromDb.clientSecret || fromDb.redirectUri || fromDb.tokenEncKey);
+  const hasDbRecord = Boolean(
+    fromDb.clientId || fromDb.clientSecret || fromDb.redirectUri || fromDb.tokenEncKey
+  );
   return {
-    clientId: resolved.source === 'db' ? fromDb.clientId : fromEnv.clientId || fromDb.clientId,
+    clientId: fromDb.clientId,
     redirectUri: resolved.redirectUri,
     redirectUriDefault: defaultRedirectUri(),
-    hasClientSecret: resolved.source === 'db' ? Boolean(fromDb.clientSecret) : Boolean(fromEnv.clientSecret),
-    hasTokenEncKey:
-      resolved.source === 'db' ? Boolean(fromDb.tokenEncKey) : Boolean(fromEnv.tokenEncKey || fromDb.tokenEncKey),
+    hasClientSecret: Boolean(fromDb.clientSecret),
+    hasTokenEncKey: Boolean(fromDb.tokenEncKey),
     configured: resolved.configured,
     source: resolved.source,
-    hasDbRecord: hasDb,
+    hasDbRecord,
   };
 }
 

@@ -2,7 +2,7 @@
 
 **J**udicial **C**ase **M**anagement **S**ystem — 司法案件與事務管理系統。
 
-**目前版本：** `0.1.20260625a`
+**目前版本：** `0.1.20260626`
 
 本儲存庫公開於 GitHub 僅作個人備份與開發歷程追溯。
 
@@ -20,6 +20,18 @@
 | 資料持久化 | Docker volumes：`jcms-data`（SQLite）、`jcms-uploads` |
 
 ## 開發日誌
+
+### 2026-06-26
+
+**版號**
+
+- 版號升至 `0.1.20260626`。
+
+**Google 行事曆 OAuth**
+
+- 移除 `.env` 的 `GOOGLE_*` fallback；OAuth 憑證僅從週曆 ⚙ 系統內設定（資料庫）讀取，避免 UI 與實際授權憑證不一致。
+- token 加密金鑰不再 fallback 至環境變數；面板提示改為「OAuth 憑證儲存於系統內設定」，Secret 缺失時提示補填。
+- `.env.example` 移除 Google Calendar 占位變數。
 
 ### 2026-06-25
 

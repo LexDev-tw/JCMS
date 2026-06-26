@@ -1,6 +1,6 @@
 /** 工作地圖圖層同步至 MapLibre */
-import { listToGeoJsonByKind, draftToGeoJson, WORK_MAP_DEFAULT_COLOR, WORK_MAP_TOOL_MODES } from './work-map-model.js?v=0.1.20260625a';
-import { featureVertices } from './work-map-interaction.js?v=0.1.20260625a';
+import { listToGeoJsonByKind, draftToGeoJson, WORK_MAP_DEFAULT_COLOR, WORK_MAP_TOOL_MODES } from './work-map-model.js?v=0.1.20260626';
+import { featureVertices } from './work-map-interaction.js?v=0.1.20260626';
 
 const WORK_MAP_LAYER_PREFIX = 'work-map-list-';
 const WORK_MAP_DRAFT_SOURCE = 'work-map-draft';
